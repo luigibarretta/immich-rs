@@ -33,6 +33,8 @@ Run `scripts/check-adrs.sh` before committing.
 | [0014](ADR-0014-platform-release-and-supply-chain.md) | Platform, release and supply chain | Accepted |
 | [0015](ADR-0015-phased-delivery-and-production-cutover.md) | Phased delivery and production cutover | Accepted |
 | [0016](ADR-0016-phase-zero-contracts.md) | Phase-zero fixture and normalized-plan contracts | Accepted |
+| [0017](ADR-0017-phase-one-folder-planning.md) | Phase-one folder planning policy | Accepted |
+| [0018](ADR-0018-source-file-size-policy.md) | Source file size policy | Accepted |
 
 ## Template
 

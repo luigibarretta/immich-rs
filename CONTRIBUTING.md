@@ -19,6 +19,11 @@
   buffering.
 - No `unsafe`, `unwrap` or `expect` in production or test code unless a new ADR
   accepts a narrowly documented exception.
+- Maintained Rust, Python and shell files stay within the 400-line source limit
+  with no undocumented baseline exceptions.
+- Read-only operations are idempotent: unchanged input and configuration must
+  produce byte-identical normalized output. Future mutations must converge
+  through stable operation IDs and durable checkpoints.
 - Library crates do not print, read process environment or terminate the
   process. The CLI owns presentation and exit codes.
 - API models stay behind `immich-client`; source-format details stay behind

@@ -1,5 +1,5 @@
 use immich_rs_core::CancellationToken;
-use immich_rs_executor::{UploadExecutionConfig, dry_run_upload};
+use immich_rs_executor::dry_run_upload;
 
 use crate::args::ApplyRequest;
 use crate::failure::CliFailure;
@@ -13,7 +13,7 @@ pub fn run(request: &ApplyRequest) -> Result<(), CliFailure> {
         &plan,
         &request.source,
         &request.checkpoint,
-        &UploadExecutionConfig::default(),
+        &request.config,
         &cancellation,
     )
     .map_err(CliFailure::from_executor)?;

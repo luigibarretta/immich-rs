@@ -2,15 +2,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use futures_util::stream::{self, StreamExt};
-use immich_rs_client::{
-    ClientError, ClientErrorClass, DuplicateCheck, ImmichUploadClient, UploadRequest, UploadResult,
-};
+use immich_rs_client::ImmichUploadClient;
 use immich_rs_core::{
     ApplyReport, Cancellation, CancellationToken, UploadOperation, UploadPlan, UploadRole,
 };
 
 use crate::journal::{CompletedAsset, Journal, JournalEvent, OutcomeKind};
-use crate::retry::{self, RetryBudget};
+use crate::operation::{OperationOutcome, OperationResult};
+use crate::retry::RetryBudget;
 use crate::verify::{VerifiedAsset, verify_source};
 use crate::{ExecutorError, ExecutorErrorClass, UploadExecutionConfig};
 
@@ -92,13 +91,6 @@ struct GroupResult {
     cancelled: bool,
 }
 
-struct OperationOutcome {
-    operation_id: String,
-    kind: OutcomeKind,
-    asset_id: Option<String>,
-    retries: u32,
-}
-
 fn pending_groups<'a>(
     plan: &'a UploadPlan,
     completed: &BTreeMap<String, CompletedAsset>,
@@ -175,14 +167,14 @@ async fn apply_group(
             continue;
         }
         if matches!(operation.role, UploadRole::LivePhotoImage { .. }) && video_asset_id.is_none() {
-            outcomes.push(failed_outcome(operation, 0));
+            outcomes.push(crate::operation::failed(operation, 0));
             continue;
         }
         let Some(source) = verified.get(&operation.operation_id) else {
-            outcomes.push(failed_outcome(operation, 0));
+            outcomes.push(crate::operation::failed(operation, 0));
             continue;
         };
-        let outcome = apply_operation(
+        let result = crate::operation::apply(
             operation,
             source,
             video_asset_id.as_deref(),
@@ -192,11 +184,23 @@ async fn apply_group(
             cancellation,
         )
         .await;
-        if matches!(operation.role, UploadRole::LivePhotoVideo { .. }) {
+        let outcome = match result {
+            OperationResult::Completed(outcome) => outcome,
+            OperationResult::Cancelled(outcome) => {
+                if let Some(outcome) = outcome {
+                    outcomes.push(outcome);
+                }
+                return GroupResult {
+                    outcomes,
+                    cancelled: true,
+                };
+            }
+        };
+        let is_video = matches!(operation.role, UploadRole::LivePhotoVideo { .. });
+        if is_video {
             video_asset_id.clone_from(&outcome.asset_id);
         }
-        let stop_dependency = outcome.asset_id.is_none()
-            && matches!(operation.role, UploadRole::LivePhotoVideo { .. });
+        let stop_dependency = outcome.asset_id.is_none() && is_video;
         outcomes.push(outcome);
         if stop_dependency {
             break;
@@ -205,147 +209,6 @@ async fn apply_group(
     GroupResult {
         outcomes,
         cancelled: false,
-    }
-}
-
-async fn apply_operation(
-    operation: &UploadOperation,
-    source: &VerifiedAsset,
-    live_photo_video_id: Option<&str>,
-    client: &ImmichUploadClient,
-    config: &UploadExecutionConfig,
-    retry_budget: &RetryBudget,
-    cancellation: &CancellationToken,
-) -> OperationOutcome {
-    let mut retries = 0_u32;
-    loop {
-        let duplicate = client
-            .duplicate_check(&operation.operation_id, &source.sha1_base64, cancellation)
-            .await;
-        match duplicate {
-            Ok(DuplicateCheck::Duplicate(asset_id)) => {
-                return successful_outcome(operation, OutcomeKind::Duplicate, asset_id, retries);
-            }
-            Ok(DuplicateCheck::Accept) => {}
-            Err(error) => {
-                if retry_allowed(error, retries, config, retry_budget)
-                    && retry::wait(
-                        retry::delay(&operation.operation_id, retries + 1, error, config),
-                        cancellation,
-                    )
-                    .await
-                {
-                    retries += 1;
-                    continue;
-                }
-                return failed_outcome(operation, retries);
-            }
-        }
-        let request = UploadRequest {
-            operation_id: &operation.operation_id,
-            file_name: &source.file_name,
-            media_path: &source.media_path,
-            media_len: operation.byte_len,
-            sha1_base64: &source.sha1_base64,
-            created_at_unix_ms: operation.created_at_unix_ms,
-            modified_at_unix_ms: operation.modified_at_unix_ms,
-            xmp: source
-                .xmp
-                .as_ref()
-                .map(|(path, len)| (path.as_path(), *len)),
-            live_photo_video_id,
-        };
-        match client.upload(&request, cancellation).await {
-            Ok((status, asset_id)) => {
-                let kind = match status {
-                    UploadResult::Created => OutcomeKind::Created,
-                    UploadResult::Duplicate => OutcomeKind::Duplicate,
-                };
-                return successful_outcome(operation, kind, asset_id, retries);
-            }
-            Err(error) if retry_allowed(error, retries, config, retry_budget) => {
-                if retry::wait(
-                    retry::delay(&operation.operation_id, retries + 1, error, config),
-                    cancellation,
-                )
-                .await
-                {
-                    retries += 1;
-                    continue;
-                }
-                return indeterminate_outcome(operation, retries);
-            }
-            Err(error) if uncertain(error) => {
-                return reconcile_uncertain(operation, source, client, cancellation, retries).await;
-            }
-            Err(_) => return failed_outcome(operation, retries),
-        }
-    }
-}
-
-async fn reconcile_uncertain(
-    operation: &UploadOperation,
-    source: &VerifiedAsset,
-    client: &ImmichUploadClient,
-    cancellation: &CancellationToken,
-    retries: u32,
-) -> OperationOutcome {
-    match client
-        .duplicate_check(&operation.operation_id, &source.sha1_base64, cancellation)
-        .await
-    {
-        Ok(DuplicateCheck::Duplicate(asset_id)) => {
-            successful_outcome(operation, OutcomeKind::Duplicate, asset_id, retries)
-        }
-        _ => indeterminate_outcome(operation, retries),
-    }
-}
-
-fn retry_allowed(
-    error: ClientError,
-    retries: u32,
-    config: &UploadExecutionConfig,
-    budget: &RetryBudget,
-) -> bool {
-    error.is_retryable() && retries + 1 < config.max_attempts_per_operation && budget.claim()
-}
-
-const fn uncertain(error: ClientError) -> bool {
-    matches!(
-        error.class(),
-        ClientErrorClass::Disconnect | ClientErrorClass::Timeout
-    )
-}
-
-fn successful_outcome(
-    operation: &UploadOperation,
-    kind: OutcomeKind,
-    asset_id: String,
-    retries: u32,
-) -> OperationOutcome {
-    OperationOutcome {
-        operation_id: operation.operation_id.clone(),
-        kind,
-        asset_id: Some(asset_id),
-        retries,
-    }
-}
-
-fn failed_outcome(operation: &UploadOperation, retries: u32) -> OperationOutcome {
-    OperationOutcome {
-        operation_id: operation.operation_id.clone(),
-        kind: OutcomeKind::Failed,
-        asset_id: None,
-        retries,
-    }
-}
-
-fn indeterminate_outcome(operation: &UploadOperation, retries: u32) -> OperationOutcome {
-    OperationOutcome {
-        operation_id: operation.operation_id.clone(),
-        kind: OutcomeKind::Indeterminate,
-        asset_id: None,
-        retries,
     }
 }
 

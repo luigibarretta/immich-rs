@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
+use immich_rs_executor::UploadExecutionConfig;
 use immich_rs_sources::FolderScanConfig;
 
 use crate::failure::CliFailure;
@@ -22,6 +23,7 @@ pub struct ApplyRequest {
     pub checkpoint: PathBuf,
     pub server: Option<String>,
     pub dry_run: bool,
+    pub config: UploadExecutionConfig,
 }
 
 pub fn parse_folder(arguments: &[OsString]) -> Result<FolderRequest, CliFailure> {
@@ -89,6 +91,7 @@ pub fn parse_apply(arguments: &[OsString]) -> Result<ApplyRequest, CliFailure> {
     let mut checkpoint = None;
     let mut server = None;
     let mut dry_run = false;
+    let mut config = UploadExecutionConfig::default();
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].to_str() {
@@ -98,6 +101,16 @@ pub fn parse_apply(arguments: &[OsString]) -> Result<ApplyRequest, CliFailure> {
                 checkpoint = Some(path_value(arguments, index, "--checkpoint")?);
             }
             Some("--server") => server = Some(string_value(arguments, index, "--server")?),
+            Some("--buffer-bytes") => {
+                config.scan.buffer_bytes = usize_value(arguments, index, "--buffer-bytes")?;
+            }
+            Some("--max-entries") => {
+                config.scan.max_entries = usize_value(arguments, index, "--max-entries")?;
+            }
+            Some("--max-directory-entries") => {
+                config.scan.max_directory_entries =
+                    usize_value(arguments, index, "--max-directory-entries")?;
+            }
             Some("--dry-run") if !dry_run => {
                 dry_run = true;
                 index += 1;
@@ -119,6 +132,7 @@ pub fn parse_apply(arguments: &[OsString]) -> Result<ApplyRequest, CliFailure> {
         checkpoint: checkpoint.ok_or_else(|| CliFailure::usage("--checkpoint is required"))?,
         server,
         dry_run,
+        config,
     })
 }
 

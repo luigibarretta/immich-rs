@@ -7,9 +7,11 @@ import json
 import os
 from pathlib import Path
 import runpy
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -73,6 +75,8 @@ def create_plan(binary: Path, source: Path, server_url: str, plan_path: Path) ->
             server_url,
             "--label",
             "synthetic-phase2",
+            "--buffer-bytes",
+            "4096",
             str(source),
         ],
         with_key=True,
@@ -104,6 +108,8 @@ def exercise_matrix(binary: Path, workspace: Path) -> None:
                 str(source),
                 "--checkpoint",
                 str(checkpoint),
+                "--buffer-bytes",
+                "4096",
             ],
             with_key=False,
         )
@@ -122,10 +128,14 @@ def exercise_matrix(binary: Path, workspace: Path) -> None:
             str(source),
             "--checkpoint",
             str(checkpoint),
+            "--buffer-bytes",
+            "4096",
         ]
         first = invoke(binary, apply_arguments, with_key=True)
         second = invoke(binary, apply_arguments, with_key=True)
-        duplicate_arguments = [*apply_arguments[:-1], str(duplicate_checkpoint)]
+        duplicate_arguments = list(apply_arguments)
+        checkpoint_index = duplicate_arguments.index("--checkpoint") + 1
+        duplicate_arguments[checkpoint_index] = str(duplicate_checkpoint)
         duplicate = invoke(binary, duplicate_arguments, with_key=True)
         snapshot = server.state.snapshot()
     if first.get("created") != 4 or second.get("resumed") != 4:
@@ -161,6 +171,8 @@ def exercise_fault(binary: Path, workspace: Path, kind: str) -> None:
                 str(source),
                 "--checkpoint",
                 str(checkpoint),
+                "--buffer-bytes",
+                "4096",
             ],
             with_key=True,
         )
@@ -211,6 +223,61 @@ def exercise_refusals(binary: Path, workspace: Path) -> None:
         raise RuntimeError("missing authentication did not fail before network access")
 
 
+def exercise_cancellation(binary: Path, workspace: Path) -> None:
+    source = workspace / "cancellation-source"
+    source.mkdir()
+    (source / "cancel.jpg").write_bytes(b"synthetic cancellation payload\n")
+    plan_path = workspace / "cancellation-plan.json"
+    checkpoint = workspace / "cancellation-checkpoint.sqlite"
+    scenario = MOCK["default_scenario"]()
+    scenario["fault"] = {
+        "kind": "timeout",
+        "times": 1,
+        "path_prefix": "/api/assets/bulk-upload-check",
+        "delay_ms": 500,
+    }
+    with MOCK["running_mock"](scenario) as server:
+        create_plan(binary, source, server.url, plan_path)
+        arguments = [
+            "apply",
+            "upload",
+            "--server",
+            server.url,
+            "--plan",
+            str(plan_path),
+            "--source",
+            str(source),
+            "--checkpoint",
+            str(checkpoint),
+            "--buffer-bytes",
+            "4096",
+        ]
+        process = subprocess.Popen(
+            [str(binary), *arguments],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=child_environment(True),
+        )
+        for _attempt in range(100):
+            paths = [request["path"] for request in server.state.snapshot()["requests"]]
+            if "/api/assets/bulk-upload-check" in paths:
+                break
+            time.sleep(0.01)
+        else:
+            process.kill()
+            process.wait(timeout=2)
+            raise RuntimeError("cancellation request did not reach the mock")
+        process.send_signal(signal.SIGINT)
+        stdout, stderr = process.communicate(timeout=2)
+        time.sleep(0.6)
+        resumed = invoke(binary, arguments, with_key=True)
+        snapshot = server.state.snapshot()
+    if process.returncode != 130 or stdout or SYNTHETIC_API_KEY.encode() in stderr:
+        raise RuntimeError("cancellation did not exit cleanly without secret output")
+    if resumed.get("created") != 1 or snapshot.get("asset_count") != 1:
+        raise RuntimeError("post-cancellation apply did not converge exactly once")
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("usage: run_phase2_mock.py <immich-rs-binary>", file=sys.stderr)
@@ -225,6 +292,7 @@ def main() -> int:
         exercise_fault(binary, workspace, "rate_limit")
         exercise_fault(binary, workspace, "commit_lost_response")
         exercise_refusals(binary, workspace)
+        exercise_cancellation(binary, workspace)
     return 0
 
 

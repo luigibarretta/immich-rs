@@ -1,5 +1,5 @@
 use immich_rs_core::CancellationToken;
-use immich_rs_executor::{UploadExecutionConfig, apply_upload};
+use immich_rs_executor::apply_upload;
 
 use crate::args::ApplyRequest;
 use crate::failure::CliFailure;
@@ -28,11 +28,14 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
         &plan,
         &request.source,
         &request.checkpoint,
-        &UploadExecutionConfig::default(),
+        &request.config,
         &client,
         &cancellation,
     )
     .await
     .map_err(CliFailure::from_executor)?;
+    if report.cancelled {
+        return Err(CliFailure::cancelled());
+    }
     output::write_json(&report, "apply report")
 }

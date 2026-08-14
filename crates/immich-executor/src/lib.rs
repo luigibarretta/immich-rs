@@ -5,6 +5,7 @@ mod apply;
 mod config;
 mod error;
 mod journal;
+mod operation;
 mod planner;
 mod retry;
 mod verify;

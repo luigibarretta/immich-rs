@@ -42,6 +42,13 @@ impl CliFailure {
         }
     }
 
+    pub fn cancelled() -> Self {
+        Self {
+            exit_code: CANCELLED_EXIT,
+            message: "operation cancelled cleanly".to_owned(),
+        }
+    }
+
     pub fn from_scan(error: &ScanError) -> Self {
         let exit_code = match error {
             ScanError::Cancelled => CANCELLED_EXIT,

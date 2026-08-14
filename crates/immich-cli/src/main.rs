@@ -75,6 +75,6 @@ async fn run_apply(arguments: &[OsString]) -> Result<(), CliFailure> {
 
 fn print_help() {
     println!(
-        "immich-rs {VERSION}\n\nBounded folder planning and disposable Phase-2 upload\n\nUsage:\n  immich-rs plan folder [OPTIONS] <PATH>\n  immich-rs plan upload folder --server <LOOPBACK_URL> [OPTIONS] <PATH>\n  immich-rs apply upload --dry-run --plan <FILE> --source <PATH> --checkpoint <FILE>\n  immich-rs apply upload --server <LOOPBACK_URL> --plan <FILE> --source <PATH> --checkpoint <FILE>\n\nThe API key is read only from IMMICH_RS_API_KEY. Phase 2 rejects non-loopback servers.\nNo delete, replace or metadata mutation command exists."
+        "immich-rs {VERSION}\n\nBounded folder planning and disposable Phase-2 upload\n\nUsage:\n  immich-rs plan folder [OPTIONS] <PATH>\n  immich-rs plan upload folder --server <LOOPBACK_URL> [OPTIONS] <PATH>\n  immich-rs apply upload --dry-run --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n  immich-rs apply upload --server <LOOPBACK_URL> --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n\nRepeat non-default scan limits when applying a plan. The API key is read only from IMMICH_RS_API_KEY. Phase 2 rejects non-loopback servers.\nNo delete, replace or metadata mutation command exists."
     );
 }

@@ -11,9 +11,13 @@ publish = false
 
 [dependencies]
 ctrlc.workspace = true
+immich-rs-client = { path = "../immich-client", version = "=0.0.0" }
 immich-rs-core = { path = "../immich-core", version = "=0.0.0" }
+immich-rs-executor = { path = "../immich-executor", version = "=0.0.0" }
 immich-rs-sources = { path = "../immich-sources", version = "=0.0.0" }
+serde.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

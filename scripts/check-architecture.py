@@ -16,7 +16,12 @@ MANIFESTS = {
     "immich-rs-sources": REPOSITORY_ROOT / "crates" / "immich-sources" / "Cargo.toml",
 }
 ALLOWED_INTERNAL = {
-    "immich-rs-cli": {"immich-rs-core", "immich-rs-sources"},
+    "immich-rs-cli": {
+        "immich-rs-client",
+        "immich-rs-core",
+        "immich-rs-executor",
+        "immich-rs-sources",
+    },
     "immich-rs-client": {"immich-rs-core"},
     "immich-rs-core": set(),
     "immich-rs-executor": {"immich-rs-client", "immich-rs-core", "immich-rs-sources"},
@@ -39,6 +44,12 @@ def check() -> list[str]:
         unexpected = actual - ALLOWED_INTERNAL[package]
         if unexpected:
             failures.append(f"{package}: forbidden internal dependencies: {sorted(unexpected)}")
+    dry_run_source = (REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "upload_dry_run.rs").read_text(
+        encoding="utf-8"
+    )
+    forbidden_dry_run_tokens = ("immich_rs_client", "api_key", "server", "authorize_upload")
+    if any(token in dry_run_source.casefold() for token in forbidden_dry_run_tokens):
+        failures.append("dry-run source can reach a server or upload capability")
     client_root = REPOSITORY_ROOT / "crates" / "immich-client" / "src"
     client_source = (client_root / "lib.rs").read_text(encoding="utf-8")
     upload_source = (client_root / "upload.rs").read_text(encoding="utf-8")

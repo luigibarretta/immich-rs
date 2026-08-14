@@ -516,9 +516,13 @@ name = "immich-rs-cli"
 version = "0.0.0"
 dependencies = [
  "ctrlc",
+ "immich-rs-client",
  "immich-rs-core",
+ "immich-rs-executor",
  "immich-rs-sources",
+ "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

@@ -1,0 +1,100 @@
+{
+  "schema": "phase2-disposable-v1",
+  "commit_sha": "ae3cb5c7ecef046a7fb12c37c8ca2081e1887cf3",
+  "environment": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "docker_server_version": "29.7.2",
+    "binary_sha256": "bb25f2215fefa897c417e518b30fafe496b0b93be4eba2088d8e6e64d2041c12"
+  },
+  "images": {
+    "server": "ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa",
+    "valkey": "docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411",
+    "database": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23"
+  },
+  "fixture": {
+    "kind": "synthetic",
+    "license": "CC0-1.0",
+    "sha256": "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
+    "assets": 1
+  },
+  "plan_sha256": "8241fc552575a7e1cbd8d2b35472590ec849bd9fdd36f9ac6d9718d04ac86522",
+  "methodology": {
+    "network": "dedicated bridge with IP masquerading disabled; ephemeral 127.0.0.1 publication",
+    "commands": [
+      "plan upload folder",
+      "apply upload --dry-run",
+      "apply upload",
+      "apply upload (checkpoint resume)",
+      "apply upload (fresh checkpoint duplicate check)"
+    ]
+  },
+  "server_version": {
+    "major": 3,
+    "minor": 1,
+    "patch": 0,
+    "prerelease": null
+  },
+  "reports": {
+    "dry_run": {
+      "schema_version": 1,
+      "dry_run": true,
+      "planned": 1,
+      "would_upload": 1,
+      "created": 0,
+      "duplicate": 0,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "first": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 1,
+      "would_upload": 0,
+      "created": 1,
+      "duplicate": 0,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "resume": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 1,
+      "would_upload": 0,
+      "created": 0,
+      "duplicate": 0,
+      "resumed": 1,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "duplicate": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 1,
+      "would_upload": 0,
+      "created": 0,
+      "duplicate": 1,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    }
+  },
+  "asset_count": 1,
+  "cleanup": {
+    "verified": true,
+    "labelled_containers": 0,
+    "labelled_volumes": 0,
+    "labelled_networks": 0,
+    "downloaded_images_removed": 3
+  }
+}

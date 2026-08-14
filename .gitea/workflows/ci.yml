@@ -37,6 +37,7 @@ jobs:
           scripts/check-adrs.sh
           python3 scripts/check-architecture.py
           python3 scripts/check-benchmark-evidence.py
+          python3 scripts/check-disposable-evidence.py
           python3 scripts/check-loc.py
       - name: Validate synthetic fixtures and repository safety
         run: |
@@ -46,11 +47,11 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
       - run: cargo test --locked --workspace --all-targets
       - run: cargo doc --locked --workspace --no-deps
-      - name: Prove the CLI remains read-only and fails closed
+      - name: Prove the CLI fails closed without a command
         run: |
           cargo run --locked -p immich-rs-cli -- --version
           if cargo run --locked -p immich-rs-cli; then
-            echo "read-only CLI unexpectedly accepted a missing command" >&2
+            echo "CLI unexpectedly accepted a missing command" >&2
             exit 1
           fi
 

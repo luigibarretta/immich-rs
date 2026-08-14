@@ -290,6 +290,8 @@ def main() -> int:
         workspace = Path(temporary)
         exercise_matrix(binary, workspace)
         exercise_fault(binary, workspace, "rate_limit")
+        exercise_fault(binary, workspace, "server_error")
+        exercise_fault(binary, workspace, "disconnect")
         exercise_fault(binary, workspace, "commit_lost_response")
         exercise_refusals(binary, workspace)
         exercise_cancellation(binary, workspace)

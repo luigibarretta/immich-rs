@@ -40,6 +40,9 @@ fn remove_unicode_collisions(state: &mut ScanState) {
     for media in &state.media {
         *counts.entry(media.relative_path.clone()).or_default() += 1;
     }
+    for sidecar in &state.sidecars {
+        *counts.entry(sidecar.relative_path.clone()).or_default() += 1;
+    }
     let collisions = counts
         .into_iter()
         .filter_map(|(path, count)| (count > 1).then_some(path))
@@ -54,6 +57,9 @@ fn remove_unicode_collisions(state: &mut ScanState) {
     state
         .media
         .retain(|media| !collisions.contains(&media.relative_path));
+    state
+        .sidecars
+        .retain(|sidecar| !collisions.contains(&sidecar.relative_path));
 }
 
 fn reconcile_sidecars(state: &mut ScanState) {

@@ -131,6 +131,23 @@ fn unicode_normalization_collisions_fail_closed_with_a_rule_id()
     Ok(())
 }
 
+#[cfg(unix)]
+#[test]
+fn unicode_sidecar_collisions_fail_closed() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("unicode-sidecar-collision")?;
+    directory.write("caf\u{e9}.png", b"image")?;
+    directory.write("caf\u{e9}.png.json", b"composed")?;
+    directory.write("cafe\u{301}.png.json", b"decomposed")?;
+    let plan = scan(&directory.path)?;
+    assert!(plan.assets[0].metadata.is_empty());
+    assert!(
+        plan.errors
+            .iter()
+            .any(|error| error.rule_id == rule_id::UNICODE_COLLISION)
+    );
+    Ok(())
+}
+
 #[test]
 fn overlong_paths_are_rejected_with_the_specific_limit_rule()
 -> Result<(), Box<dyn std::error::Error>> {

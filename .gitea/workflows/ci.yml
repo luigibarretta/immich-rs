@@ -103,7 +103,7 @@ jobs:
             .artifacts/oracle/observation.json \
             --output .artifacts/oracle/differential-report.json
       - name: Preserve normalized evidence without redistributing the oracle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: phase1-differential-${{ github.sha }}
           path: .artifacts/oracle

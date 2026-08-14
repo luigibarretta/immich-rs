@@ -45,7 +45,10 @@ class MockImmichServerTests(unittest.TestCase):
                 request(server, "/api/server/version")
             self.assertEqual(error.exception.code, 401)
             with request(server, "/api/server/version", api_key=mock.SYNTHETIC_API_KEY) as response:
-                self.assertEqual(json.load(response), {"major": 3, "minor": 1, "patch": 0})
+                self.assertEqual(
+                    json.load(response),
+                    {"major": 3, "minor": 1, "patch": 0, "prerelease": None},
+                )
 
     def test_incompatible_version_is_explicit(self) -> None:
         scenario = mock.default_scenario()

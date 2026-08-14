@@ -116,7 +116,10 @@ impl ImmichReadClient {
             .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
         check_cancelled(cancellation)?;
         let version: VersionResponse = self.get_json("api/server/version").await?;
-        if version.major != SUPPORTED_MAJOR || version.minor != SUPPORTED_MINOR {
+        if version.major != SUPPORTED_MAJOR
+            || version.minor != SUPPORTED_MINOR
+            || version.prerelease.is_some()
+        {
             return Err(ClientError::new(ClientErrorClass::Compatibility));
         }
         check_cancelled(cancellation)?;

@@ -6,6 +6,7 @@ pub struct VersionResponse {
     pub major: u32,
     pub minor: u32,
     pub patch: u32,
+    pub prerelease: Option<u32>,
 }
 
 #[derive(Deserialize)]

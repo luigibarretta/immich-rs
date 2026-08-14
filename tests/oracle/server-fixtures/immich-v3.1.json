@@ -6,7 +6,7 @@
     "author": "immich-rs test harness",
     "license": "CC0-1.0"
   },
-  "version": { "major": 3, "minor": 1, "patch": 0 },
+  "version": { "major": 3, "minor": 1, "patch": 0, "prerelease": null },
   "user": {
     "id": "00000000-0000-4000-8000-000000000001",
     "email": "synthetic-user@example.invalid",

@@ -2,16 +2,16 @@
   "aggregate": {
     "immich_go": {
       "characters_read": {
-        "max": 67154034,
-        "median": 67153645.5,
-        "min": 67153103,
-        "p95": 67154034
+        "max": 67152478,
+        "median": 67152360.0,
+        "min": 67151884,
+        "p95": 67152478
       },
       "characters_written": {
-        "max": 9405,
-        "median": 8755.0,
-        "min": 7809,
-        "p95": 9405
+        "max": 9397,
+        "median": 8969.0,
+        "min": 8087,
+        "p95": 9397
       },
       "logical_media_bytes_read": {
         "max": 67108864,
@@ -32,10 +32,10 @@
         "p95": 16
       },
       "peak_rss_bytes": {
-        "max": 14495744,
+        "max": 14835712,
         "median": 13959168.0,
-        "min": 13303808,
-        "p95": 14495744
+        "min": 13815808,
+        "p95": 14835712
       },
       "storage_bytes_read": {
         "max": 0,
@@ -50,36 +50,36 @@
         "p95": 0
       },
       "system_cpu_seconds": {
-        "max": 0.024787000000000003,
-        "median": 0.0203285,
-        "min": 0.008525000000000005,
-        "p95": 0.024787000000000003
+        "max": 0.025844000000000006,
+        "median": 0.01462999999999999,
+        "min": 0.012371000000000021,
+        "p95": 0.025844000000000006
       },
       "user_cpu_seconds": {
-        "max": 0.062027000000000054,
-        "median": 0.04408650000000014,
-        "min": 0.037993000000000166,
-        "p95": 0.062027000000000054
+        "max": 0.052571000000000034,
+        "median": 0.04608000000000001,
+        "min": 0.03015100000000004,
+        "p95": 0.052571000000000034
       },
       "wall_time_seconds": {
-        "max": 0.083402431,
-        "median": 0.058400972,
-        "min": 0.054828234,
-        "p95": 0.083402431
+        "max": 0.061624839,
+        "median": 0.058898802,
+        "min": 0.054686625,
+        "p95": 0.061624839
       }
     },
     "immich_rs": {
       "characters_read": {
-        "max": 67116767,
-        "median": 66428639.0,
-        "min": 63971039,
-        "p95": 67116767
+        "max": 66920159,
+        "median": 65674975.0,
+        "min": 64233183,
+        "p95": 66920159
       },
       "characters_written": {
-        "max": 3282,
+        "max": 0,
         "median": 0.0,
         "min": 0,
-        "p95": 3282
+        "p95": 0
       },
       "logical_media_bytes_read": {
         "max": 67108864,
@@ -100,10 +100,10 @@
         "p95": 4
       },
       "peak_rss_bytes": {
-        "max": 2609152,
-        "median": 2547712.0,
-        "min": 2461696,
-        "p95": 2609152
+        "max": 2621440,
+        "median": 2603008.0,
+        "min": 2535424,
+        "p95": 2621440
       },
       "storage_bytes_read": {
         "max": 0,
@@ -118,22 +118,22 @@
         "p95": 0
       },
       "system_cpu_seconds": {
-        "max": 0.012407999999999975,
-        "median": 0.009720499999999993,
-        "min": 0.0,
-        "p95": 0.012407999999999975
+        "max": 0.020064,
+        "median": 0.011784,
+        "min": 0.0042240000000000055,
+        "p95": 0.020064
       },
       "user_cpu_seconds": {
-        "max": 0.0588820000000001,
-        "median": 0.04003500000000004,
-        "min": 0.03317199999999998,
-        "p95": 0.0588820000000001
+        "max": 0.04286100000000004,
+        "median": 0.03569199999999996,
+        "min": 0.02721800000000002,
+        "p95": 0.04286100000000004
       },
       "wall_time_seconds": {
-        "max": 0.073852181,
-        "median": 0.048027526,
-        "min": 0.045906461,
-        "p95": 0.073852181
+        "max": 0.053618278,
+        "median": 0.0491022505,
+        "min": 0.047308316,
+        "p95": 0.053618278
       }
     }
   },
@@ -167,7 +167,7 @@
       "scope": "child process only; fixture generation and mock startup excluded",
       "warmups": 2
     },
-    "source_revision": "af2fa9397561199129794abe0ac1de94a5993bf2",
+    "source_revision": "497244e3b2dc954902773c341166cb2475192c16",
     "tools": {
       "immich_go": {
         "binary_sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
@@ -187,8 +187,50 @@
     {
       "execution_order": "immich-rs-first",
       "immich_go": {
-        "characters_read": 67153103,
-        "characters_written": 7809,
+        "characters_read": 67152470,
+        "characters_written": 9151,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 14811136,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.019401,
+        "user_cpu_seconds": 0.034913,
+        "wall_time_seconds": 0.054686625
+      },
+      "immich_rs": {
+        "characters_read": 66920159,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 4,
+        "peak_rss_bytes": 2621440,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.007863000000000002,
+        "user_cpu_seconds": 0.03931799999999999,
+        "wall_time_seconds": 0.049028154
+      },
+      "sample": 0
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67151884,
+        "characters_written": 8087,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -198,12 +240,138 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 16,
-        "peak_rss_bytes": 14495744,
+        "peak_rss_bytes": 14835712,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.008525000000000005,
-        "user_cpu_seconds": 0.051183999999999674,
-        "wall_time_seconds": 0.057147325
+        "system_cpu_seconds": 0.012443999999999997,
+        "user_cpu_seconds": 0.049767000000000006,
+        "wall_time_seconds": 0.061624839
+      },
+      "immich_rs": {
+        "characters_read": 65281759,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 4,
+        "peak_rss_bytes": 2613248,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.0042240000000000055,
+        "user_cpu_seconds": 0.04224099999999997,
+        "wall_time_seconds": 0.047308316
+      },
+      "sample": 1
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67152478,
+        "characters_written": 9159,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 13881344,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.012768000000000002,
+        "user_cpu_seconds": 0.04681400000000002,
+        "wall_time_seconds": 0.05818276
+      },
+      "immich_rs": {
+        "characters_read": 64495327,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 4,
+        "peak_rss_bytes": 2539520,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.019455,
+        "user_cpu_seconds": 0.02721800000000002,
+        "wall_time_seconds": 0.049103199
+      },
+      "sample": 2
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67152258,
+        "characters_written": 8755,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 13893632,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.01649199999999998,
+        "user_cpu_seconds": 0.045346,
+        "wall_time_seconds": 0.059614844
+      },
+      "immich_rs": {
+        "characters_read": 66068191,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 4,
+        "peak_rss_bytes": 2592768,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.020064,
+        "user_cpu_seconds": 0.03206599999999993,
+        "wall_time_seconds": 0.053618278
+      },
+      "sample": 3
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67152136,
+        "characters_written": 8787,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 14024704,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.025844000000000006,
+        "user_cpu_seconds": 0.03015100000000004,
+        "wall_time_seconds": 0.056470213
       },
       "immich_rs": {
         "characters_read": 66854623,
@@ -217,20 +385,20 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2609152,
+        "peak_rss_bytes": 2613248,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.0,
-        "user_cpu_seconds": 0.04791400000000001,
-        "wall_time_seconds": 0.050012803
+        "system_cpu_seconds": 0.015704999999999997,
+        "user_cpu_seconds": 0.03140799999999999,
+        "wall_time_seconds": 0.049101302
       },
-      "sample": 0
+      "sample": 4
     },
     {
       "execution_order": "immich-go-first",
       "immich_go": {
-        "characters_read": 67154034,
-        "characters_written": 9405,
+        "characters_read": 67152462,
+        "characters_written": 9397,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -239,58 +407,16 @@
           "http_retries_observed": 0,
           "source_assets_planned": 8
         },
-        "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 14315520,
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 13815808,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.024787000000000003,
-        "user_cpu_seconds": 0.062027000000000054,
-        "wall_time_seconds": 0.083402431
+        "system_cpu_seconds": 0.012371000000000021,
+        "user_cpu_seconds": 0.052571000000000034,
+        "wall_time_seconds": 0.061348367
       },
       "immich_rs": {
-        "characters_read": 67116767,
-        "characters_written": 3282,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 0,
-          "http_requests": 0,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2519040,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.010934999999999973,
-        "user_cpu_seconds": 0.0588820000000001,
-        "wall_time_seconds": 0.073852181
-      },
-      "sample": 1
-    },
-    {
-      "execution_order": "immich-rs-first",
-      "immich_go": {
-        "characters_read": 67153448,
-        "characters_written": 8415,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 5,
-          "http_requests": 17,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 13352960,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.01703899999999997,
-        "user_cpu_seconds": 0.040915000000000035,
-        "wall_time_seconds": 0.054828234
-      },
-      "immich_rs": {
-        "characters_read": 66002655,
+        "characters_read": 64233183,
         "characters_written": 0,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
@@ -304,135 +430,9 @@
         "peak_rss_bytes": 2535424,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.011525000000000007,
-        "user_cpu_seconds": 0.03461099999999995,
-        "wall_time_seconds": 0.047465743
-      },
-      "sample": 2
-    },
-    {
-      "execution_order": "immich-go-first",
-      "immich_go": {
-        "characters_read": 67153639,
-        "characters_written": 8755,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 5,
-          "http_requests": 17,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 13303808,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.023618000000000028,
-        "user_cpu_seconds": 0.043254000000000126,
-        "wall_time_seconds": 0.062398186
-      },
-      "immich_rs": {
-        "characters_read": 63971039,
-        "characters_written": 0,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 0,
-          "http_requests": 0,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2560000,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.012407999999999975,
-        "user_cpu_seconds": 0.03317199999999998,
-        "wall_time_seconds": 0.045906461
-      },
-      "sample": 3
-    },
-    {
-      "execution_order": "immich-rs-first",
-      "immich_go": {
-        "characters_read": 67153668,
-        "characters_written": 8755,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 5,
-          "http_requests": 17,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 14450688,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.02415299999999998,
-        "user_cpu_seconds": 0.037993000000000166,
-        "wall_time_seconds": 0.058557875
-      },
-      "immich_rs": {
-        "characters_read": 66330335,
-        "characters_written": 0,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 0,
-          "http_requests": 0,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2576384,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.008506000000000014,
-        "user_cpu_seconds": 0.0382760000000002,
-        "wall_time_seconds": 0.048234067
-      },
-      "sample": 4
-    },
-    {
-      "execution_order": "immich-go-first",
-      "immich_go": {
-        "characters_read": 67153652,
-        "characters_written": 9066,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 5,
-          "http_requests": 17,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 13602816,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.014979999999999993,
-        "user_cpu_seconds": 0.04491900000000015,
-        "wall_time_seconds": 0.058244069
-      },
-      "immich_rs": {
-        "characters_read": 66526943,
-        "characters_written": 0,
-        "logical_media_bytes_read": 67108864,
-        "logical_media_bytes_written": 0,
-        "operations": {
-          "contained_oracle_mutations": 0,
-          "http_requests": 0,
-          "http_retries_observed": 0,
-          "source_assets_planned": 8
-        },
-        "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2461696,
-        "storage_bytes_read": 0,
-        "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.00418099999999999,
-        "user_cpu_seconds": 0.04179399999999989,
-        "wall_time_seconds": 0.047820985
+        "system_cpu_seconds": 0.007811999999999986,
+        "user_cpu_seconds": 0.04286100000000004,
+        "wall_time_seconds": 0.053126729
       },
       "sample": 5
     }

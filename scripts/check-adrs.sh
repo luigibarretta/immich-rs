@@ -3,7 +3,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 adr_dir="$repo_root/docs/adr"
-minimum_count=15
+minimum_count=16
 
 count=$(find "$adr_dir" -maxdepth 1 -type f -name 'ADR-[0-9][0-9][0-9][0-9]-*.md' | wc -l)
 if [ "$count" -lt "$minimum_count" ]; then

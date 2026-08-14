@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""Fail closed on unsafe, undeclared or non-reproducible test fixtures."""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import re
+import sys
+from types import ModuleType
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "fixtures" / "v1"
+SKIPPED_PARTS = {".git", "target", ".cargo"}
+SELF_TEST_PATHS = {
+    "scripts/check-fixtures.py",
+    "tests/tooling/test_fixture_tools.py",
+}
+TEXT_SUFFIXES = {".json", ".md", ".py", ".rs", ".sh", ".toml", ".yml", ".yaml"}
+SECRET_PATTERNS = {
+    "credential assignment": re.compile(
+        r"(?i)(?:api[_-]?key|x-api-key|authorization|bearer|password|secret)"
+        r"\s*[:=]\s*[\"']?(?!synthetic|placeholder|redacted)[A-Za-z0-9_./+:-]{16,}"
+    ),
+    "AWS access key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    "JWT": re.compile(r"\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\b"),
+}
+PRODUCTION_PATTERNS = {
+    "production hostname": re.compile(r"(?i)\bit[0-9]+-prd-[a-z0-9-]+\b"),
+    "RFC1918 IPv4": re.compile(
+        r"(?<![0-9])(?:10\.(?:[0-9]{1,3}\.){2}[0-9]{1,3}|192\.168\.(?:[0-9]{1,3}\.)[0-9]{1,3}|172\.(?:1[6-9]|2[0-9]|3[01])\.(?:[0-9]{1,3}\.)[0-9]{1,3})(?![0-9])"
+    ),
+}
+PERSONAL_METADATA_KEYS = {
+    "address",
+    "altitude",
+    "face",
+    "faces",
+    "gps",
+    "latitude",
+    "location",
+    "longitude",
+    "people",
+    "person",
+}
+
+
+class CheckFailure(ValueError):
+    """One fail-closed fixture or repository check failed."""
+
+
+def _load_materializer() -> ModuleType:
+    path = REPOSITORY_ROOT / "scripts" / "materialize-fixture.py"
+    spec = importlib.util.spec_from_file_location("fixture_materializer", path)
+    if spec is None or spec.loader is None:
+        raise CheckFailure("cannot load fixture materializer")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _iter_repository_text() -> list[Path]:
+    return sorted(
+        path
+        for path in REPOSITORY_ROOT.rglob("*")
+        if path.is_file()
+        and path.suffix.lower() in TEXT_SUFFIXES
+        and not any(part in SKIPPED_PARTS for part in path.relative_to(REPOSITORY_ROOT).parts)
+        and path.relative_to(REPOSITORY_ROOT).as_posix() not in SELF_TEST_PATHS
+    )
+
+
+def check_repository_secrets() -> None:
+    """Reject credential-shaped data and known production infrastructure."""
+    findings: list[str] = []
+    for path in _iter_repository_text():
+        relative = path.relative_to(REPOSITORY_ROOT).as_posix()
+        text = path.read_text(encoding="utf-8")
+        for label, pattern in {**SECRET_PATTERNS, **PRODUCTION_PATTERNS}.items():
+            if pattern.search(text):
+                findings.append(f"{relative}: contains {label}")
+    if findings:
+        raise CheckFailure("\n".join(findings))
+
+
+def _walk_json(value: object, path: str = "$") -> list[str]:
+    findings: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key.casefold() in PERSONAL_METADATA_KEYS:
+                findings.append(f"{path}.{key}: personal metadata key is forbidden")
+            findings.extend(_walk_json(child, f"{path}.{key}"))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            findings.extend(_walk_json(child, f"{path}[{index}]"))
+    return findings
+
+
+def check_manifests() -> None:
+    """Validate every v1 fixture and expected normalized-plan digest."""
+    materializer = _load_materializer()
+    manifests = sorted(FIXTURE_ROOT.glob("*/manifest.json")) if FIXTURE_ROOT.exists() else []
+    for manifest_path in manifests:
+        try:
+            manifest = materializer.load_manifest(manifest_path)
+        except ValueError as error:
+            raise CheckFailure(f"{manifest_path}: {error}") from error
+        findings = _walk_json(manifest)
+        if findings:
+            raise CheckFailure("\n".join(f"{manifest_path}: {finding}" for finding in findings))
+        expected = manifest.get("expected_plan")
+        if not isinstance(expected, dict) or expected.get("schema") != "normalized-plan-v1":
+            raise CheckFailure(f"{manifest_path}: invalid expected-plan declaration")
+        expected_path_value = expected.get("path")
+        expected_digest = expected.get("sha256")
+        if expected_path_value != "expected-plan.json" or not isinstance(expected_digest, str):
+            raise CheckFailure(f"{manifest_path}: expected plan path or digest is invalid")
+        expected_path = manifest_path.parent / expected_path_value
+        try:
+            expected_bytes = expected_path.read_bytes()
+            expected_json = json.loads(expected_bytes)
+        except (OSError, json.JSONDecodeError) as error:
+            raise CheckFailure(f"{expected_path}: cannot read expected plan: {error}") from error
+        if expected_json.get("schema_version") != 1:
+            raise CheckFailure(f"{expected_path}: normalized plan schema must be 1")
+        actual_digest = hashlib.sha256(expected_bytes).hexdigest()
+        if actual_digest != expected_digest:
+            raise CheckFailure(f"{expected_path}: expected-plan digest mismatch")
+        allowed = {"manifest.json", "expected-plan.json"}
+        extras = sorted(path.name for path in manifest_path.parent.iterdir() if path.name not in allowed)
+        if extras:
+            raise CheckFailure(f"{manifest_path.parent}: undeclared committed fixture files: {extras}")
+
+
+def main() -> int:
+    try:
+        check_repository_secrets()
+        check_manifests()
+    except (CheckFailure, OSError, UnicodeError) as error:
+        print(f"fixture safety check failed:\n{error}", file=sys.stderr)
+        return 1
+    print("fixture safety and provenance checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

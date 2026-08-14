@@ -32,6 +32,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0013](ADR-0013-security-privacy-and-observability.md) | Security, privacy and observability | Accepted |
 | [0014](ADR-0014-platform-release-and-supply-chain.md) | Platform, release and supply chain | Accepted |
 | [0015](ADR-0015-phased-delivery-and-production-cutover.md) | Phased delivery and production cutover | Accepted |
+| [0016](ADR-0016-phase-zero-contracts.md) | Phase-zero fixture and normalized-plan contracts | Accepted |
 
 ## Template
 

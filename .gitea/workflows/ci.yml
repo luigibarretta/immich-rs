@@ -23,7 +23,9 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - name: Validate architecture records
-        run: scripts/check-adrs.sh
+        run: |
+          scripts/check-adrs.sh
+          python3 scripts/check-loc.py
       - name: Validate synthetic fixtures and repository safety
         run: |
           python3 scripts/check-fixtures.py

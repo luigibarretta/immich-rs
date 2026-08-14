@@ -1,0 +1,16 @@
+{
+  "maxLines": 400,
+  "allowedGrowthLines": 0,
+  "roots": [
+    "crates",
+    "scripts",
+    "tests"
+  ],
+  "extensions": [
+    ".rs",
+    ".py",
+    ".sh"
+  ],
+  "ignore": {},
+  "allow": {}
+}

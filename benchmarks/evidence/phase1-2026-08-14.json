@@ -2,16 +2,16 @@
   "aggregate": {
     "immich_go": {
       "characters_read": {
-        "max": 67153973,
-        "median": 67153424.0,
-        "min": 67153209,
-        "p95": 67153973
+        "max": 67154034,
+        "median": 67153645.5,
+        "min": 67153103,
+        "p95": 67154034
       },
       "characters_written": {
-        "max": 10999,
-        "median": 8638.0,
-        "min": 8071,
-        "p95": 10999
+        "max": 9405,
+        "median": 8755.0,
+        "min": 7809,
+        "p95": 9405
       },
       "logical_media_bytes_read": {
         "max": 67108864,
@@ -27,15 +27,15 @@
       },
       "peak_open_file_descriptors": {
         "max": 16,
-        "median": 15.5,
+        "median": 15.0,
         "min": 15,
         "p95": 16
       },
       "peak_rss_bytes": {
-        "max": 15093760,
-        "median": 14282752.0,
-        "min": 13451264,
-        "p95": 15093760
+        "max": 14495744,
+        "median": 13959168.0,
+        "min": 13303808,
+        "p95": 14495744
       },
       "storage_bytes_read": {
         "max": 0,
@@ -50,36 +50,36 @@
         "p95": 0
       },
       "system_cpu_seconds": {
-        "max": 0.046232999999999996,
-        "median": 0.020770500000000004,
-        "min": 0.017664,
-        "p95": 0.046232999999999996
+        "max": 0.024787000000000003,
+        "median": 0.0203285,
+        "min": 0.008525000000000005,
+        "p95": 0.024787000000000003
       },
       "user_cpu_seconds": {
-        "max": 0.08432499999999998,
-        "median": 0.04261250000000001,
-        "min": 0.03321799999999997,
-        "p95": 0.08432499999999998
+        "max": 0.062027000000000054,
+        "median": 0.04408650000000014,
+        "min": 0.037993000000000166,
+        "p95": 0.062027000000000054
       },
       "wall_time_seconds": {
-        "max": 0.099334671,
-        "median": 0.0608631645,
-        "min": 0.057859958,
-        "p95": 0.099334671
+        "max": 0.083402431,
+        "median": 0.058400972,
+        "min": 0.054828234,
+        "p95": 0.083402431
       }
     },
     "immich_rs": {
       "characters_read": {
-        "max": 67051231,
-        "median": 65543903.0,
-        "min": 64429791,
-        "p95": 67051231
+        "max": 67116767,
+        "median": 66428639.0,
+        "min": 63971039,
+        "p95": 67116767
       },
       "characters_written": {
-        "max": 0,
+        "max": 3282,
         "median": 0.0,
         "min": 0,
-        "p95": 0
+        "p95": 3282
       },
       "logical_media_bytes_read": {
         "max": 67108864,
@@ -100,10 +100,10 @@
         "p95": 4
       },
       "peak_rss_bytes": {
-        "max": 2629632,
-        "median": 2605056.0,
-        "min": 2420736,
-        "p95": 2629632
+        "max": 2609152,
+        "median": 2547712.0,
+        "min": 2461696,
+        "p95": 2609152
       },
       "storage_bytes_read": {
         "max": 0,
@@ -118,22 +118,22 @@
         "p95": 0
       },
       "system_cpu_seconds": {
-        "max": 0.019613999999999965,
-        "median": 0.009693499999999994,
-        "min": 0.0039050000000000057,
-        "p95": 0.019613999999999965
+        "max": 0.012407999999999975,
+        "median": 0.009720499999999993,
+        "min": 0.0,
+        "p95": 0.012407999999999975
       },
       "user_cpu_seconds": {
-        "max": 0.08602299999999996,
-        "median": 0.04231099999999999,
-        "min": 0.039675000000000016,
-        "p95": 0.08602299999999996
+        "max": 0.0588820000000001,
+        "median": 0.04003500000000004,
+        "min": 0.03317199999999998,
+        "p95": 0.0588820000000001
       },
       "wall_time_seconds": {
-        "max": 0.109096248,
-        "median": 0.051021750500000004,
-        "min": 0.047821327,
-        "p95": 0.109096248
+        "max": 0.073852181,
+        "median": 0.048027526,
+        "min": 0.045906461,
+        "p95": 0.073852181
       }
     }
   },
@@ -167,7 +167,7 @@
       "scope": "child process only; fixture generation and mock startup excluded",
       "warmups": 2
     },
-    "source_revision": "4c0e4742efa2bbbcc3a91482fec7e664e6496473",
+    "source_revision": "af2fa9397561199129794abe0ac1de94a5993bf2",
     "tools": {
       "immich_go": {
         "binary_sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
@@ -187,8 +187,8 @@
     {
       "execution_order": "immich-rs-first",
       "immich_go": {
-        "characters_read": 67153726,
-        "characters_written": 9357,
+        "characters_read": 67153103,
+        "characters_written": 7809,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -197,16 +197,16 @@
           "http_retries_observed": 0,
           "source_assets_planned": 8
         },
-        "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 14413824,
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 14495744,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.019600999999999993,
-        "user_cpu_seconds": 0.04408300000000001,
-        "wall_time_seconds": 0.058615046
+        "system_cpu_seconds": 0.008525000000000005,
+        "user_cpu_seconds": 0.051183999999999674,
+        "wall_time_seconds": 0.057147325
       },
       "immich_rs": {
-        "characters_read": 65281759,
+        "characters_read": 66854623,
         "characters_written": 0,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
@@ -217,20 +217,20 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2486272,
+        "peak_rss_bytes": 2609152,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.0039050000000000057,
-        "user_cpu_seconds": 0.04294700000000001,
-        "wall_time_seconds": 0.047821327
+        "system_cpu_seconds": 0.0,
+        "user_cpu_seconds": 0.04791400000000001,
+        "wall_time_seconds": 0.050012803
       },
       "sample": 0
     },
     {
       "execution_order": "immich-go-first",
       "immich_go": {
-        "characters_read": 67153973,
-        "characters_written": 10999,
+        "characters_read": 67154034,
+        "characters_written": 9405,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -240,16 +240,16 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 14249984,
+        "peak_rss_bytes": 14315520,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.017664,
-        "user_cpu_seconds": 0.06175900000000001,
-        "wall_time_seconds": 0.07579459
+        "system_cpu_seconds": 0.024787000000000003,
+        "user_cpu_seconds": 0.062027000000000054,
+        "wall_time_seconds": 0.083402431
       },
       "immich_rs": {
-        "characters_read": 64954079,
-        "characters_written": 0,
+        "characters_read": 67116767,
+        "characters_written": 3282,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -259,20 +259,20 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2420736,
+        "peak_rss_bytes": 2519040,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.011359999999999995,
-        "user_cpu_seconds": 0.04167499999999996,
-        "wall_time_seconds": 0.053631631
+        "system_cpu_seconds": 0.010934999999999973,
+        "user_cpu_seconds": 0.0588820000000001,
+        "wall_time_seconds": 0.073852181
       },
       "sample": 1
     },
     {
       "execution_order": "immich-rs-first",
       "immich_go": {
-        "characters_read": 67153615,
-        "characters_written": 9106,
+        "characters_read": 67153448,
+        "characters_written": 8415,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -282,15 +282,15 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 15,
-        "peak_rss_bytes": 14163968,
+        "peak_rss_bytes": 13352960,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.021940000000000015,
-        "user_cpu_seconds": 0.040213,
-        "wall_time_seconds": 0.061283999
+        "system_cpu_seconds": 0.01703899999999997,
+        "user_cpu_seconds": 0.040915000000000035,
+        "wall_time_seconds": 0.054828234
       },
       "immich_rs": {
-        "characters_read": 66461407,
+        "characters_read": 66002655,
         "characters_written": 0,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
@@ -301,20 +301,20 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2629632,
+        "peak_rss_bytes": 2535424,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.008026999999999992,
-        "user_cpu_seconds": 0.04011799999999999,
-        "wall_time_seconds": 0.050015146
+        "system_cpu_seconds": 0.011525000000000007,
+        "user_cpu_seconds": 0.03461099999999995,
+        "wall_time_seconds": 0.047465743
       },
       "sample": 2
     },
     {
       "execution_order": "immich-go-first",
       "immich_go": {
-        "characters_read": 67153233,
-        "characters_written": 8170,
+        "characters_read": 67153639,
+        "characters_written": 8755,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -323,16 +323,16 @@
           "http_retries_observed": 0,
           "source_assets_planned": 8
         },
-        "peak_open_file_descriptors": 16,
-        "peak_rss_bytes": 13451264,
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 13303808,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.028491000000000016,
-        "user_cpu_seconds": 0.03321799999999997,
-        "wall_time_seconds": 0.06044233
+        "system_cpu_seconds": 0.023618000000000028,
+        "user_cpu_seconds": 0.043254000000000126,
+        "wall_time_seconds": 0.062398186
       },
       "immich_rs": {
-        "characters_read": 64429791,
+        "characters_read": 63971039,
         "characters_written": 0,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
@@ -343,20 +343,20 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2621440,
+        "peak_rss_bytes": 2560000,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.011906,
-        "user_cpu_seconds": 0.039675000000000016,
-        "wall_time_seconds": 0.052028355
+        "system_cpu_seconds": 0.012407999999999975,
+        "user_cpu_seconds": 0.03317199999999998,
+        "wall_time_seconds": 0.045906461
       },
       "sample": 3
     },
     {
       "execution_order": "immich-rs-first",
       "immich_go": {
-        "characters_read": 67153209,
-        "characters_written": 8071,
+        "characters_read": 67153668,
+        "characters_written": 8755,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -365,16 +365,16 @@
           "http_retries_observed": 0,
           "source_assets_planned": 8
         },
-        "peak_open_file_descriptors": 16,
-        "peak_rss_bytes": 14315520,
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 14450688,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.01829800000000001,
-        "user_cpu_seconds": 0.04114200000000001,
-        "wall_time_seconds": 0.057859958
+        "system_cpu_seconds": 0.02415299999999998,
+        "user_cpu_seconds": 0.037993000000000166,
+        "wall_time_seconds": 0.058557875
       },
       "immich_rs": {
-        "characters_read": 65806047,
+        "characters_read": 66330335,
         "characters_written": 0,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
@@ -385,20 +385,20 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2613248,
+        "peak_rss_bytes": 2576384,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.004038999999999987,
-        "user_cpu_seconds": 0.04438300000000006,
-        "wall_time_seconds": 0.049672604
+        "system_cpu_seconds": 0.008506000000000014,
+        "user_cpu_seconds": 0.0382760000000002,
+        "wall_time_seconds": 0.048234067
       },
       "sample": 4
     },
     {
       "execution_order": "immich-go-first",
       "immich_go": {
-        "characters_read": 67153233,
-        "characters_written": 8170,
+        "characters_read": 67153652,
+        "characters_written": 9066,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
         "operations": {
@@ -407,16 +407,16 @@
           "http_retries_observed": 0,
           "source_assets_planned": 8
         },
-        "peak_open_file_descriptors": 16,
-        "peak_rss_bytes": 15093760,
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 13602816,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.046232999999999996,
-        "user_cpu_seconds": 0.08432499999999998,
-        "wall_time_seconds": 0.099334671
+        "system_cpu_seconds": 0.014979999999999993,
+        "user_cpu_seconds": 0.04491900000000015,
+        "wall_time_seconds": 0.058244069
       },
       "immich_rs": {
-        "characters_read": 67051231,
+        "characters_read": 66526943,
         "characters_written": 0,
         "logical_media_bytes_read": 67108864,
         "logical_media_bytes_written": 0,
@@ -427,12 +427,12 @@
           "source_assets_planned": 8
         },
         "peak_open_file_descriptors": 4,
-        "peak_rss_bytes": 2596864,
+        "peak_rss_bytes": 2461696,
         "storage_bytes_read": 0,
         "storage_bytes_written": 0,
-        "system_cpu_seconds": 0.019613999999999965,
-        "user_cpu_seconds": 0.08602299999999996,
-        "wall_time_seconds": 0.109096248
+        "system_cpu_seconds": 0.00418099999999999,
+        "user_cpu_seconds": 0.04179399999999989,
+        "wall_time_seconds": 0.047820985
       },
       "sample": 5
     }

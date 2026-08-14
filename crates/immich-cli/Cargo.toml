@@ -1,0 +1,17 @@
+[package]
+name = "immich-rs-cli"
+description = "Command-line interface for immich-rs"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "immich-rs"
+path = "src/main.rs"
+
+[lints]
+workspace = true

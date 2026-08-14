@@ -1,0 +1,13 @@
+[package]
+name = "immich-rs-client"
+description = "Version-aware Immich API boundary for immich-rs"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true

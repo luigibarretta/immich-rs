@@ -1,0 +1,14 @@
+/target/
+/.cargo/
+*.profraw
+*.profdata
+*.flamegraph
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Compatibility and benchmark fixtures must be synthetic or explicitly
+# redistributable. Never commit real Immich exports or user media.
+/fixtures/private/
+/benchmarks/results/

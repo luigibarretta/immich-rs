@@ -1,0 +1,10 @@
+[oracle]
+name = "immich-go"
+version = "0.32.0"
+upstream_commit = "f7d19fce34acd4884ea2c02fc3025706a060afdf"
+license = "AGPL-3.0"
+
+[artifacts.linux_x86_64]
+archive = "immich-go_Linux_x86_64.tar.gz"
+archive_sha256 = "6e2ad86bafdadb9466d6515de7cb882726c0aea1a21d51164dff361d7d480a97"
+binary_sha256 = "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475"

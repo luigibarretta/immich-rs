@@ -1,0 +1,37 @@
+---
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: immich-rs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: docker
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Validate architecture records
+        run: scripts/check-adrs.sh
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --all-targets
+      - run: cargo doc --locked --workspace --no-deps
+      - name: Prove scaffold fails closed
+        run: |
+          cargo run --locked -p immich-rs-cli -- --version
+          if cargo run --locked -p immich-rs-cli; then
+            echo "scaffold unexpectedly accepted a media command" >&2
+            exit 1
+          fi

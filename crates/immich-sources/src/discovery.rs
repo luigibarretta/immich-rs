@@ -340,12 +340,15 @@ fn stream_identity(
     let mut digest = Sha256::new();
     let mut buffer = vec![0_u8; buffer_bytes];
     let mut bytes_read = 0_u64;
-    loop {
+    while bytes_read < opened_snapshot.len {
         if cancellation.is_cancelled() {
             return Err(StreamError::Cancelled);
         }
+        let remaining = opened_snapshot.len - bytes_read;
+        let read_limit =
+            usize::try_from(remaining).map_or(buffer.len(), |value| value.min(buffer.len()));
         let read = file
-            .read(&mut buffer)
+            .read(&mut buffer[..read_limit])
             .map_err(|_| StreamError::Unreadable)?;
         if read == 0 {
             break;

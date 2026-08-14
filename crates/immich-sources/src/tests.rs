@@ -90,6 +90,22 @@ fn sidecars_and_live_photos_are_explainable() -> Result<(), Box<dyn std::error::
 }
 
 #[test]
+fn sidecar_content_changes_the_source_fingerprint() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("sidecar-identity")?;
+    directory.write("image.png", b"image")?;
+    directory.write("image.png.json", b"one")?;
+    let first = scan(&directory.path)?;
+    directory.write("image.png.json", b"two")?;
+    let second = scan(&directory.path)?;
+    assert_ne!(
+        first.source.fingerprint_sha256,
+        second.source.fingerprint_sha256
+    );
+    assert_eq!(first.assets[0].metadata, second.assets[0].metadata);
+    Ok(())
+}
+
+#[test]
 fn unicode_paths_are_normalized_to_nfc() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new("unicode")?;
     directory.write("cafe\u{301}.png", b"unicode")?;

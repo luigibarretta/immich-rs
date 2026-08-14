@@ -13,6 +13,7 @@ use immich_rs_core::{
 };
 
 mod discovery;
+mod identity;
 mod reconcile;
 
 const MIN_BUFFER_BYTES: usize = 4 * 1024;
@@ -144,6 +145,8 @@ struct DiscoveredMedia {
 struct DiscoveredSidecar {
     relative_path: String,
     kind: MetadataKind,
+    byte_len: u64,
+    content_sha256: String,
 }
 
 struct RegularFile<'a> {
@@ -151,42 +154,6 @@ struct RegularFile<'a> {
     relative_path: String,
     metadata: &'a Metadata,
 }
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct FileSnapshot {
-    len: u64,
-    modified_nanos: Option<u128>,
-    platform_identity: PlatformIdentity,
-}
-
-impl FileSnapshot {
-    fn from_metadata(metadata: &Metadata) -> Self {
-        Self {
-            len: metadata.len(),
-            modified_nanos: metadata
-                .modified()
-                .ok()
-                .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
-                .map(|duration| duration.as_nanos()),
-            platform_identity: platform_identity(metadata),
-        }
-    }
-}
-
-#[cfg(unix)]
-type PlatformIdentity = (u64, u64);
-
-#[cfg(not(unix))]
-type PlatformIdentity = ();
-
-#[cfg(unix)]
-fn platform_identity(metadata: &Metadata) -> PlatformIdentity {
-    use std::os::unix::fs::MetadataExt;
-    (metadata.dev(), metadata.ino())
-}
-
-#[cfg(not(unix))]
-fn platform_identity(_metadata: &Metadata) -> PlatformIdentity {}
 
 #[derive(Debug)]
 struct ScanState {

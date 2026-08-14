@@ -283,7 +283,8 @@ pub fn finalize_plan(
         })
         .collect::<Vec<_>>();
     assets.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
-    let source_fingerprint = source_fingerprint(&assets, &state.warnings, &state.errors);
+    let source_fingerprint =
+        source_fingerprint(&assets, &state.sidecars, &state.warnings, &state.errors);
     let sidecars = assets.iter().map(|asset| asset.metadata.len() as u64).sum();
     NormalizedPlan {
         schema_version: NORMALIZED_PLAN_SCHEMA_VERSION,
@@ -307,6 +308,7 @@ pub fn finalize_plan(
 
 fn source_fingerprint(
     assets: &[CandidateAsset],
+    sidecars: &[DiscoveredSidecar],
     warnings: &[PlanDiagnostic],
     errors: &[PlanDiagnostic],
 ) -> String {
@@ -320,6 +322,11 @@ fn source_fingerprint(
             update_field(&mut digest, &metadata.relative_path);
             update_field(&mut digest, &metadata.rule_id);
         }
+    }
+    for sidecar in sidecars {
+        update_field(&mut digest, &sidecar.relative_path);
+        update_field(&mut digest, &sidecar.byte_len.to_string());
+        update_field(&mut digest, &sidecar.content_sha256);
     }
     for diagnostic in warnings.iter().chain(errors) {
         update_field(&mut digest, &diagnostic.rule_id);

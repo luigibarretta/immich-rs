@@ -326,7 +326,7 @@ pub struct ProgressEvent {
     pub stage: ProgressStage,
     /// Assets observed so far.
     pub assets_observed: u64,
-    /// Media bytes streamed so far.
+    /// Source content bytes streamed so far.
     pub bytes_read: u64,
 }
 

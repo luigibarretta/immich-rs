@@ -3,7 +3,7 @@
   "source": {
     "kind": "folder",
     "label": "synthetic-folder-matrix",
-    "fingerprint_sha256": "b837a34cb70c9fb44de52eb59a93047fef79a07ca1263b3225697c56f6bdda86",
+    "fingerprint_sha256": "428494cd1795bbb677825a947d4bcab329ac92b36bb959e391afbbf836948809",
     "case_sensitive": true,
     "unicode_normalization": "nfc"
   },
@@ -200,6 +200,6 @@
   "summary": {
     "assets": 8,
     "sidecars": 2,
-    "bytes_read": 542
+    "bytes_read": 773
   }
 }

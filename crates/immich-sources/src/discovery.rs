@@ -1,15 +1,14 @@
-use std::fs::{self, File, Metadata};
-use std::io::Read;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use immich_rs_core::{Cancellation, MediaKind, MetadataKind, ProgressStage, RuleEvidence, rule_id};
-use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization as _;
 
+use crate::identity::{StreamError, stream_identity};
 use crate::reconcile::diagnostic;
 use crate::{
-    DiscoveredMedia, DiscoveredSidecar, FileSnapshot, FolderScanConfig, ProgressObserver,
-    RegularFile, ScanError, ScanState,
+    DiscoveredMedia, DiscoveredSidecar, FolderScanConfig, ProgressObserver, RegularFile, ScanError,
+    ScanState,
 };
 
 pub fn validate_root_and_label(root: &Path, source_label: &str) -> Result<(), ScanError> {
@@ -180,15 +179,11 @@ fn process_regular_file(
         relative_path,
         metadata,
     } = file;
-    let Some(kind) = media_kind(&relative_path) else {
-        if let Some(sidecar_kind) = metadata_kind(&relative_path) {
-            state.sidecars.push(DiscoveredSidecar {
-                relative_path,
-                kind: sidecar_kind,
-            });
-        }
+    let media = media_kind(&relative_path);
+    let sidecar = metadata_kind(&relative_path);
+    if media.is_none() && sidecar.is_none() {
         return Ok(());
-    };
+    }
     before_read(path);
     match stream_identity(path, metadata, config.buffer_bytes, cancellation) {
         Ok((byte_len, content_sha256, changed)) => {
@@ -200,18 +195,27 @@ fn process_regular_file(
                     vec![relative_path.clone()],
                 ));
             }
-            state.media.push(DiscoveredMedia {
-                relative_path,
-                kind,
-                byte_len,
-                content_sha256,
-                metadata: Vec::new(),
-                live_photo: None,
-                evidence: vec![RuleEvidence {
-                    rule_id: rule_id::REGULAR_MEDIA.to_owned(),
-                    outcome: "streamed_content_identity".to_owned(),
-                }],
-            });
+            if let Some(kind) = media {
+                state.media.push(DiscoveredMedia {
+                    relative_path,
+                    kind,
+                    byte_len,
+                    content_sha256,
+                    metadata: Vec::new(),
+                    live_photo: None,
+                    evidence: vec![RuleEvidence {
+                        rule_id: rule_id::REGULAR_MEDIA.to_owned(),
+                        outcome: "streamed_content_identity".to_owned(),
+                    }],
+                });
+            } else if let Some(kind) = sidecar {
+                state.sidecars.push(DiscoveredSidecar {
+                    relative_path,
+                    kind,
+                    byte_len,
+                    content_sha256,
+                });
+            }
             state.progress(ProgressStage::ContentIdentity, observer);
             Ok(())
         }
@@ -219,7 +223,7 @@ fn process_regular_file(
         Err(StreamError::Unreadable) => {
             state.errors.push(diagnostic(
                 rule_id::UNREADABLE_FILE,
-                "unreadable_media",
+                "unreadable_source_file",
                 vec![relative_path],
             ));
             Ok(())
@@ -306,63 +310,4 @@ fn metadata_kind(path: &str) -> Option<MetadataKind> {
         "xmp" => Some(MetadataKind::Xmp),
         _ => None,
     }
-}
-
-#[cfg(unix)]
-fn lacks_read_permissions(metadata: &Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt as _;
-    metadata.permissions().mode() & 0o444 == 0
-}
-
-#[cfg(not(unix))]
-fn lacks_read_permissions(_metadata: &Metadata) -> bool {
-    false
-}
-
-enum StreamError {
-    Cancelled,
-    Unreadable,
-}
-
-fn stream_identity(
-    path: &Path,
-    discovered_metadata: &Metadata,
-    buffer_bytes: usize,
-    cancellation: &impl Cancellation,
-) -> Result<(u64, String, bool), StreamError> {
-    if lacks_read_permissions(discovered_metadata) {
-        return Err(StreamError::Unreadable);
-    }
-    let before = FileSnapshot::from_metadata(discovered_metadata);
-    let mut file = File::open(path).map_err(|_| StreamError::Unreadable)?;
-    let opened = file.metadata().map_err(|_| StreamError::Unreadable)?;
-    let opened_snapshot = FileSnapshot::from_metadata(&opened);
-    let mut digest = Sha256::new();
-    let mut buffer = vec![0_u8; buffer_bytes];
-    let mut bytes_read = 0_u64;
-    while bytes_read < opened_snapshot.len {
-        if cancellation.is_cancelled() {
-            return Err(StreamError::Cancelled);
-        }
-        let remaining = opened_snapshot.len - bytes_read;
-        let read_limit =
-            usize::try_from(remaining).map_or(buffer.len(), |value| value.min(buffer.len()));
-        let read = file
-            .read(&mut buffer[..read_limit])
-            .map_err(|_| StreamError::Unreadable)?;
-        if read == 0 {
-            break;
-        }
-        digest.update(&buffer[..read]);
-        bytes_read = bytes_read
-            .checked_add(read as u64)
-            .ok_or(StreamError::Unreadable)?;
-    }
-    let after_open = file.metadata().map_err(|_| StreamError::Unreadable)?;
-    let after_path = fs::metadata(path).map_err(|_| StreamError::Unreadable)?;
-    let changed = before != opened_snapshot
-        || opened_snapshot != FileSnapshot::from_metadata(&after_open)
-        || opened_snapshot != FileSnapshot::from_metadata(&after_path)
-        || bytes_read != opened_snapshot.len;
-    Ok((bytes_read, format!("{:x}", digest.finalize()), changed))
 }

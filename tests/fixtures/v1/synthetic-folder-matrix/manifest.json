@@ -91,6 +91,6 @@
   "expected_plan": {
     "schema": "normalized-plan-v1",
     "path": "expected-plan.json",
-    "sha256": "36d79bdaa960b7ac362b7d4367c3a1acfebda52c687430f6b9fc319639e54a8c"
+    "sha256": "9ccf1242427a0da09655a5f75fbb4d7323b3fa9185cf44bf2bdaae5612035239"
   }
 }

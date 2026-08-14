@@ -1,0 +1,26 @@
+{
+  "schema": "mock-immich-responses-v1",
+  "fixture_id": "synthetic-immich-v3-1",
+  "provenance": {
+    "kind": "synthetic",
+    "author": "immich-rs test harness",
+    "license": "CC0-1.0"
+  },
+  "version": { "major": 3, "minor": 1, "patch": 0 },
+  "user": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "email": "synthetic-user@example.invalid",
+    "name": "Synthetic User",
+    "isAdmin": false,
+    "storageLabel": null,
+    "quotaSizeInBytes": null,
+    "quotaUsageInBytes": 0
+  },
+  "media_types": {
+    "image": [".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"],
+    "sidecar": [".xmp"],
+    "video": [".mp4", ".mov", ".m4v"]
+  },
+  "asset_statistics": { "images": 0, "total": 0, "videos": 0 },
+  "search_result": { "assets": { "items": [], "total": 0, "count": 0 } }
+}

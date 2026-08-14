@@ -78,6 +78,11 @@ class FixtureToolTests(unittest.TestCase):
         self.assertTrue(findings)
 
     def test_credential_and_production_canaries_are_detected(self) -> None:
+        self.assertTrue(
+            checker.SECRET_PATTERNS["credential assignment"].search(
+                "api_key = test-value-that-is-deliberately-not-allowed"
+            )
+        )
         self.assertTrue(checker.SECRET_PATTERNS["AWS access key"].search("AKIAABCDEFGHIJKLMNOP"))
         self.assertTrue(checker.PRODUCTION_PATTERNS["production hostname"].search("it1-prd-photo-01"))
         self.assertTrue(checker.PRODUCTION_PATTERNS["RFC1918 IPv4"].search("192.168.50.10"))

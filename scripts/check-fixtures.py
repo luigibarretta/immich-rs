@@ -13,10 +13,12 @@ from types import ModuleType
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "fixtures" / "v1"
+SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
 SKIPPED_PARTS = {".git", "target", ".cargo"}
 SELF_TEST_PATHS = {
     "scripts/check-fixtures.py",
     "tests/tooling/test_fixture_tools.py",
+    "tests/tooling/test_mock_immich_server.py",
 }
 TEXT_SUFFIXES = {".json", ".md", ".py", ".rs", ".sh", ".toml", ".yml", ".yaml"}
 SECRET_PATTERNS = {
@@ -134,10 +136,38 @@ def check_manifests() -> None:
             raise CheckFailure(f"{manifest_path.parent}: undeclared committed fixture files: {extras}")
 
 
+def check_server_fixtures() -> None:
+    """Require versioned synthetic provenance for every mock response fixture."""
+    paths = sorted(SERVER_FIXTURE_ROOT.glob("*.json")) if SERVER_FIXTURE_ROOT.exists() else []
+    if not paths:
+        raise CheckFailure("mock server response fixtures are missing")
+    for path in paths:
+        try:
+            fixture = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            raise CheckFailure(f"{path}: cannot read mock response fixture: {error}") from error
+        provenance = fixture.get("provenance")
+        version = fixture.get("version")
+        if (
+            fixture.get("schema") != "mock-immich-responses-v1"
+            or not isinstance(fixture.get("fixture_id"), str)
+            or not isinstance(provenance, dict)
+            or provenance.get("kind") != "synthetic"
+            or provenance.get("license") != "CC0-1.0"
+            or not isinstance(version, dict)
+            or any(not isinstance(version.get(key), int) for key in ("major", "minor", "patch"))
+        ):
+            raise CheckFailure(f"{path}: invalid version or synthetic provenance")
+        findings = _walk_json(fixture)
+        if findings:
+            raise CheckFailure("\n".join(f"{path}: {finding}" for finding in findings))
+
+
 def main() -> int:
     try:
         check_repository_secrets()
         check_manifests()
+        check_server_fixtures()
     except (CheckFailure, OSError, UnicodeError) as error:
         print(f"fixture safety check failed:\n{error}", file=sys.stderr)
         return 1

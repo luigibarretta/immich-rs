@@ -1,0 +1,96 @@
+{
+  "schema": "fixture-manifest-v1",
+  "fixture_id": "synthetic-folder-matrix",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "1",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "Case.PNG",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [240, 16, 32]
+    },
+    {
+      "path": "alpha.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 1,
+      "rgb": [16, 32, 48]
+    },
+    {
+      "path": "alpha.png.json",
+      "recipe": "text",
+      "content": "{\"schema\":\"synthetic-sidecar-v1\",\"description\":\"generated color field\"}\n"
+    },
+    {
+      "path": "case.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [32, 16, 240]
+    },
+    {
+      "path": "link.png",
+      "recipe": "symlink",
+      "target": "alpha.png"
+    },
+    {
+      "path": "nested/café.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 2,
+      "rgb": [48, 64, 80]
+    },
+    {
+      "path": "nested/repeat.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [64, 80, 96]
+    },
+    {
+      "path": "other/repeat.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [80, 96, 112]
+    },
+    {
+      "path": "pair.mov",
+      "recipe": "synthetic_isobmff",
+      "marker": "synthetic-live-motion-v1"
+    },
+    {
+      "path": "pair.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [96, 112, 128]
+    },
+    {
+      "path": "pair.xmp",
+      "recipe": "text",
+      "content": "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><synthetic>generated</synthetic></x:xmpmeta>\n"
+    },
+    {
+      "path": "unmatched.json",
+      "recipe": "text",
+      "content": "{\"schema\":\"synthetic-sidecar-v1\",\"description\":\"unmatched generated sidecar\"}\n"
+    },
+    {
+      "path": "unsupported.txt",
+      "recipe": "text",
+      "content": "synthetic unsupported file\n"
+    }
+  ],
+  "expected_plan": {
+    "schema": "normalized-plan-v1",
+    "path": "expected-plan.json",
+    "sha256": "36d79bdaa960b7ac362b7d4367c3a1acfebda52c687430f6b9fc319639e54a8c"
+  }
+}

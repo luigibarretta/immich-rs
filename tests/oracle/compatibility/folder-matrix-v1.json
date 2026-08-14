@@ -1,0 +1,16 @@
+{
+  "schema": "differential-expectation-v1",
+  "case_id": "folder-matrix-v1",
+  "expected_plan": "../../fixtures/v1/synthetic-folder-matrix/expected-plan.json",
+  "matrix": [
+    { "id": "regular_recursive", "outcome": "parity" },
+    { "id": "unicode_nfc", "outcome": "parity_after_normalization" },
+    { "id": "case_collision", "outcome": "parity_with_immich_rs_diagnostic" },
+    { "id": "duplicate_basename", "outcome": "parity_with_immich_rs_diagnostic" },
+    { "id": "xmp_sidecar", "outcome": "parity" },
+    { "id": "generic_json_sidecar", "outcome": "declared_oracle_divergence" },
+    { "id": "live_photo_pair", "outcome": "parity" },
+    { "id": "symlink", "outcome": "equivalent_unique_plan" },
+    { "id": "dry_run_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

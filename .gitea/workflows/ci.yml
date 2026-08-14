@@ -70,3 +70,35 @@ jobs:
           tool: cargo-deny@0.20.2,cargo-audit@0.22.2
       - run: cargo deny check
       - run: cargo audit --deny warnings
+
+  differential:
+    runs-on: docker
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore the pinned oracle cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/oracle
+          key: immich-go-v0.32.0-linux-x86-64-6e2ad86b
+      - name: Fetch and verify the official oracle on cache miss
+        run: python3 scripts/fetch-oracle.py
+      - name: Run the normalized black-box differential
+        run: |
+          mkdir -p .artifacts/oracle
+          python3 scripts/run-oracle.py \
+            tests/oracle/cases/folder-matrix-v1.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --output .artifacts/oracle/observation.json
+          python3 scripts/compare-oracle.py \
+            tests/oracle/compatibility/folder-matrix-v1.json \
+            .artifacts/oracle/observation.json \
+            --output .artifacts/oracle/differential-report.json
+      - name: Preserve normalized evidence without redistributing the oracle
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-differential-${{ github.sha }}
+          path: .artifacts/oracle
+          retention-days: 14

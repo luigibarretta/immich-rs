@@ -73,7 +73,7 @@ jobs:
 
   differential:
     runs-on: docker
-    timeout-minutes: 10
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:

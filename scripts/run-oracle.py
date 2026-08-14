@@ -219,6 +219,7 @@ def run_case(
     process_executor: Any = None,
 ) -> dict[str, Any]:
     """Verify, materialize, execute and normalize one black-box observation."""
+    executable = executable.resolve()
     baseline = load_baseline(baseline_path)
     verified = verify_oracle(executable, baseline)
     case = load_case(case_path)

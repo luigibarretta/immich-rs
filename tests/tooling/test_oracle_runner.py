@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import stat
 import sys
@@ -130,10 +131,13 @@ class OracleRunnerTests(unittest.TestCase):
                 encoding="utf-8",
             )
             original_fixture_root = runner.FIXTURE_ROOT
+            original_working_directory = Path.cwd()
             runner.FIXTURE_ROOT = fixture_root.resolve()
+            os.chdir(root)
             try:
-                observation = runner.run_case(case_path, executable, baseline_path)
+                observation = runner.run_case(case_path, Path("fake-oracle"), baseline_path)
             finally:
+                os.chdir(original_working_directory)
                 runner.FIXTURE_ROOT = original_fixture_root
             self.assertEqual(observation["schema"], "oracle-observation-v1")
             self.assertEqual(observation["observable"]["mutation_request_count"], 0)

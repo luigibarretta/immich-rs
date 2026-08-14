@@ -45,6 +45,10 @@ case "$OUTPUT" in
 esac
 [[ ! -e "$OUTPUT" ]] || { echo 'evidence output already exists' >&2; exit 2; }
 mkdir -p -- "$REPOSITORY_ROOT/.artifacts"
+BINARY_SHA256=$(sha256sum "$BINARY" | cut -d' ' -f1)
+HOST_OS=$(uname -s)
+HOST_ARCH=$(uname -m)
+DOCKER_VERSION=$(docker version --format '{{.Server.Version}}')
 
 RUN_SUFFIX="$(date -u +%Y%m%dT%H%M%SZ)-$$-$(openssl rand -hex 4)"
 RUN_ID="phase2-$RUN_SUFFIX"
@@ -239,9 +243,19 @@ REMAINING_CONTAINERS=$(docker ps --all --quiet --filter "label=$RESOURCE_LABEL=$
 REMAINING_VOLUMES=$(docker volume ls --quiet --filter "label=$RESOURCE_LABEL=$RUN_ID")
 REMAINING_NETWORKS=$(docker network ls --quiet --filter "label=$RESOURCE_LABEL=$RUN_ID")
 [[ -z "$REMAINING_CONTAINERS$REMAINING_VOLUMES$REMAINING_NETWORKS" ]]
+for image_ref in "${PULLED_IMAGES[@]}"; do
+  if docker image inspect "$image_ref" >/dev/null 2>&1; then
+    echo 'a disposable image downloaded by this run remains present' >&2
+    exit 1
+  fi
+done
 
 jq -n \
   --arg commit "$COMMIT_SHA" \
+  --arg binary_sha256 "$BINARY_SHA256" \
+  --arg host_os "$HOST_OS" \
+  --arg host_arch "$HOST_ARCH" \
+  --arg docker_version "$DOCKER_VERSION" \
   --arg server_image "$SERVER_IMAGE" \
   --arg valkey_image "$VALKEY_IMAGE" \
   --arg database_image "$DATABASE_IMAGE" \
@@ -254,5 +268,6 @@ jq -n \
   --argjson duplicate "$DUPLICATE_REPORT" \
   --argjson asset_count "$ASSET_COUNT" \
   --argjson cleanup_verified "$CLEANED" \
-  '{schema:"phase2-disposable-v1",commit_sha:$commit,images:{server:$server_image,valkey:$valkey_image,database:$database_image},fixture_sha256:$fixture_sha256,plan_sha256:$plan_sha256,server_version:$server_version,reports:{dry_run:$dry_run,first:$first,resume:$resume,duplicate:$duplicate},asset_count:$asset_count,cleanup_verified:($cleanup_verified == 1)}' \
+  --argjson downloaded_images "${#PULLED_IMAGES[@]}" \
+  '{schema:"phase2-disposable-v1",commit_sha:$commit,environment:{os:$host_os,architecture:$host_arch,docker_server_version:$docker_version,binary_sha256:$binary_sha256},images:{server:$server_image,valkey:$valkey_image,database:$database_image},fixture:{kind:"synthetic",license:"CC0-1.0",sha256:$fixture_sha256,assets:1},plan_sha256:$plan_sha256,methodology:{network:"dedicated bridge with IP masquerading disabled; ephemeral 127.0.0.1 publication",commands:["plan upload folder","apply upload --dry-run","apply upload","apply upload (checkpoint resume)","apply upload (fresh checkpoint duplicate check)"]},server_version:$server_version,reports:{dry_run:$dry_run,first:$first,resume:$resume,duplicate:$duplicate},asset_count:$asset_count,cleanup:{verified:($cleanup_verified == 1),labelled_containers:0,labelled_volumes:0,labelled_networks:0,downloaded_images_removed:$downloaded_images}}' \
   >"$OUTPUT"

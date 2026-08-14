@@ -6,8 +6,13 @@ archive and migration client for [Immich](https://immich.app/).
 The current executable is deliberately read-only. It recursively scans a real
 folder and emits a versioned normalized plan; it has no upload, delete, replace
 or metadata-mutation command and no dependency path to the Immich client crate.
-Phase 2 mutation work remains out of scope until the final read-only gate is
-green for the exact implementation SHA in Gitea.
+Phase 0 and Phase 1 are complete for implementation SHA
+`36d0f7f55308e1b578474ae0bec9346e27ea0365`: push CI
+[run 5165](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5165)
+and manual benchmark
+[run 5170](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5170)
+are green. Phase 2 mutation work remains unimplemented and must begin as a new
+reviewed vertical.
 
 ## Current capabilities
 
@@ -107,7 +112,8 @@ python3 scripts/compare-oracle.py \
 Full paired benchmarks are manual and separate from push CI. Read the
 [methodology](benchmarks/README.md) and the committed
 [raw evidence](benchmarks/evidence/phase1-2026-08-14.json). Those measurements
-are not a generalized performance claim.
+are not a generalized performance claim. The same harness completed in Gitea
+run 5170 and uploaded the raw JSON evidence for the exact implementation SHA.
 
 Read [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the full
 [ADR index](docs/adr/README.md) before implementing a new vertical.

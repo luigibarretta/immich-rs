@@ -23,4 +23,6 @@ observable in this matrix. They are not silently counted as parity.
 
 The normalized local observation contains 9 discovered oracle assets, 8 unique
 oracle assets, 8 planned immich-rs assets and 3 distinct sidecar paths. Every
-matrix assertion passes with the pinned baseline and synthetic corpus.
+matrix assertion passes with the pinned baseline and synthetic corpus. Gitea
+push CI run 5165 repeated the differential successfully on implementation SHA
+`36d0f7f55308e1b578474ae0bec9346e27ea0365`.

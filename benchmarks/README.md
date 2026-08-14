@@ -27,3 +27,9 @@ The Gitea `phase1-benchmark` workflow performs the same run manually and
 publishes only JSON evidence, never the oracle executable. Raw results do not
 constitute a performance claim. ADR-0012 budgets apply before any improvement
 is advertised.
+
+Verification record: Gitea run 5170 completed six paired samples after two
+warmups on implementation SHA
+`36d0f7f55308e1b578474ae0bec9346e27ea0365` and uploaded
+`phase1-benchmark-36d0f7f55308e1b578474ae0bec9346e27ea0365`. The report records
+the 64 MiB, eight-asset fixture and the pinned immich-go v0.32.0 digest.

@@ -5,7 +5,8 @@ evidence is committed and CI-enforced.
 
 ## Phase 0 — architecture and harness
 
-Implementation and local evidence are complete:
+Complete and CI-enforced on implementation SHA
+`36d0f7f55308e1b578474ae0bec9346e27ea0365`:
 
 - accepted architecture and Phase 0 contract ADRs;
 - buildable workspace, dependency policy and 400-LOC source guard;
@@ -20,12 +21,13 @@ Implementation and local evidence are complete:
 - fast push CI plus a separate manual full-benchmark workflow.
 
 Exit evidence: synthetic-only fixtures, exact oracle identity, stable normalized
-plans, deterministic tests and no production access. The final phase status is
-recorded only after the exact implementation SHA is green in Gitea.
+plans, deterministic tests and no production access. Gitea push CI run 5165 is
+green for the exact implementation SHA.
 
 ## Phase 1 — read-only scan and plan
 
-Implementation and local evidence are complete:
+Complete and CI-enforced on implementation SHA
+`36d0f7f55308e1b578474ae0bec9346e27ea0365`:
 
 - recursive deterministic folder enumeration;
 - streaming content identity with bounded memory and file descriptors;
@@ -41,8 +43,8 @@ Implementation and local evidence are complete:
 Exit evidence: all declared compatibility rows pass, including documented
 intentional divergence and oracle-defect containment. The committed benchmark
 records raw results and methodology without claiming a generalized speedup.
-The final phase status is recorded only after the exact implementation SHA is
-green in Gitea.
+Gitea push CI run 5165 and manual paired-benchmark run 5170 are green for the
+exact implementation SHA; run 5170 uploaded the raw JSON report.
 
 ## Phase 2 — folder upload MVP
 

@@ -1,15 +1,22 @@
 #![forbid(unsafe_code)]
-//! Version-aware Immich HTTP API boundary.
+//! Version-aware, bounded Immich HTTP capabilities.
 
-/// Human-readable component identity used by initial workspace smoke tests.
+mod auth;
+mod endpoint;
+mod error;
+mod models;
+mod read;
+mod response;
+mod upload;
+
+pub use auth::{ApiKey, ApiKeyError};
+pub use endpoint::{EndpointError, ImmichEndpoint};
+pub use error::{ClientError, ClientErrorClass};
+pub use read::{ClientConfig, ImmichReadClient, NegotiatedServer};
+pub use upload::{DuplicateCheck, ImmichUploadClient, UploadRequest, UploadResult};
+
+/// Human-readable component identity.
 pub const COMPONENT: &str = "immich-rs-client";
 
 #[cfg(test)]
-mod tests {
-    use super::COMPONENT;
-
-    #[test]
-    fn component_identity_is_stable() {
-        assert_eq!(COMPONENT, "immich-rs-client");
-    }
-}
+mod tests;

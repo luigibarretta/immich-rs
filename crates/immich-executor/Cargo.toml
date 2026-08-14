@@ -1,6 +1,6 @@
 [package]
-name = "immich-rs-client"
-description = "Version-aware Immich API boundary for immich-rs"
+name = "immich-rs-executor"
+description = "Bounded idempotent upload execution for immich-rs"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -10,15 +10,19 @@ repository.workspace = true
 publish = false
 
 [dependencies]
+base64.workspace = true
+futures-util.workspace = true
+immich-rs-client = { path = "../immich-client", version = "=0.0.0" }
 immich-rs-core = { path = "../immich-core", version = "=0.0.0" }
-reqwest.workspace = true
+immich-rs-sources = { path = "../immich-sources", version = "=0.0.0" }
+rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha1.workspace = true
 sha2.workspace = true
-time.workspace = true
 tokio.workspace = true
-tokio-util.workspace = true
-url.workspace = true
+
+[dev-dependencies]
 
 [lints]
 workspace = true

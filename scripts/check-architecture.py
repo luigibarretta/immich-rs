@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce workspace dependency boundaries and the Phase-1 read-only graph."""
+"""Enforce workspace dependency and Phase-2 capability boundaries."""
 
 from __future__ import annotations
 
@@ -12,12 +12,14 @@ MANIFESTS = {
     "immich-rs-cli": REPOSITORY_ROOT / "crates" / "immich-cli" / "Cargo.toml",
     "immich-rs-client": REPOSITORY_ROOT / "crates" / "immich-client" / "Cargo.toml",
     "immich-rs-core": REPOSITORY_ROOT / "crates" / "immich-core" / "Cargo.toml",
+    "immich-rs-executor": REPOSITORY_ROOT / "crates" / "immich-executor" / "Cargo.toml",
     "immich-rs-sources": REPOSITORY_ROOT / "crates" / "immich-sources" / "Cargo.toml",
 }
 ALLOWED_INTERNAL = {
     "immich-rs-cli": {"immich-rs-core", "immich-rs-sources"},
-    "immich-rs-client": set(),
+    "immich-rs-client": {"immich-rs-core"},
     "immich-rs-core": set(),
+    "immich-rs-executor": {"immich-rs-client", "immich-rs-core", "immich-rs-sources"},
     "immich-rs-sources": {"immich-rs-core"},
 }
 
@@ -37,13 +39,17 @@ def check() -> list[str]:
         unexpected = actual - ALLOWED_INTERNAL[package]
         if unexpected:
             failures.append(f"{package}: forbidden internal dependencies: {sorted(unexpected)}")
-    cli_dependencies = internal_dependencies(MANIFESTS["immich-rs-cli"])
-    if "immich-rs-client" in cli_dependencies:
-        failures.append("Phase-1 CLI dependency graph contains the Immich client")
-    client_source = (REPOSITORY_ROOT / "crates" / "immich-client" / "src" / "lib.rs").read_text(encoding="utf-8")
-    mutation_tokens = ("upload", "delete", "replace", "mutate", "multipart")
-    if any(token in client_source.casefold() for token in mutation_tokens):
-        failures.append("Phase-1 Immich client source contains a mutation capability token")
+    client_root = REPOSITORY_ROOT / "crates" / "immich-client" / "src"
+    client_source = (client_root / "lib.rs").read_text(encoding="utf-8")
+    upload_source = (client_root / "upload.rs").read_text(encoding="utf-8")
+    read_source = (client_root / "read.rs").read_text(encoding="utf-8")
+    if "ImmichReadClient" not in client_source or "ImmichUploadClient" not in client_source:
+        failures.append("client does not expose separate read and upload capability types")
+    if "pub fn authorize_upload" not in read_source or "NegotiatedServer" not in read_source:
+        failures.append("upload capability is not restricted to an opaque probe proof")
+    forbidden_mutations = ("delete(", "replace(", "put(", "patch(")
+    if any(token in upload_source.casefold() for token in forbidden_mutations):
+        failures.append("Phase-2 client contains an unapproved mutation primitive")
     return failures
 
 
@@ -56,7 +62,7 @@ def main() -> int:
     if failures:
         print("architecture check failed:\n" + "\n".join(failures), file=sys.stderr)
         return 1
-    print("workspace boundaries and read-only dependency graph passed")
+    print("workspace and Phase-2 capability boundaries passed")
     return 0
 
 

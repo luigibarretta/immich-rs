@@ -225,6 +225,7 @@ def run_case(
     case = load_case(case_path)
     materializer = _load_python(REPOSITORY_ROOT / "scripts" / "materialize-fixture.py", "oracle_fixture_materializer")
     mock_module = _load_python(REPOSITORY_ROOT / "tests" / "oracle" / "mock_immich_server.py", "oracle_mock_immich")
+    capture_module = _load_python(REPOSITORY_ROOT / "scripts" / "bounded-process.py", "oracle_bounded_process")
     fixture_path = case["fixture_path"]
     fixture_manifest = materializer.load_manifest(fixture_path)
     fixture_digest = _sha256_file(fixture_path)
@@ -253,14 +254,8 @@ def run_case(
             try:
                 command = [str(executable), *arguments]
                 if process_executor is None:
-                    result = subprocess.run(
-                        command,
-                        cwd=temporary_root,
-                        env=environment,
-                        check=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=case["timeout_seconds"],
+                    result = capture_module.run_command(
+                        command, temporary_root, environment, case["timeout_seconds"]
                     )
                 else:
                     result = process_executor(

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import binascii
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -85,6 +86,27 @@ def _synthetic_isobmff(item: dict[str, object]) -> bytes:
     return ftyp + free
 
 
+def _write_padded_png(destination: Path, item: dict[str, object]) -> None:
+    """Stream a valid tiny PNG plus deterministic synthetic padding."""
+    total_bytes = item.get("bytes")
+    seed = item.get("seed")
+    if not isinstance(total_bytes, int) or not (1_048_576 <= total_bytes <= 16_777_216):
+        raise FixtureError("synthetic_padded_png bytes must be in 1048576..16777216")
+    if not isinstance(seed, str) or not seed.isascii() or not (1 <= len(seed) <= 64):
+        raise FixtureError("synthetic_padded_png seed must be bounded ASCII")
+    prefix = _synthetic_png(item)
+    if len(prefix) >= total_bytes:
+        raise FixtureError("synthetic_padded_png bytes must exceed the PNG prefix")
+    block = hashlib.sha256(seed.encode("ascii")).digest() * 2_048
+    remaining = total_bytes - len(prefix)
+    with destination.open("xb") as handle:
+        handle.write(prefix)
+        while remaining:
+            chunk = block[: min(remaining, len(block))]
+            handle.write(chunk)
+            remaining -= len(chunk)
+
+
 def _materialize_item(root: Path, item: dict[str, object]) -> None:
     relative = _portable_relative_path(item.get("path"))
     destination = root.joinpath(relative)
@@ -97,6 +119,8 @@ def _materialize_item(root: Path, item: dict[str, object]) -> None:
         destination.write_text(content, encoding="utf-8", newline="\n")
     elif recipe == "synthetic_png":
         destination.write_bytes(_synthetic_png(item))
+    elif recipe == "synthetic_padded_png":
+        _write_padded_png(destination, item)
     elif recipe == "synthetic_isobmff":
         destination.write_bytes(_synthetic_isobmff(item))
     elif recipe == "symlink":

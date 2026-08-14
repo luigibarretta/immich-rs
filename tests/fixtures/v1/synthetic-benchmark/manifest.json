@@ -1,0 +1,25 @@
+{
+  "schema": "fixture-manifest-v1",
+  "fixture_id": "synthetic-benchmark",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "1",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    { "path": "asset-00.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-00", "width": 1, "height": 1, "rgb": [16, 32, 48] },
+    { "path": "asset-01.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-01", "width": 1, "height": 1, "rgb": [32, 48, 64] },
+    { "path": "asset-02.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-02", "width": 1, "height": 1, "rgb": [48, 64, 80] },
+    { "path": "asset-03.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-03", "width": 1, "height": 1, "rgb": [64, 80, 96] },
+    { "path": "asset-04.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-04", "width": 1, "height": 1, "rgb": [80, 96, 112] },
+    { "path": "asset-05.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-05", "width": 1, "height": 1, "rgb": [96, 112, 128] },
+    { "path": "asset-06.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-06", "width": 1, "height": 1, "rgb": [112, 128, 144] },
+    { "path": "asset-07.png", "recipe": "synthetic_padded_png", "bytes": 8388608, "seed": "synthetic-benchmark-07", "width": 1, "height": 1, "rgb": [128, 144, 160] }
+  ],
+  "expected_plan": {
+    "schema": "normalized-plan-v1",
+    "path": "expected-plan.json",
+    "sha256": "96a753fe2677785bce5a23a7de370b82ff2f2c280ac956801de7b4ca0e2830bd"
+  }
+}

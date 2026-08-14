@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "source": {
+    "kind": "folder",
+    "label": "synthetic-benchmark",
+    "fingerprint_sha256": "adc4f58024967f40e5be6d12383234016527563b1254faf4d73a8d09110870bf",
+    "case_sensitive": true,
+    "unicode_normalization": "nfc"
+  },
+  "assets": [
+    {
+      "operation_id": "8cbb0db3f762878a530122e97968388e627abc0725b2443c7e9af8bb1a7ab10e",
+      "relative_path": "asset-00.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "108df2803633241823b000cb4f3832cf7aeafbb5aa94eea11adeae231a34a3ac",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "4bb1769d4b5383da57bec92447d4fc0cb4fe8b6e6381fc9afcfde24b7e070186",
+      "relative_path": "asset-01.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "2a5f589ecb64e08bbd4c8148272b65cf885c9fc063faf47a5d6d23414296b25e",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "75dc75187f1c138f58caf6f7bb1938a42127e86dde7cf212474f6c42f1eaedab",
+      "relative_path": "asset-02.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "11d7079bb4c3285df4b96b692eb181f0b97e1bea5c9bdcee361f157e41533750",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "56ad47eb28a66e88f12ec9abcde8ffe2f33203a7d377e7477141ab5938a09b67",
+      "relative_path": "asset-03.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "e72df8ad48cfbedc29cc28aaf80ead25b13597b1c08acb2d188e294d2a4349de",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "6e8a6e8931506398a82df907c9e5f6b00299e9cbcf871d46851b3411acc0306f",
+      "relative_path": "asset-04.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "92ac1084988ff300e5e0801292152a81ee3200d9bf92774fd36c502530a31e4f",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "7246b75683c81b84a63f00e5e3f6bbcf38925369d967ed39de24224a2684f4c7",
+      "relative_path": "asset-05.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "d959a463b3d4cd28dcdb6ca5fa81694b8b2df5bc6410ae137b883a87ab075460",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "4ea0fea80802ddd3146eacbace7ec4b139fba627166abade89795f7bec48cf91",
+      "relative_path": "asset-06.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "d2a66cbd2a598b0145a7fda4ca22d18f1b60068bc64299c7782234b9e41c0b85",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "973af5f4262ae892b7e3985c528ca2118eb4280a4b7883c9854227df61e562ce",
+      "relative_path": "asset-07.png",
+      "media_kind": "image",
+      "byte_len": 8388608,
+      "content_sha256": "375bd4127051edffbfeb4e7722111162b2ada548391497611398d4a3743d4c16",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "summary": {
+    "assets": 8,
+    "sidecars": 0,
+    "bytes_read": 67108864
+  }
+}

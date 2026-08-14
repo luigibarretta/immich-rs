@@ -30,12 +30,18 @@ pub mod rule_id {
     pub const SYMLINK_SKIPPED: &str = "FS_SYMLINK_SKIPPED_V1";
     /// A path is not valid Unicode and cannot enter the portable plan.
     pub const NON_UNICODE_PATH: &str = "FS_NON_UNICODE_PATH_V1";
+    /// Two native paths normalize to the same NFC portable path.
+    pub const UNICODE_COLLISION: &str = "FS_UNICODE_COLLISION_V1";
+    /// A portable path exceeded the configured byte limit.
+    pub const PATH_LIMIT_EXCEEDED: &str = "FS_PATH_LIMIT_EXCEEDED_V1";
     /// Two portable paths differ only by case.
     pub const CASE_COLLISION: &str = "FS_CASE_COLLISION_V1";
     /// Multiple assets share a basename in distinct directories.
     pub const DUPLICATE_BASENAME: &str = "FS_DUPLICATE_BASENAME_V1";
     /// A sidecar could not be associated without ambiguity.
     pub const AMBIGUOUS_SIDECAR: &str = "META_AMBIGUOUS_SIDECAR_V1";
+    /// A sidecar has no supported media candidate.
+    pub const ORPHAN_SIDECAR: &str = "META_ORPHAN_SIDECAR_V1";
     /// A file could not be opened or read.
     pub const UNREADABLE_FILE: &str = "FS_UNREADABLE_FILE_V1";
     /// File identity changed while content was being read.

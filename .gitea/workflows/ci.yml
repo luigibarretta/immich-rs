@@ -35,6 +35,7 @@ jobs:
       - name: Validate architecture records
         run: |
           scripts/check-adrs.sh
+          python3 scripts/check-architecture.py
           python3 scripts/check-loc.py
       - name: Validate synthetic fixtures and repository safety
         run: |
@@ -44,7 +45,7 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
       - run: cargo test --locked --workspace --all-targets
       - run: cargo doc --locked --workspace --no-deps
-      - name: Prove scaffold fails closed
+      - name: Prove the CLI remains read-only and fails closed
         run: |
           cargo run --locked -p immich-rs-cli -- --version
           if cargo run --locked -p immich-rs-cli; then

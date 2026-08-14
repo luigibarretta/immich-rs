@@ -9,6 +9,15 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+ctrlc.workspace = true
+immich-rs-core = { path = "../immich-core", version = "=0.0.0" }
+immich-rs-sources = { path = "../immich-sources", version = "=0.0.0" }
+serde_json.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
 [[bin]]
 name = "immich-rs"
 path = "src/main.rs"

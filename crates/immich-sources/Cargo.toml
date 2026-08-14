@@ -9,5 +9,10 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+immich-rs-core = { path = "../immich-core", version = "=0.0.0" }
+sha2.workspace = true
+unicode-normalization.workspace = true
+
 [lints]
 workspace = true

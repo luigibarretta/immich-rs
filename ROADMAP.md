@@ -5,27 +5,44 @@ evidence is committed and CI-enforced.
 
 ## Phase 0 — architecture and harness
 
-- accepted ADR set;
-- buildable workspace and strict CI;
-- synthetic fixture format and redaction check;
-- pinned `immich-go` oracle runner;
-- benchmark harness that records wall time, CPU time, peak RSS, bytes read and
-  bytes written;
-- mock Immich server capable of recording requests and injecting failures.
+Implementation and local evidence are complete:
 
-Exit gate: identical normalized plans for the first folder fixtures, with no
-production endpoint or credential involved.
+- accepted architecture and Phase 0 contract ADRs;
+- buildable workspace, dependency policy and 400-LOC source guard;
+- versioned synthetic fixture and expected-plan formats;
+- fail-closed credential, production-host, personal-metadata and provenance
+  checks;
+- pinned, digest-verified black-box immich-go runner with bounded capture;
+- loopback mock Immich server with request recording and fault injection;
+- versioned source-neutral normalized plan, diagnostics, progress and
+  cancellation contracts;
+- paired benchmark metrics and reproducibility manifest;
+- fast push CI plus a separate manual full-benchmark workflow.
+
+Exit evidence: synthetic-only fixtures, exact oracle identity, stable normalized
+plans, deterministic tests and no production access. The final phase status is
+recorded only after the exact implementation SHA is green in Gitea.
 
 ## Phase 1 — read-only scan and plan
 
-- recursive folder enumeration;
-- content identity and sidecar discovery;
-- deterministic normalized plan output;
-- bounded memory and cancellation;
-- no upload or server mutation.
+Implementation and local evidence are complete:
 
-Exit gate: golden and differential parity for supported folder cases, plus
-published benchmark evidence.
+- recursive deterministic folder enumeration;
+- streaming content identity with bounded memory and file descriptors;
+- explicit regular-file, symlink, Unicode/NFC collision, case collision,
+  duplicate basename, unreadable-file, path-limit and source-change behavior;
+- deterministic JSON/XMP sidecars and live-photo pairing;
+- read-only `normalized-plan-v1` output only;
+- exact golden, property, cancellation and black-box differential tests;
+- enforced read-only dependency graph with no Immich client capability;
+- six paired raw benchmark samples after two warmups on the same 64 MiB
+  synthetic corpus and environment.
+
+Exit evidence: all declared compatibility rows pass, including documented
+intentional divergence and oracle-defect containment. The committed benchmark
+records raw results and methodology without claiming a generalized speedup.
+The final phase status is recorded only after the exact implementation SHA is
+green in Gitea.
 
 ## Phase 2 — folder upload MVP
 

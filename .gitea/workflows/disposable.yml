@@ -1,0 +1,42 @@
+---
+name: phase2-disposable
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-phase2-disposable
+  cancel-in-progress: false
+
+jobs:
+  disposable:
+    runs-on: docker
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore the pinned Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/1.88.0-x86_64-unknown-linux-gnu
+            ~/.rustup/update-hashes/1.88.0-x86_64-unknown-linux-gnu
+          key: rustup-linux-x86-64-1.88.0
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the exact release binary
+        run: cargo build --locked --release -p immich-rs-cli
+      - name: Run and remove the isolated Immich v3.1.0 stack
+        run: |
+          mkdir -p .artifacts
+          scripts/run-disposable-immich.sh \
+            --binary target/release/immich-rs \
+            --commit-sha "${{ github.sha }}" \
+            --output ".artifacts/phase2-disposable-${{ github.sha }}.json"
+      - name: Preserve aggregate disposable evidence
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: phase2-disposable-${{ github.sha }}
+          path: .artifacts/phase2-disposable-${{ github.sha }}.json
+          retention-days: 14

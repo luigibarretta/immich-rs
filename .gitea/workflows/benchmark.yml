@@ -11,7 +11,7 @@ concurrency:
 jobs:
   paired-benchmark:
     runs-on: docker
-    timeout-minutes: 30
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:

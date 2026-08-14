@@ -108,6 +108,37 @@ class MockImmichServerTests(unittest.TestCase):
         self.assertFalse(snapshot["requests"][0]["mutating"])
         self.assertFalse(snapshot["committed_mutations"])
 
+    def test_bulk_check_converges_after_one_upload(self) -> None:
+        checksum = "synthetic-checksum"
+        bulk = json.dumps({"assets": [{"id": "synthetic-operation", "checksum": checksum}]}).encode()
+        with mock.running_mock() as server:
+            with request(
+                server,
+                "/api/assets/bulk-upload-check",
+                method="POST",
+                api_key=mock.SYNTHETIC_API_KEY,
+                body=bulk,
+            ) as response:
+                self.assertEqual(json.load(response)["results"][0]["action"], "accept")
+            upload_request = urllib.request.Request(
+                server.url + "/api/assets",
+                data=b"synthetic multipart body",
+                method="POST",
+                headers={"x-api-key": mock.SYNTHETIC_API_KEY, "x-immich-checksum": checksum},
+            )
+            with urllib.request.urlopen(upload_request, timeout=2) as response:
+                self.assertEqual(json.load(response)["status"], "created")
+            with request(
+                server,
+                "/api/assets/bulk-upload-check",
+                method="POST",
+                api_key=mock.SYNTHETIC_API_KEY,
+                body=bulk,
+            ) as response:
+                self.assertEqual(json.load(response)["results"][0]["action"], "reject")
+            snapshot = server.state.snapshot()
+        self.assertEqual(snapshot["asset_count"], 1)
+
     def test_scenario_rejects_non_synthetic_credentials(self) -> None:
         scenario = deepcopy(mock.default_scenario())
         scenario["api_key"] = "not-the-declared-test-constant"

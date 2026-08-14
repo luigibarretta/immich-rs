@@ -9,8 +9,9 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
+import runpy
 import socket
-from threading import Lock, Thread
+from threading import Thread
 import time
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlsplit
@@ -19,52 +20,13 @@ MOCK_SCHEMA = "mock-immich-v1"
 SYNTHETIC_API_KEY = "synthetic-oracle-key"
 MAX_REQUEST_BODY_BYTES = 1_048_576
 RESPONSE_FIXTURE_PATH = Path(__file__).resolve().parent / "server-fixtures" / "immich-v3.1.json"
+SUPPORT = runpy.run_path(str(Path(__file__).resolve().with_name("mock_support.py")))
+MockState = SUPPORT["MockState"]
+is_mutating_request = SUPPORT["is_mutating_request"]
 
 
 class MockConfigurationError(ValueError):
     """The requested mock scenario is unsafe or malformed."""
-
-
-class MockState:
-    """Thread-safe observable server state."""
-
-    def __init__(self, scenario: dict[str, Any]):
-        self.scenario = scenario
-        self.requests: list[dict[str, Any]] = []
-        self.committed_mutations: list[dict[str, Any]] = []
-        self._lock = Lock()
-        fault = scenario.get("fault", {})
-        self._fault_remaining = int(fault.get("times", 0)) if isinstance(fault, dict) else 0
-
-    def record(self, request: dict[str, Any]) -> None:
-        with self._lock:
-            self.requests.append(request)
-
-    def record_commit(self, request: dict[str, Any]) -> None:
-        with self._lock:
-            self.committed_mutations.append(request)
-
-    def consume_fault(self, path: str) -> str | None:
-        fault = self.scenario.get("fault", {})
-        if not isinstance(fault, dict):
-            return None
-        prefix = fault.get("path_prefix", "/api/")
-        kind = fault.get("kind")
-        if not isinstance(prefix, str) or not isinstance(kind, str) or not path.startswith(prefix):
-            return None
-        with self._lock:
-            if self._fault_remaining <= 0:
-                return None
-            self._fault_remaining -= 1
-        return kind
-
-    def snapshot(self) -> dict[str, Any]:
-        with self._lock:
-            return {
-                "schema": MOCK_SCHEMA,
-                "requests": [dict(request) for request in self.requests],
-                "committed_mutations": [dict(request) for request in self.committed_mutations],
-            }
 
 
 def _validate_scenario(scenario: dict[str, Any]) -> None:
@@ -119,21 +81,6 @@ def default_scenario() -> dict[str, Any]:
         "fault": {},
         "responses": responses,
     }
-
-
-def is_mutating_request(method: str, path: str) -> bool:
-    """Classify semantic mutations rather than treating every POST as a write."""
-    if method in {"PUT", "PATCH", "DELETE"}:
-        return True
-    if method != "POST":
-        return False
-    read_only_posts = (
-        "/api/search/",
-        "/api/assets/bulk-upload-check",
-        "/api/assets/exist",
-        "/api/duplicates",
-    )
-    return not path.startswith(read_only_posts)
 
 
 def _normalized_target(raw_target: str) -> tuple[str, str]:
@@ -248,9 +195,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._json_response(401, {"message": "synthetic authentication rejected"})
             return
 
-        fault = self.state.consume_fault(path)
+        configured_fault = scenario.get("fault", {})
+        skip_lost_response_precheck = (
+            isinstance(configured_fault, dict)
+            and configured_fault.get("kind") == "commit_lost_response"
+            and not mutating
+        )
+        fault = None if skip_lost_response_precheck else self.state.consume_fault(path)
         if fault == "timeout":
-            configured_fault = scenario.get("fault", {})
             delay_ms = configured_fault.get("delay_ms", 100) if isinstance(configured_fault, dict) else 100
             time.sleep(delay_ms / 1000)
         elif fault == "rate_limit":
@@ -263,6 +215,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._disconnect()
             return
         elif fault == "commit_lost_response" and mutating:
+            checksum = self.headers.get("x-immich-checksum", "synthetic-unidentified")
+            self.state.commit_asset(checksum)
             self.state.record_commit(request)
             self._disconnect()
             return
@@ -316,10 +270,23 @@ class _Handler(BaseHTTPRequestHandler):
         elif path.startswith("/api/search/") and self.command == "POST":
             self._json_response(200, responses["search_result"])
         elif path == "/api/assets/bulk-upload-check" and self.command == "POST":
-            self._json_response(200, [])
+            assets = json_body.get("assets") if isinstance(json_body, dict) else None
+            if not isinstance(assets, list) or any(
+                not isinstance(asset, dict)
+                or not isinstance(asset.get("id"), str)
+                or not isinstance(asset.get("checksum"), str)
+                for asset in assets
+            ):
+                self._json_response(400, {"message": "invalid synthetic bulk check"})
+                return
+            results = [self.state.check_asset(asset["id"], asset["checksum"]) for asset in assets]
+            self._json_response(200, {"results": results})
         elif path == "/api/assets" and self.command == "POST":
-            self.state.record_commit(request)
-            self._json_response(201, {"id": "00000000-0000-4000-8000-000000000002", "status": "created"})
+            checksum = self.headers.get("x-immich-checksum", "synthetic-unidentified")
+            asset_id, status = self.state.commit_asset(checksum)
+            if status == "created":
+                self.state.record_commit(request)
+            self._json_response(201, {"id": asset_id, "status": status})
         elif mutating:
             self.state.record_commit(request)
             self._json_response(200, {"status": "synthetic-commit"})

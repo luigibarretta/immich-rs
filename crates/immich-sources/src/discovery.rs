@@ -197,6 +197,7 @@ fn process_regular_file(
             }
             if let Some(kind) = media {
                 state.media.push(DiscoveredMedia {
+                    native_path: path.to_path_buf(),
                     relative_path,
                     kind,
                     byte_len,
@@ -210,6 +211,7 @@ fn process_regular_file(
                 });
             } else if let Some(kind) = sidecar {
                 state.sidecars.push(DiscoveredSidecar {
+                    native_path: path.to_path_buf(),
                     relative_path,
                     kind,
                     byte_len,

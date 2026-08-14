@@ -1,10 +1,11 @@
 #![forbid(unsafe_code)]
 //! Deterministic, bounded and read-only source adapters.
 
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::fs::Metadata;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use immich_rs_core::{
     Cancellation, LivePhotoMember, MediaKind, MetadataCandidate, MetadataKind, NormalizedPlan,
@@ -132,6 +133,7 @@ impl From<PlanValidationError> for ScanError {
 
 #[derive(Clone, Debug)]
 struct DiscoveredMedia {
+    native_path: PathBuf,
     relative_path: String,
     kind: MediaKind,
     byte_len: u64,
@@ -143,10 +145,63 @@ struct DiscoveredMedia {
 
 #[derive(Clone, Debug)]
 struct DiscoveredSidecar {
+    native_path: PathBuf,
     relative_path: String,
     kind: MetadataKind,
     byte_len: u64,
     content_sha256: String,
+}
+
+/// One normalized plan paired with ephemeral native source path resolution.
+#[derive(Clone, Debug)]
+pub struct ResolvedFolderPlan {
+    /// Source-neutral, serializable plan.
+    pub plan: NormalizedPlan,
+    files: BTreeMap<String, ResolvedSourceFile>,
+}
+
+impl ResolvedFolderPlan {
+    /// Resolve one NFC portable path to the native path observed by the scan.
+    #[must_use]
+    pub fn native_path(&self, portable_path: &str) -> Option<&Path> {
+        self.files
+            .get(portable_path)
+            .map(|file| file.native_path.as_path())
+    }
+
+    /// Resolve content facts captured during the same bounded scan.
+    #[must_use]
+    pub fn source_file(&self, portable_path: &str) -> Option<&ResolvedSourceFile> {
+        self.files.get(portable_path)
+    }
+}
+
+/// Ephemeral native resolution and content identity for one scanned file.
+#[derive(Clone, Debug)]
+pub struct ResolvedSourceFile {
+    native_path: PathBuf,
+    byte_len: u64,
+    content_sha256: String,
+}
+
+impl ResolvedSourceFile {
+    /// Native path observed by discovery.
+    #[must_use]
+    pub fn native_path(&self) -> &Path {
+        &self.native_path
+    }
+
+    /// Exact length observed during the streaming identity read.
+    #[must_use]
+    pub const fn byte_len(&self) -> u64 {
+        self.byte_len
+    }
+
+    /// SHA-256 observed during the streaming identity read.
+    #[must_use]
+    pub fn content_sha256(&self) -> &str {
+        &self.content_sha256
+    }
 }
 
 struct RegularFile<'a> {
@@ -199,7 +254,26 @@ pub fn scan_folder(
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
 ) -> Result<NormalizedPlan, ScanError> {
-    scan_folder_internal(
+    scan_folder_resolved_internal(
+        root,
+        source_label,
+        config,
+        cancellation,
+        observer,
+        &mut |_| {},
+    )
+    .map(|resolved| resolved.plan)
+}
+
+/// Scan once and retain bounded native paths for a subsequent local apply plan.
+pub fn scan_folder_resolved(
+    root: &Path,
+    source_label: &str,
+    config: &FolderScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+) -> Result<ResolvedFolderPlan, ScanError> {
+    scan_folder_resolved_internal(
         root,
         source_label,
         config,
@@ -209,6 +283,7 @@ pub fn scan_folder(
     )
 }
 
+#[cfg(test)]
 fn scan_folder_internal(
     root: &Path,
     source_label: &str,
@@ -217,6 +292,25 @@ fn scan_folder_internal(
     observer: &mut impl ProgressObserver,
     before_read: &mut impl FnMut(&Path),
 ) -> Result<NormalizedPlan, ScanError> {
+    scan_folder_resolved_internal(
+        root,
+        source_label,
+        config,
+        cancellation,
+        observer,
+        before_read,
+    )
+    .map(|resolved| resolved.plan)
+}
+
+fn scan_folder_resolved_internal(
+    root: &Path,
+    source_label: &str,
+    config: &FolderScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+    before_read: &mut impl FnMut(&Path),
+) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
     discovery::validate_root_and_label(root, source_label)?;
 
@@ -233,6 +327,30 @@ fn scan_folder_internal(
     reconcile::reconcile(&mut state);
     state.progress(ProgressStage::Reconciliation, observer);
     let complete_sequence = state.event_sequence.saturating_add(1);
+    let files = state
+        .media
+        .iter()
+        .map(|media| {
+            (
+                media.relative_path.clone(),
+                ResolvedSourceFile {
+                    native_path: media.native_path.clone(),
+                    byte_len: media.byte_len,
+                    content_sha256: media.content_sha256.clone(),
+                },
+            )
+        })
+        .chain(state.sidecars.iter().map(|sidecar| {
+            (
+                sidecar.relative_path.clone(),
+                ResolvedSourceFile {
+                    native_path: sidecar.native_path.clone(),
+                    byte_len: sidecar.byte_len,
+                    content_sha256: sidecar.content_sha256.clone(),
+                },
+            )
+        }))
+        .collect::<BTreeMap<_, _>>();
     let plan = reconcile::finalize_plan(source_label, config, state);
     plan.validate()?;
     observer.observe(ProgressEvent {
@@ -242,8 +360,10 @@ fn scan_folder_internal(
         assets_observed: plan.summary.assets,
         bytes_read: plan.summary.bytes_read,
     });
-    Ok(plan)
+    Ok(ResolvedFolderPlan { plan, files })
 }
 
+#[cfg(test)]
+mod resolved_tests;
 #[cfg(test)]
 mod tests;

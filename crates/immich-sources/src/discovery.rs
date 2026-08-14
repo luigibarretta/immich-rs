@@ -308,6 +308,17 @@ fn metadata_kind(path: &str) -> Option<MetadataKind> {
     }
 }
 
+#[cfg(unix)]
+fn lacks_read_permissions(metadata: &Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt as _;
+    metadata.permissions().mode() & 0o444 == 0
+}
+
+#[cfg(not(unix))]
+fn lacks_read_permissions(_metadata: &Metadata) -> bool {
+    false
+}
+
 enum StreamError {
     Cancelled,
     Unreadable,
@@ -319,6 +330,9 @@ fn stream_identity(
     buffer_bytes: usize,
     cancellation: &impl Cancellation,
 ) -> Result<(u64, String, bool), StreamError> {
+    if lacks_read_permissions(discovered_metadata) {
+        return Err(StreamError::Unreadable);
+    }
     let before = FileSnapshot::from_metadata(discovered_metadata);
     let mut file = File::open(path).map_err(|_| StreamError::Unreadable)?;
     let opened = file.metadata().map_err(|_| StreamError::Unreadable)?;

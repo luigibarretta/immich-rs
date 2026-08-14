@@ -48,14 +48,24 @@ exact implementation SHA; run 5170 uploaded the raw JSON report.
 
 ## Phase 2 — folder upload MVP
 
-- version-negotiated Immich client;
-- streaming multipart upload;
-- duplicate handling;
-- bounded concurrency, retries and resumable checkpoint journal;
-- explicit dry-run and plan/apply separation.
+- version-negotiated Immich client with separate probe and upload capabilities;
+- bounded streaming multipart upload for image, video, XMP and live photo;
+- checksum duplicate handling, including commit with a lost response;
+- bounded concurrency, retries and a durable resumable checkpoint journal;
+- explicit immutable plan, dry-run and apply separation;
+- loopback-only disposable-server authorization boundary;
+- synthetic mock coverage for retry, refusal and cancellation behavior;
+- real Immich v3.1.0 create, resume and duplicate convergence evidence.
 
 Exit gate: isolated disposable Immich test instance, fault-injection recovery,
-idempotent second run and no duplicate assets.
+idempotent second run and no duplicate assets. The implementation and committed
+evidence satisfy this first vertical's local gate. Push CI and the full
+disposable workflow remain required for every release candidate SHA.
+
+The current real-server corpus is one synthetic PNG. The richer video, XMP and
+live-photo matrix is mock-backed, and Phase 2 has no paired performance claim.
+Expanding both items is the next Phase 2 evidence vertical; production remains
+unauthorized.
 
 ## Phase 3 — Google Takeout
 

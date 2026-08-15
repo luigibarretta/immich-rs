@@ -51,9 +51,11 @@ jobs:
             --benchmark-output ".artifacts/phase2-benchmark-${{ github.sha }}.json" \
             --samples 6 \
             --warmups 2
+          mkdir phase2-artifacts
+          cp -- .artifacts/*.json phase2-artifacts/
       - name: Preserve raw benchmark and disposable evidence
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: phase2-benchmark-${{ github.sha }}
-          path: .artifacts
+          path: phase2-artifacts
           retention-days: 30

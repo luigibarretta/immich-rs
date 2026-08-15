@@ -16,6 +16,8 @@ pub const GOOGLE_TAKEOUT_JSON_OVERSIZED: &str = "META_GOOGLE_TAKEOUT_JSON_OVERSI
 pub const GOOGLE_TAKEOUT_AMBIGUOUS: &str = "META_GOOGLE_TAKEOUT_AMBIGUOUS_V1";
 /// A metadata family is outside the first Google Takeout vertical.
 pub const GOOGLE_TAKEOUT_UNSUPPORTED: &str = "META_GOOGLE_TAKEOUT_UNSUPPORTED_V1";
+/// A Google Takeout media file had no associated JSON metadata candidate.
+pub const GOOGLE_TAKEOUT_UNMATCHED_MEDIA: &str = "META_GOOGLE_TAKEOUT_UNMATCHED_MEDIA_V1";
 /// A still image and video were associated as a live-photo pair.
 pub const LIVE_PHOTO_BASENAME: &str = "PAIR_LIVE_PHOTO_BASENAME_V1";
 /// A symbolic link was deliberately not followed.

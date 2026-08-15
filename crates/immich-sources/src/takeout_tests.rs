@@ -94,6 +94,19 @@ fn malformed_and_oversized_json_fail_closed() -> Result<(), Box<dyn std::error::
 }
 
 #[test]
+fn media_without_json_is_never_silent() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("unmatched-media")?;
+    directory.write("pixel.png", b"synthetic-image")?;
+    let plan = scan(&directory.0)?;
+    assert!(
+        plan.warnings
+            .iter()
+            .any(|warning| warning.rule_id == rule_id::GOOGLE_TAKEOUT_UNMATCHED_MEDIA)
+    );
+    Ok(())
+}
+
+#[test]
 fn duplicate_sidecars_are_ambiguous_and_never_attached() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new("ambiguous")?;
     directory.write("pixel.png", b"synthetic-image")?;

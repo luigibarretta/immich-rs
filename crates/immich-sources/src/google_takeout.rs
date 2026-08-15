@@ -127,6 +127,15 @@ pub fn reconcile(state: &mut ScanState) {
             ));
         }
     }
+    for media in &state.media {
+        if media.metadata.is_empty() {
+            state.warnings.push(diagnostic(
+                rule_id::GOOGLE_TAKEOUT_UNMATCHED_MEDIA,
+                "takeout_media_without_json",
+                vec![media.relative_path.clone()],
+            ));
+        }
+    }
     complete(state);
 }
 

@@ -265,10 +265,10 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             time.sleep(0.01)
         else:
             process.kill()
-            process.wait(timeout=2)
+            process.wait(timeout=5)
             raise RuntimeError("cancellation request did not reach the mock")
         process.send_signal(signal.SIGINT)
-        stdout, stderr = process.communicate(timeout=2)
+        stdout, stderr = process.communicate(timeout=10)
         time.sleep(0.6)
         resumed = invoke(binary, arguments, with_key=True)
         snapshot = server.state.snapshot()

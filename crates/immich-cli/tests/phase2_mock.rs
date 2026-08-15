@@ -13,7 +13,15 @@ fn phase_two_converges_against_only_the_synthetic_mock() -> Result<(), Box<dyn s
         .arg(repository.join("tests/integration/run_phase2_mock.py"))
         .arg(env!("CARGO_BIN_EXE_immich-rs"))
         .output()?;
-    assert!(output.status.success());
+    if !output.status.success() {
+        return Err(format!(
+            "Phase-2 mock subprocess failed with {}: stdout={} stderr={}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        )
+        .into());
+    }
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
     Ok(())

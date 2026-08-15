@@ -61,6 +61,21 @@ def check() -> list[str]:
     forbidden_mutations = ("delete(", "replace(", "put(", "patch(")
     if any(token in upload_source.casefold() for token in forbidden_mutations):
         failures.append("Phase-2 client contains an unapproved mutation primitive")
+    disposable_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            REPOSITORY_ROOT / ".gitea" / "workflows" / "disposable.yml",
+            REPOSITORY_ROOT / "scripts" / "run-disposable-immich.sh",
+        )
+    ).casefold()
+    forbidden_transport = ("--network host", "host.docker.internal", "host-gateway")
+    if any(token in disposable_sources for token in forbidden_transport):
+        failures.append("disposable gate can reach the Docker host network")
+    harness = (REPOSITORY_ROOT / "scripts" / "run-disposable-immich.sh").read_text(
+        encoding="utf-8"
+    )
+    if '--target-container "$SERVER"' not in harness or "--target-port" in harness:
+        failures.append("containerized loopback forwarder is not bound to disposable Immich")
     return failures
 
 

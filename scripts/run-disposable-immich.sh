@@ -61,6 +61,8 @@ DATABASE_VOLUME="$PREFIX-database"
 UPLOAD_VOLUME="$PREFIX-upload"
 WORKSPACE=$(mktemp -d "/tmp/immich-rs-disposable.XXXXXX")
 CLEANED=0
+DRIVER_CONTAINER=''
+PROXY_PID=''
 declare -a PULLED_IMAGES=()
 
 label_value() {
@@ -70,6 +72,11 @@ label_value() {
 cleanup() {
   local resource label
   set +e
+  if [[ -n "$PROXY_PID" ]]; then
+    kill "$PROXY_PID" >/dev/null 2>&1
+    wait "$PROXY_PID" >/dev/null 2>&1
+    PROXY_PID=''
+  fi
   for resource in "$SERVER" "$VALKEY" "$DATABASE"; do
     label=$(label_value "$resource")
     if [[ "$label" == "$RUN_ID" ]]; then
@@ -84,6 +91,9 @@ cleanup() {
   done
   label=$(docker network inspect --format "{{ index .Labels \"$RESOURCE_LABEL\" }}" "$NETWORK" 2>/dev/null || true)
   if [[ "$label" == "$RUN_ID" ]]; then
+    if [[ -n "$DRIVER_CONTAINER" ]]; then
+      docker network disconnect --force "$NETWORK" "$DRIVER_CONTAINER" >/dev/null 2>&1
+    fi
     docker network rm "$NETWORK" >/dev/null 2>&1
   fi
   for resource in "${PULLED_IMAGES[@]}"; do
@@ -117,7 +127,19 @@ docker network create \
 docker volume create --label "$RESOURCE_LABEL=$RUN_ID" "$DATABASE_VOLUME" >/dev/null
 docker volume create --label "$RESOURCE_LABEL=$RUN_ID" "$UPLOAD_VOLUME" >/dev/null
 
+if [[ -n "${HOSTNAME:-}" ]]; then
+  candidate=$(docker inspect --format '{{.Id}}' "$HOSTNAME" 2>/dev/null || true)
+  if [[ -n "$candidate" && "$candidate" == "$HOSTNAME"* ]]; then
+    DRIVER_CONTAINER=$candidate
+    docker network connect "$NETWORK" "$DRIVER_CONTAINER"
+  fi
+fi
+
 DATABASE_PASSWORD="synthetic-db-$RUN_SUFFIX"
+declare -a SERVER_PUBLICATION=(--publish 127.0.0.1::2283)
+if [[ -n "$DRIVER_CONTAINER" ]]; then
+  SERVER_PUBLICATION=()
+fi
 docker run --detach \
   --name "$DATABASE" \
   --label "$RESOURCE_LABEL=$RUN_ID" \
@@ -142,7 +164,7 @@ docker run --detach \
   --name "$SERVER" \
   --label "$RESOURCE_LABEL=$RUN_ID" \
   --network "$NETWORK" \
-  --publish 127.0.0.1::2283 \
+  "${SERVER_PUBLICATION[@]}" \
   --env DB_HOSTNAME=database \
   --env DB_USERNAME=postgres \
   --env "DB_PASSWORD=$DATABASE_PASSWORD" \
@@ -152,14 +174,22 @@ docker run --detach \
   --volume "$UPLOAD_VOLUME:/data" \
   "$SERVER_IMAGE" >/dev/null
 
-sleep 1
-if ! PUBLISHED=$(docker port "$SERVER" 2283/tcp); then
-  echo "disposable server state: $(docker inspect --format '{{.State.Status}}' "$SERVER")" >&2
-  docker logs --tail 80 "$SERVER" >&2 || true
-  exit 1
+if [[ -n "$DRIVER_CONTAINER" ]]; then
+  PROXY_PORT=$(python3 -c 'import socket; sock=socket.socket(); sock.bind(("127.0.0.1", 0)); print(sock.getsockname()[1]); sock.close()')
+  python3 "$REPOSITORY_ROOT/scripts/loopback-forward.py" \
+    --listen-port "$PROXY_PORT" --target-container "$SERVER" &
+  PROXY_PID=$!
+  ENDPOINT="http://127.0.0.1:$PROXY_PORT"
+else
+  sleep 1
+  if ! PUBLISHED=$(docker port "$SERVER" 2283/tcp); then
+    echo "disposable server state: $(docker inspect --format '{{.State.Status}}' "$SERVER")" >&2
+    docker logs --tail 80 "$SERVER" >&2 || true
+    exit 1
+  fi
+  [[ "$PUBLISHED" =~ ^127\.0\.0\.1:[0-9]+$ ]] || { echo 'server port escaped loopback' >&2; exit 1; }
+  ENDPOINT="http://$PUBLISHED"
 fi
-[[ "$PUBLISHED" =~ ^127\.0\.0\.1:[0-9]+$ ]] || { echo 'server port escaped loopback' >&2; exit 1; }
-ENDPOINT="http://$PUBLISHED"
 READY=0
 for _attempt in $(seq 1 120); do
   if curl --fail --silent --show-error --max-time 2 "$ENDPOINT/api/server/ping" >/dev/null 2>&1; then
@@ -168,7 +198,12 @@ for _attempt in $(seq 1 120); do
   fi
   sleep 1
 done
-[[ "$READY" == 1 ]] || { echo 'disposable Immich did not become ready' >&2; exit 1; }
+if [[ "$READY" != 1 ]]; then
+  echo 'disposable Immich did not become ready' >&2
+  docker logs --tail 80 "$DATABASE" >&2 || true
+  docker logs --tail 80 "$SERVER" >&2 || true
+  exit 1
+fi
 
 EMAIL="synthetic-$RUN_SUFFIX@example.invalid"
 PASSWORD="synthetic-admin-$RUN_SUFFIX"
@@ -269,5 +304,5 @@ jq -n \
   --argjson asset_count "$ASSET_COUNT" \
   --argjson cleanup_verified "$CLEANED" \
   --argjson downloaded_images "${#PULLED_IMAGES[@]}" \
-  '{schema:"phase2-disposable-v1",commit_sha:$commit,environment:{os:$host_os,architecture:$host_arch,docker_server_version:$docker_version,binary_sha256:$binary_sha256},images:{server:$server_image,valkey:$valkey_image,database:$database_image},fixture:{kind:"synthetic",license:"CC0-1.0",sha256:$fixture_sha256,assets:1},plan_sha256:$plan_sha256,methodology:{network:"dedicated bridge with IP masquerading disabled; ephemeral 127.0.0.1 publication",commands:["plan upload folder","apply upload --dry-run","apply upload","apply upload (checkpoint resume)","apply upload (fresh checkpoint duplicate check)"]},server_version:$server_version,reports:{dry_run:$dry_run,first:$first,resume:$resume,duplicate:$duplicate},asset_count:$asset_count,cleanup:{verified:($cleanup_verified == 1),labelled_containers:0,labelled_volumes:0,labelled_networks:0,downloaded_images_removed:$downloaded_images}}' \
+  '{schema:"phase2-disposable-v1",commit_sha:$commit,environment:{os:$host_os,architecture:$host_arch,docker_server_version:$docker_version,binary_sha256:$binary_sha256},images:{server:$server_image,valkey:$valkey_image,database:$database_image},fixture:{kind:"synthetic",license:"CC0-1.0",sha256:$fixture_sha256,assets:1},plan_sha256:$plan_sha256,methodology:{network:"dedicated non-masquerading bridge; ephemeral 127.0.0.1 endpoint",commands:["plan upload folder","apply upload --dry-run","apply upload","apply upload (checkpoint resume)","apply upload (fresh checkpoint duplicate check)"]},server_version:$server_version,reports:{dry_run:$dry_run,first:$first,resume:$resume,duplicate:$duplicate},asset_count:$asset_count,cleanup:{verified:($cleanup_verified == 1),labelled_containers:0,labelled_volumes:0,labelled_networks:0,downloaded_images_removed:$downloaded_images}}' \
   >"$OUTPUT"

@@ -10,6 +10,9 @@ SOURCE=''
 SOURCE_MANIFEST=''
 OUTPUT=''
 OUTPUT_MANIFEST=''
+LIVE_PHOTO_ID='synthetic-live-photo-v1'
+STANDALONE_IMAGE_ID='synthetic-still-only-v1'
+STANDALONE_VIDEO_ID='synthetic-video-only-v1'
 while (($# > 0)); do
   case "$1" in
     --source) (($# >= 2)) || usage; SOURCE=$2; shift 2 ;;
@@ -64,8 +67,12 @@ done < <(find "$OUTPUT" -mindepth 1 -maxdepth 1 -type f -print | sort)
 cp --reflink=auto --sparse=always -- "$SOURCE/clip.mp4" "$OUTPUT/clip.mp4"
 cp --reflink=auto --sparse=always -- "$SOURCE/image.jpg" "$OUTPUT/image.jpg"
 cp --reflink=auto --sparse=always -- "$SOURCE/image.xmp" "$OUTPUT/image.xmp"
-cp --reflink=auto --sparse=always -- "$SOURCE/live.mov" "$OUTPUT/motion.mov"
-cp --reflink=auto --sparse=always -- "$SOURCE/live.jpg" "$OUTPUT/still.jpg"
+python3 "$(dirname -- "$0")/rewrite-synthetic-identifier.py" \
+  --from-identifier "$LIVE_PHOTO_ID" --to-identifier "$STANDALONE_VIDEO_ID" \
+  <"$SOURCE/live.mov" >"$OUTPUT/motion.mov"
+python3 "$(dirname -- "$0")/rewrite-synthetic-identifier.py" \
+  --from-identifier "$LIVE_PHOTO_ID" --to-identifier "$STANDALONE_IMAGE_ID" \
+  <"$SOURCE/live.jpg" >"$OUTPUT/still.jpg"
 
 files='[]'
 for entry in \
@@ -83,5 +90,5 @@ for entry in \
 done
 source_digest=$(sha256sum "$SOURCE_MANIFEST" | cut -d' ' -f1)
 jq -n --arg source_digest "$source_digest" --argjson files "$files" \
-  '{schema:"phase2-benchmark-corpus-v1",fixture_id:"synthetic-phase2-standalone-matrix",synthetic:true,license:"CC0-1.0",derived_from:{schema:"phase2-corpus-v1",manifest_sha256:$source_digest,mapping:"live bytes renamed to distinct standalone basenames"},files:$files,expected:{upload_operations:4,xmp_sidecars:1,live_photo_pairs:0,visible_assets:4,live_photo_links:0}}' \
+  '{schema:"phase2-benchmark-corpus-v1",fixture_id:"synthetic-phase2-standalone-matrix",synthetic:true,license:"CC0-1.0",derived_from:{schema:"phase2-corpus-v1",manifest_sha256:$source_digest,mapping:"live media renamed and assigned distinct fixed-size synthetic identifiers"},files:$files,expected:{upload_operations:4,xmp_sidecars:1,live_photo_pairs:0,visible_assets:4,live_photo_links:0}}' \
   >"$OUTPUT_MANIFEST"

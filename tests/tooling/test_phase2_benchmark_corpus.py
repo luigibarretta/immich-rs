@@ -30,7 +30,8 @@ class Phase2BenchmarkCorpusTests(unittest.TestCase):
             }
             files = []
             for path, role in roles.items():
-                content = f"synthetic {path}\n".encode()
+                suffix = b"synthetic-live-photo-v1" if path in {"live.jpg", "live.mov"} else b""
+                content = f"synthetic {path}\n".encode() + suffix
                 (source / path).write_bytes(content)
                 files.append(
                     {"path": path, "role": role, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
@@ -62,6 +63,10 @@ class Phase2BenchmarkCorpusTests(unittest.TestCase):
             derived = json.loads(first)
             self.assertEqual(derived["expected"]["live_photo_pairs"], 0)
             self.assertEqual(derived["expected"]["visible_assets"], 4)
+            self.assertNotIn(b"synthetic-live-photo-v1", (output / "motion.mov").read_bytes())
+            self.assertNotIn(b"synthetic-live-photo-v1", (output / "still.jpg").read_bytes())
+            self.assertIn(b"synthetic-video-only-v1", (output / "motion.mov").read_bytes())
+            self.assertIn(b"synthetic-still-only-v1", (output / "still.jpg").read_bytes())
             self.assertEqual(sorted(path.name for path in output.iterdir()), [
                 "clip.mp4", "image.jpg", "image.xmp", "motion.mov", "still.jpg"
             ])

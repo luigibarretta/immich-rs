@@ -3,6 +3,9 @@ name: phase2-disposable
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - phase2-disposable-*
 
 concurrency:
   group: immich-rs-phase2-disposable

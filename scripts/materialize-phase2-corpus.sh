@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPOSITORY_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+LIVE_PHOTO_ID='synthetic-live-photo-v1'
+
 usage() {
   echo 'usage: materialize-phase2-corpus.sh --image <digest-ref> --source <path> --manifest <path> --container <name> --run-label <key=value>' >&2
   exit 2
@@ -74,10 +77,15 @@ run_ffmpeg "$SOURCE/clip.mp4" \
 run_ffmpeg "$SOURCE/live.jpg" \
   -f lavfi -i 'color=c=0x654321:s=64x64:r=1' -frames:v 1 \
   -map_metadata -1 -fflags +bitexact -flags:v +bitexact -c:v mjpeg -q:v 2 -f image2pipe
+python3 "$REPOSITORY_ROOT/scripts/add-live-photo-metadata.py" \
+  --content-identifier "$LIVE_PHOTO_ID" \
+  <"$SOURCE/live.jpg" >"$SOURCE/.live-with-metadata.jpg"
+mv -- "$SOURCE/.live-with-metadata.jpg" "$SOURCE/live.jpg"
 run_ffmpeg "$SOURCE/live.mov" \
   -f lavfi -i 'testsrc2=size=640x360:rate=30:duration=2' -vf hflip -an -map_metadata -1 \
   -fflags +bitexact -flags:v +bitexact -threads 1 -c:v libx264 -preset medium -crf 18 \
-  -pix_fmt yuv420p -movflags frag_keyframe+empty_moov+default_base_moof -f mov
+  -pix_fmt yuv420p -metadata "com.apple.quicktime.content.identifier=$LIVE_PHOTO_ID" \
+  -movflags use_metadata_tags+frag_keyframe+empty_moov+default_base_moof -f mov
 
 files='[]'
 for entry in \
@@ -97,5 +105,5 @@ done
 jq -n \
   --arg image "$IMAGE" \
   --argjson files "$files" \
-  '{schema:"phase2-corpus-v1",fixture_id:"synthetic-phase2-media-matrix",synthetic:true,license:"CC0-1.0",generator:{network:"none",image:$image,recipe:"ffmpeg-lavfi-v1",determinism:"pinned image, fixed filters, single-thread video encoding, stripped metadata"},files:$files,expected:{upload_operations:4,xmp_sidecars:1,live_photo_pairs:1}}' \
+  '{schema:"phase2-corpus-v1",fixture_id:"synthetic-phase2-media-matrix",synthetic:true,license:"CC0-1.0",generator:{network:"none",image:$image,recipe:"ffmpeg-lavfi-apple-live-v2",determinism:"pinned image, fixed filters, single-thread video encoding, stripped metadata, fixed synthetic live-photo identifier"},files:$files,expected:{upload_operations:4,xmp_sidecars:1,live_photo_pairs:1}}' \
   >"$MANIFEST"

@@ -17,6 +17,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 EVIDENCE_ROOT = REPOSITORY_ROOT / "benchmarks" / "evidence"
 FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "fixtures" / "v1" / "synthetic-benchmark"
 BASELINE_PATH = REPOSITORY_ROOT / "tests" / "oracle" / "baseline.toml"
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+COMMIT = re.compile(r"^[0-9a-f]{40}$")
 METRICS = {
     "wall_time_seconds",
     "user_cpu_seconds",
@@ -29,6 +31,14 @@ METRICS = {
     "storage_bytes_written",
     "logical_media_bytes_read",
     "logical_media_bytes_written",
+}
+PHASE2_METRICS = METRICS - {"logical_media_bytes_read", "logical_media_bytes_written"}
+PHASE2_FILES = {
+    "clip.mp4": ("standalone-video", 294_437, "0a8fecdcd3acc4d48f86556019a116e949e8b54259bf37b368e957fa11863092"),
+    "image.jpg": ("standalone-image", 229, "1ddf2520656768129b504be9d3c54b8b722a7b5e03bbd68dbd1c8006fe27969b"),
+    "image.xmp": ("xmp-sidecar", 289, "f8dc98bef622f83d65bd58cdc957d1bdf349ccfd8fe87391a474c3bf558e92fa"),
+    "motion.mov": ("standalone-video", 291_962, "9b45455a0279ac0ec5be05f94f157497165064f1269daf93ebc0c7fc1ad29cb8"),
+    "still.jpg": ("standalone-image", 387, "70e4a5c7ac4a99e89e5cdbf6cd7a27da7bf143450ee1ad9b24eb02e29ed92fc2"),
 }
 
 
@@ -154,17 +164,103 @@ def validate(path: Path) -> None:
         raise EvidenceError(f"{path}: unsupported performance claim")
 
 
+def validate_phase2(path: Path) -> None:
+    report = _object(path)
+    if report.get("schema") != "phase2-benchmark-report-v1":
+        raise EvidenceError(f"{path}: unsupported Phase-2 benchmark schema")
+    encoded = json.dumps(report, sort_keys=True)
+    if any(value in encoded for value in ("/tmp/", "127.0.0.1", "example.invalid", "accessToken", "api_key", "password")):
+        raise EvidenceError(f"{path}: Phase-2 report contains a sensitive runtime value")
+    manifest = report.get("manifest")
+    if not isinstance(manifest, dict):
+        raise EvidenceError(f"{path}: Phase-2 manifest is missing")
+    revision = manifest.get("source_revision")
+    if not isinstance(revision, str) or COMMIT.fullmatch(revision) is None:
+        raise EvidenceError(f"{path}: Phase-2 source revision is invalid")
+    fixture = manifest.get("fixture")
+    if not isinstance(fixture, dict):
+        raise EvidenceError(f"{path}: Phase-2 fixture manifest is missing")
+    expected = {"upload_operations": 4, "xmp_sidecars": 1, "live_photo_pairs": 0, "visible_assets": 4, "live_photo_links": 0}
+    derived = fixture.get("derived_from")
+    if (
+        fixture.get("expected") != expected
+        or fixture.get("manifest_sha256") != "2eb2efe0668bf113dc8901459c5efb9f7da215f0a448d1e57f6e63b420d53640"
+        or not isinstance(derived, dict)
+        or derived.get("schema") != "phase2-corpus-v1"
+        or derived.get("manifest_sha256") != "5288a0548d947d22e2e693ef958db00215a562ffa3172a26861d569ae5927a61"
+    ):
+        raise EvidenceError(f"{path}: Phase-2 fixture identity drift")
+    files = fixture.get("files")
+    if not isinstance(files, list) or len(files) != len(PHASE2_FILES):
+        raise EvidenceError(f"{path}: Phase-2 fixture files are missing")
+    for entry in files:
+        if not isinstance(entry, dict):
+            raise EvidenceError(f"{path}: Phase-2 fixture entry is invalid")
+        expected_file = PHASE2_FILES.get(entry.get("path"))
+        if expected_file != (entry.get("role"), entry.get("bytes"), entry.get("sha256")):
+            raise EvidenceError(f"{path}: Phase-2 fixture file drift")
+    tools = manifest.get("tools")
+    oracle = tools.get("immich_go") if isinstance(tools, dict) else None
+    rust = tools.get("immich_rs") if isinstance(tools, dict) else None
+    baseline = tomllib.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    expected_oracle = baseline["artifacts"]["linux_x86_64"]["binary_sha256"]
+    if (
+        not isinstance(oracle, dict)
+        or oracle.get("version") != baseline["oracle"]["version"]
+        or oracle.get("binary_sha256") != expected_oracle
+        or oracle.get("sha256") != expected_oracle
+        or not isinstance(rust, dict)
+        or not isinstance(rust.get("sha256"), str)
+        or SHA256.fullmatch(rust["sha256"]) is None
+    ):
+        raise EvidenceError(f"{path}: Phase-2 tool identity drift")
+    environment = manifest.get("environment")
+    if not isinstance(environment, dict) or environment.get("hostname") != "<REDACTED_HOST>":
+        raise EvidenceError(f"{path}: Phase-2 environment is not redacted")
+    methodology = manifest.get("methodology")
+    samples = report.get("raw_samples")
+    if not isinstance(methodology, dict) or not isinstance(samples, list):
+        raise EvidenceError(f"{path}: Phase-2 methodology or samples are missing")
+    if methodology.get("samples") != len(samples) or len(samples) < 2:
+        raise EvidenceError(f"{path}: Phase-2 sample count mismatch")
+    if methodology.get("percentiles") != "nearest-rank p95 over the raw samples":
+        raise EvidenceError(f"{path}: Phase-2 percentile method is missing")
+    operations = {"source_operations": 4, "visible_assets": 4, "live_photo_links": 0, "retries": 0}
+    for index, sample in enumerate(samples):
+        expected_order = "immich-rs-first" if index % 2 == 0 else "immich-go-first"
+        if sample.get("sample") != index or sample.get("execution_order") != expected_order:
+            raise EvidenceError(f"{path}: Phase-2 pair order drift")
+        for tool in ("immich_rs", "immich_go"):
+            measured = sample.get(tool)
+            if not isinstance(measured, dict) or any(not _numeric(measured.get(field)) for field in PHASE2_METRICS):
+                raise EvidenceError(f"{path}: Phase-2 {tool} metrics are incomplete")
+            if measured.get("operations") != operations:
+                raise EvidenceError(f"{path}: Phase-2 {tool} outcome drift")
+    aggregate = report.get("aggregate")
+    if not isinstance(aggregate, dict):
+        raise EvidenceError(f"{path}: Phase-2 aggregate is missing")
+    for tool in ("immich_rs", "immich_go"):
+        for field in PHASE2_METRICS:
+            if aggregate.get(tool, {}).get(field) != _aggregate(samples, tool, field):
+                raise EvidenceError(f"{path}: Phase-2 aggregate drift for {tool}.{field}")
+    if report.get("claims") != ["Raw measurements only; no performance improvement is claimed."]:
+        raise EvidenceError(f"{path}: unsupported Phase-2 performance claim")
+
+
 def main() -> int:
     paths = sorted(EVIDENCE_ROOT.glob("phase1-*.json")) if EVIDENCE_ROOT.exists() else []
+    phase2_paths = sorted(EVIDENCE_ROOT.glob("phase2-*.json")) if EVIDENCE_ROOT.exists() else []
     try:
         if not paths:
             raise EvidenceError("Phase 1 benchmark evidence is missing")
         for path in paths:
             validate(path)
+        for path in phase2_paths:
+            validate_phase2(path)
     except (EvidenceError, OSError, UnicodeError) as error:
         print(f"benchmark evidence check failed: {error}", file=sys.stderr)
         return 1
-    print(f"benchmark evidence passed: {len(paths)} report(s)")
+    print(f"benchmark evidence passed: {len(paths) + len(phase2_paths)} report(s)")
     return 0
 
 

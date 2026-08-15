@@ -144,7 +144,7 @@ def validate_corpus(fixture: dict[str, Any]) -> None:
     if (
         generator.get("network") != "none"
         or generator.get("image") != EXPECTED_IMAGES["server"]
-        or generator.get("recipe") != "ffmpeg-lavfi-v1"
+        or generator.get("recipe") != "ffmpeg-lavfi-apple-live-v2"
     ):
         raise EvidenceError("Phase-2 corpus provenance drift")
     files = fixture.get("files")

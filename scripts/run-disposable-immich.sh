@@ -7,13 +7,17 @@ DATABASE_IMAGE='ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@s
 RESOURCE_LABEL='io.immich-rs.disposable.run'
 
 usage() {
-  echo 'usage: run-disposable-immich.sh --binary <path> --commit-sha <sha> --output <path>' >&2
+  echo 'usage: run-disposable-immich.sh --binary <path> --commit-sha <sha> --output <path> [--oracle <path> --benchmark-output <path> --samples <n> --warmups <n>]' >&2
   exit 2
 }
 
 BINARY=''
 COMMIT_SHA=''
 OUTPUT=''
+ORACLE=''
+BENCHMARK_OUTPUT=''
+SAMPLES=6
+WARMUPS=2
 while (($# > 0)); do
   case "$1" in
     --binary)
@@ -31,12 +35,22 @@ while (($# > 0)); do
       OUTPUT=$2
       shift 2
       ;;
+    --oracle) (($# >= 2)) || usage; ORACLE=$2; shift 2 ;;
+    --benchmark-output) (($# >= 2)) || usage; BENCHMARK_OUTPUT=$2; shift 2 ;;
+    --samples) (($# >= 2)) || usage; SAMPLES=$2; shift 2 ;;
+    --warmups) (($# >= 2)) || usage; WARMUPS=$2; shift 2 ;;
     *) usage ;;
   esac
 done
 
 [[ -f "$BINARY" && -x "$BINARY" ]] || usage
+BINARY=$(realpath -- "$BINARY")
 [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || usage
+[[ "$SAMPLES" =~ ^[0-9]+$ && "$WARMUPS" =~ ^[0-9]+$ ]] || usage
+if [[ -n "$ORACLE$BENCHMARK_OUTPUT" ]]; then
+  [[ -f "$ORACLE" && -x "$ORACLE" && -n "$BENCHMARK_OUTPUT" ]] || usage
+  ORACLE=$(realpath -- "$ORACLE")
+fi
 REPOSITORY_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 OUTPUT=$(realpath -m -- "$OUTPUT")
 case "$OUTPUT" in
@@ -44,6 +58,14 @@ case "$OUTPUT" in
   *) echo 'evidence output must be inside .artifacts' >&2; exit 2 ;;
 esac
 [[ ! -e "$OUTPUT" ]] || { echo 'evidence output already exists' >&2; exit 2; }
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  BENCHMARK_OUTPUT=$(realpath -m -- "$BENCHMARK_OUTPUT")
+  case "$BENCHMARK_OUTPUT" in
+    "$REPOSITORY_ROOT"/.artifacts/*) ;;
+    *) echo 'benchmark output must be inside .artifacts' >&2; exit 2 ;;
+  esac
+  [[ ! -e "$BENCHMARK_OUTPUT" ]] || { echo 'benchmark output already exists' >&2; exit 2; }
+fi
 mkdir -p -- "$REPOSITORY_ROOT/.artifacts"
 BINARY_SHA256=$(sha256sum "$BINARY" | cut -d' ' -f1)
 HOST_OS=$(uname -s)
@@ -296,6 +318,30 @@ LIVE_PHOTO_LINKS=$(jq '[.assets.items[] | select(.livePhotoVideoId != null)] | l
 [[ "$ASSET_COUNT" == 3 ]] || { echo "disposable visible asset count was $ASSET_COUNT, expected 3" >&2; exit 1; }
 [[ "$LIVE_PHOTO_LINKS" == 1 ]] || { echo "disposable live-photo link count was $LIVE_PHOTO_LINKS, expected 1" >&2; exit 1; }
 SERVER_VERSION=$(curl --fail --silent --show-error "$ENDPOINT/api/server/version")
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  echo 'disposable stage: paired benchmark' >&2
+  BENCHMARK_SOURCE="$WORKSPACE/benchmark-source"
+  BENCHMARK_MANIFEST="$WORKSPACE/benchmark-manifest.json"
+  "$REPOSITORY_ROOT/scripts/prepare-phase2-benchmark-corpus.sh" \
+    --source "$SOURCE" \
+    --source-manifest "$CORPUS_MANIFEST" \
+    --output "$BENCHMARK_SOURCE" \
+    --output-manifest "$BENCHMARK_MANIFEST"
+  mkdir -- "$WORKSPACE/benchmark"
+  IMMICH_RS_BENCHMARK_ADMIN_TOKEN="$ACCESS_TOKEN" \
+    python3 "$REPOSITORY_ROOT/scripts/benchmark-phase2.py" \
+      --endpoint "$ENDPOINT" \
+      --run-id "$RUN_SUFFIX" \
+      --source-revision "$COMMIT_SHA" \
+      --source "$BENCHMARK_SOURCE" \
+      --fixture-manifest "$BENCHMARK_MANIFEST" \
+      --workspace "$WORKSPACE/benchmark" \
+      --immich-rs "$BINARY" \
+      --oracle "$ORACLE" \
+      --samples "$SAMPLES" \
+      --warmups "$WARMUPS" \
+      --output "$BENCHMARK_OUTPUT"
+fi
 
 cleanup
 CLEANED=1

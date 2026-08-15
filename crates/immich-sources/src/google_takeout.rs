@@ -4,29 +4,14 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use immich_rs_core::{Cancellation, MetadataKind, NormalizedPlan, SourceKind, rule_id};
-use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 use crate::reconcile::{attach_sidecar, complete, diagnostic, prepare};
+use crate::takeout_metadata::{MAX_JSON_BYTES, ParseError, TakeoutDocument, parse_bytes};
 use crate::{
     DiscoveredSidecar, FolderScanConfig, MAX_DIAGNOSTIC_PATHS, ProgressObserver, ScanError,
     ScanState, ScanStrategy, TakeoutScanConfig, scan_resolved_internal,
 };
-
-pub const MAX_JSON_BYTES: u64 = 256 * 1_024;
-const MAX_TITLE_BYTES: usize = 4_096;
-
-#[derive(Deserialize)]
-struct GoogleSidecar {
-    title: String,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ParseError {
-    Invalid,
-    Oversized,
-    SourceChanged,
-}
 
 /// Scan one decompressed Google Takeout layout into a read-only normalized plan.
 pub fn scan_google_takeout(
@@ -66,7 +51,21 @@ pub fn scan_google_takeout_inputs(
         if std::fs::symlink_metadata(input).is_ok_and(|metadata| {
             metadata.file_type().is_dir() && !metadata.file_type().is_symlink()
         }) {
-            return scan_google_takeout(input, source_label, &config.scan, cancellation, observer);
+            validate_layout(input)?;
+            return scan_resolved_internal(
+                input,
+                source_label,
+                &config.scan,
+                cancellation,
+                observer,
+                &mut |_| {},
+                ScanStrategy {
+                    source_kind: SourceKind::GoogleTakeout,
+                    schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION_V2,
+                    reconcile_state: crate::takeout_reconcile::reconcile,
+                },
+            )
+            .map(|resolved| resolved.plan);
         }
     }
     if inputs.iter().any(|input| {
@@ -108,8 +107,8 @@ pub fn reconcile(state: &mut ScanState) {
             ));
             continue;
         }
-        let title = match parse_title(&sidecar) {
-            Ok(title) => title,
+        let document = match parse_document(&sidecar) {
+            Ok(document) => document,
             Err(error) => {
                 record_parse_error(state, &sidecar, error);
                 continue;
@@ -122,7 +121,7 @@ pub fn reconcile(state: &mut ScanState) {
             .enumerate()
             .filter(|(_, media)| {
                 sidecar_parent == parent_of(&media.relative_path)
-                    && filename(&media.relative_path) == title
+                    && filename(&media.relative_path) == document.title
             })
             .map(|(index, _)| index)
             .collect::<Vec<_>>();
@@ -169,12 +168,12 @@ pub fn reconcile(state: &mut ScanState) {
     complete(state);
 }
 
-fn parse_title(sidecar: &DiscoveredSidecar) -> Result<String, ParseError> {
+pub fn parse_document(sidecar: &DiscoveredSidecar) -> Result<TakeoutDocument, ParseError> {
     if let Some(error) = sidecar.takeout_parse_error {
         return Err(error);
     }
-    if let Some(title) = &sidecar.takeout_title {
-        return Ok(title.clone());
+    if let Some(document) = &sidecar.takeout_document {
+        return Ok(document.clone());
     }
     if sidecar.byte_len == 0 {
         return Err(ParseError::Invalid);
@@ -195,22 +194,10 @@ fn parse_title(sidecar: &DiscoveredSidecar) -> Result<String, ParseError> {
     if bytes.len() as u64 != sidecar.byte_len || digest != sidecar.content_sha256 {
         return Err(ParseError::SourceChanged);
     }
-    parse_title_bytes(&bytes)
+    parse_bytes(&bytes)
 }
 
-pub fn parse_title_bytes(bytes: &[u8]) -> Result<String, ParseError> {
-    let parsed: GoogleSidecar = serde_json::from_slice(bytes).map_err(|_| ParseError::Invalid)?;
-    if parsed.title.is_empty()
-        || parsed.title.len() > MAX_TITLE_BYTES
-        || parsed.title.chars().any(char::is_control)
-        || parsed.title.contains(['/', '\\'])
-    {
-        return Err(ParseError::Invalid);
-    }
-    Ok(parsed.title)
-}
-
-fn record_parse_error(state: &mut ScanState, sidecar: &DiscoveredSidecar, error: ParseError) {
+pub fn record_parse_error(state: &mut ScanState, sidecar: &DiscoveredSidecar, error: ParseError) {
     let (rule, code) = match error {
         ParseError::Invalid => (rule_id::GOOGLE_TAKEOUT_JSON_INVALID, "invalid_takeout_json"),
         ParseError::Oversized => (

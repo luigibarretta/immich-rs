@@ -73,6 +73,31 @@ class FixtureToolTests(unittest.TestCase):
             with self.assertRaises(materializer.FixtureError):
                 materializer.load_manifest(path)
 
+    def test_v2_split_archives_are_reproducible(self) -> None:
+        manifest = self.manifest()
+        manifest["schema"] = "fixture-manifest-v2"
+        manifest["provenance"]["generator_version"] = "2"
+        manifest["expected_plan"]["schema"] = "normalized-plan-v2"
+        manifest["archive_views"] = [
+            {
+                "name": "split",
+                "parts": [{"path": "part-001.zip", "files": ["image.png"]}],
+            }
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest_path = root / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            first = root / "first"
+            second = root / "second"
+            materializer.materialize(manifest_path, first, "split")
+            materializer.materialize(manifest_path, second, "split")
+            self.assertEqual(
+                (first / "part-001.zip").read_bytes(),
+                (second / "part-001.zip").read_bytes(),
+            )
+            self.assertFalse((first / ".fixture-staging").exists())
+
     def test_personal_metadata_keys_are_rejected(self) -> None:
         findings = checker._walk_json({"metadata": {"latitude": 1}})
         self.assertTrue(findings)

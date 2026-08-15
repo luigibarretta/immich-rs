@@ -52,13 +52,48 @@ impl Drop for TestDirectory {
 }
 
 fn scan(inputs: &[PathBuf]) -> Result<immich_rs_core::NormalizedPlan, ScanError> {
+    scan_with_config(inputs, &TakeoutScanConfig::default())
+}
+
+fn scan_with_config(
+    inputs: &[PathBuf],
+    config: &TakeoutScanConfig,
+) -> Result<immich_rs_core::NormalizedPlan, ScanError> {
     scan_google_takeout_inputs(
         inputs,
         "synthetic-split",
-        &TakeoutScanConfig::default(),
+        config,
         &NeverCancel,
         &mut NoProgress,
     )
+}
+
+#[test]
+fn archive_entry_order_and_buffer_size_are_not_semantic() -> Result<(), Box<dyn std::error::Error>>
+{
+    let directory = TestDirectory::new("entry-order")?;
+    let entries = [
+        (
+            "Takeout/Google Photos/Photos from 2024/alpha.png",
+            b"synthetic-alpha".as_slice(),
+        ),
+        (
+            "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+            br#"{"title":"alpha.png","photoTakenTime":{"timestamp":"1704067200"}}"#.as_slice(),
+        ),
+    ];
+    let reverse_entries = [entries[1], entries[0]];
+    let forward_archive = directory.archive("forward.zip", &entries)?;
+    let reverse_archive = directory.archive("reverse.zip", &reverse_entries)?;
+    let mut small = TakeoutScanConfig::default();
+    small.scan.buffer_bytes = 4 * 1_024;
+    let mut large = TakeoutScanConfig::default();
+    large.scan.buffer_bytes = 256 * 1_024;
+    assert_eq!(
+        scan_with_config(&[forward_archive], &small)?,
+        scan_with_config(&[reverse_archive], &large)?
+    );
+    Ok(())
 }
 
 #[test]

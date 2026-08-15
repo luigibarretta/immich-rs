@@ -1,0 +1,144 @@
+{
+  "schema_version": 2,
+  "source": {
+    "kind": "google_takeout",
+    "label": "synthetic-google-takeout-complete",
+    "fingerprint_sha256": "ca4227350c330e6d4f53e394f73762212d9f40aeac87dd7e01237172ce1534e3",
+    "case_sensitive": true,
+    "unicode_normalization": "nfc"
+  },
+  "assets": [
+    {
+      "operation_id": "aa89d5e7e206278580c6c41d5ba5db3612b240b73b7959385bd038df0b555b38",
+      "relative_path": "Takeout/Google Photos/Photos from 2024/alpha.png",
+      "media_kind": "image",
+      "byte_len": 73,
+      "content_sha256": "9359f8b9db230170541c3a80f4e449cafc1d44438275a652196527c863304cd6",
+      "metadata": [
+        {
+          "relative_path": "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1"
+        },
+        {
+          "relative_path": "Takeout/Google Photos/Synthetic Album/alpha.png.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1"
+        },
+        {
+          "relative_path": "Takeout/Google Photos/Synthetic Album/metadata.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_ALBUM_V1"
+        }
+      ],
+      "normalized_metadata": {
+        "description": "synthetic alpha description",
+        "taken_at_utc": "2024-01-01T00:00:00Z",
+        "location": {
+          "latitude": "3.5",
+          "longitude": "-4.25"
+        },
+        "albums": [
+          "Synthetic Album"
+        ]
+      },
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_ALBUM_V1",
+          "outcome": "metadata_candidate_associated"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_CONTENT_ALIAS_V1",
+          "outcome": "content_identical_paths_collapsed"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1",
+          "outcome": "metadata_candidate_associated"
+        }
+      ]
+    },
+    {
+      "operation_id": "40148f352c2cd7a2eed3585d52a22c7217e233a92693a3bfd84aa22b32765fcc",
+      "relative_path": "Takeout/Google Photos/Photos from 2024/beta.png",
+      "media_kind": "image",
+      "byte_len": 71,
+      "content_sha256": "669daae152d0d59203b1fee14c341913df612939e2fd3a6dd7ef0b4d468e0caf",
+      "metadata": [
+        {
+          "relative_path": "Takeout/Google Photos/Photos from 2024/beta.png.supplemental-metadata.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1"
+        }
+      ],
+      "normalized_metadata": {
+        "description": "synthetic beta description",
+        "taken_at_utc": "2024-01-02T00:00:00Z",
+        "location": null,
+        "albums": []
+      },
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1",
+          "outcome": "metadata_candidate_associated"
+        }
+      ]
+    },
+    {
+      "operation_id": "c23856a78514983bc7887f9e4628d095fc0e35b0bf63302a32c5e35b8fe70dd8",
+      "relative_path": "Takeout/Google Photos/Photos from 2024/café.png",
+      "media_kind": "image",
+      "byte_len": 70,
+      "content_sha256": "7930c964970e54985d1149269c9608d2dfad0077e74ee1d958f30000f6e82724",
+      "metadata": [
+        {
+          "relative_path": "Takeout/Google Photos/Photos from 2024/café.png.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1"
+        }
+      ],
+      "normalized_metadata": {
+        "description": "synthetic unicode description",
+        "taken_at_utc": "2024-01-03T00:00:00Z",
+        "location": null,
+        "albums": []
+      },
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1",
+          "outcome": "metadata_candidate_associated"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "rule_id": "META_GOOGLE_TAKEOUT_CONTENT_ALIAS_V1",
+      "code": "content_identical_takeout_aliases",
+      "paths": [
+        "Takeout/Google Photos/Photos from 2024/alpha.png",
+        "Takeout/Google Photos/Synthetic Album/alpha.png"
+      ]
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "assets": 3,
+    "sidecars": 5,
+    "bytes_read": 1296
+  }
+}

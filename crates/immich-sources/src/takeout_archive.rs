@@ -13,8 +13,8 @@ use zip::read::ZipFile;
 use zip::{CompressionMethod, ZipArchive};
 
 use crate::discovery::{media_kind, metadata_kind, validate_source_label};
-use crate::google_takeout::{MAX_JSON_BYTES, ParseError, parse_title_bytes, reconcile};
 use crate::reconcile::{diagnostic, finalize_plan};
+use crate::takeout_metadata::{MAX_JSON_BYTES, ParseError, parse_bytes};
 use crate::{
     DiscoveredMedia, DiscoveredSidecar, ProgressObserver, ScanError, ScanState, TakeoutScanConfig,
 };
@@ -63,7 +63,7 @@ pub fn scan_archives(
             "archives must contain Takeout/Google Photos",
         ));
     }
-    reconcile(&mut state);
+    crate::takeout_reconcile::reconcile(&mut state);
     state.progress(ProgressStage::Reconciliation, observer);
     let sequence = state.event_sequence.saturating_add(1);
     let plan = finalize_plan(
@@ -307,20 +307,21 @@ fn merge_entry(
             byte_len: identity.byte_len,
             content_sha256: identity.content_sha256,
             metadata: Vec::new(),
+            normalized_metadata: None,
             live_photo: None,
             evidence: vec![RuleEvidence {
                 rule_id: rule_id::REGULAR_MEDIA.to_owned(),
-                outcome: "streamed_archive_content_identity".to_owned(),
+                outcome: "streamed_content_identity".to_owned(),
             }],
         }),
         EntryKind::Sidecar(kind) => {
-            let (takeout_title, takeout_parse_error) = if kind != MetadataKind::Json {
+            let (takeout_document, takeout_parse_error) = if kind != MetadataKind::Json {
                 (None, None)
             } else if identity.byte_len > MAX_JSON_BYTES {
                 (None, Some(ParseError::Oversized))
             } else {
-                match parse_title_bytes(bytes) {
-                    Ok(title) => (Some(title), None),
+                match parse_bytes(bytes) {
+                    Ok(document) => (Some(document), None),
                     Err(error) => (None, Some(error)),
                 }
             };
@@ -330,7 +331,7 @@ fn merge_entry(
                 kind,
                 byte_len: identity.byte_len,
                 content_sha256: identity.content_sha256,
-                takeout_title,
+                takeout_document,
                 takeout_parse_error,
             });
         }

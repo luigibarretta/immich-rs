@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
 
 /// Canonical geographic coordinates without binary floating-point output.
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -35,20 +37,38 @@ impl NormalizedMetadata {
     pub(crate) fn is_valid(&self) -> bool {
         self.description
             .as_ref()
-            .is_none_or(|value| !value.contains('\0') && value.len() <= 16 * 1_024)
+            .is_none_or(|value| valid_text(value, 16 * 1_024, true))
             && self.taken_at_utc.as_ref().is_none_or(|value| {
-                value.len() == 20 && value.ends_with('Z') && value.as_bytes().get(10) == Some(&b'T')
+                OffsetDateTime::parse(value, &Rfc3339)
+                    .ok()
+                    .and_then(|instant| instant.format(&Rfc3339).ok())
+                    .is_some_and(|canonical| canonical == *value && value.ends_with('Z'))
             })
             && self.location.as_ref().is_none_or(GeoCoordinates::is_valid)
-            && self.albums.iter().all(|album| {
-                !album.is_empty() && album.len() <= 4_096 && !album.contains(['\0', '/', '\\'])
-            })
+            && self
+                .albums
+                .iter()
+                .all(|album| valid_text(album, 4_096, false))
             && self.albums.windows(2).all(|pair| pair[0] < pair[1])
     }
 }
 
 fn decimal_in_range(value: &str, minimum: f64, maximum: f64) -> bool {
-    value
-        .parse::<f64>()
-        .is_ok_and(|number| number.is_finite() && (minimum..=maximum).contains(&number))
+    value.parse::<f64>().is_ok_and(|number| {
+        let canonical = if number == 0.0 {
+            "0".to_owned()
+        } else {
+            number.to_string()
+        };
+        number.is_finite() && (minimum..=maximum).contains(&number) && value == canonical
+    })
+}
+
+fn valid_text(value: &str, max_bytes: usize, allow_layout: bool) -> bool {
+    !value.is_empty()
+        && value.len() <= max_bytes
+        && !value.chars().any(|character| {
+            character.is_control() && !(allow_layout && "\n\r\t".contains(character))
+        })
+        && (allow_layout || !value.contains(['/', '\\']))
 }

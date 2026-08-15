@@ -12,7 +12,10 @@ import sys
 from types import ModuleType
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
-FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "fixtures" / "v1"
+FIXTURE_ROOTS = [
+    REPOSITORY_ROOT / "tests" / "fixtures" / "v1",
+    REPOSITORY_ROOT / "tests" / "fixtures" / "v2",
+]
 SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
 SKIPPED_PARTS = {".git", "target", ".cargo"}
 SELF_TEST_PATHS = {
@@ -101,9 +104,14 @@ def _walk_json(value: object, path: str = "$") -> list[str]:
 
 
 def check_manifests() -> None:
-    """Validate every v1 fixture and expected normalized-plan digest."""
+    """Validate every fixture and expected normalized-plan digest."""
     materializer = _load_materializer()
-    manifests = sorted(FIXTURE_ROOT.glob("*/manifest.json")) if FIXTURE_ROOT.exists() else []
+    manifests = sorted(
+        manifest
+        for root in FIXTURE_ROOTS
+        if root.exists()
+        for manifest in root.glob("*/manifest.json")
+    )
     for manifest_path in manifests:
         try:
             manifest = materializer.load_manifest(manifest_path)
@@ -113,7 +121,11 @@ def check_manifests() -> None:
         if findings:
             raise CheckFailure("\n".join(f"{manifest_path}: {finding}" for finding in findings))
         expected = manifest.get("expected_plan")
-        if not isinstance(expected, dict) or expected.get("schema") != "normalized-plan-v1":
+        schema_version = 1 if manifest.get("schema") == "fixture-manifest-v1" else 2
+        if (
+            not isinstance(expected, dict)
+            or expected.get("schema") != f"normalized-plan-v{schema_version}"
+        ):
             raise CheckFailure(f"{manifest_path}: invalid expected-plan declaration")
         expected_path_value = expected.get("path")
         expected_digest = expected.get("sha256")
@@ -125,8 +137,10 @@ def check_manifests() -> None:
             expected_json = json.loads(expected_bytes)
         except (OSError, json.JSONDecodeError) as error:
             raise CheckFailure(f"{expected_path}: cannot read expected plan: {error}") from error
-        if expected_json.get("schema_version") != 1:
-            raise CheckFailure(f"{expected_path}: normalized plan schema must be 1")
+        if expected_json.get("schema_version") != schema_version:
+            raise CheckFailure(
+                f"{expected_path}: normalized plan schema must be {schema_version}"
+            )
         actual_digest = hashlib.sha256(expected_bytes).hexdigest()
         if actual_digest != expected_digest:
             raise CheckFailure(f"{expected_path}: expected-plan digest mismatch")

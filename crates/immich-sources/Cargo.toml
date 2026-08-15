@@ -14,6 +14,7 @@ immich-rs-core = { path = "../immich-core", version = "=0.0.0" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+time.workspace = true
 unicode-normalization.workspace = true
 zip.workspace = true
 

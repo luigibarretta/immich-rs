@@ -208,6 +208,7 @@ fn process_regular_file(
                     byte_len,
                     content_sha256,
                     metadata: Vec::new(),
+                    normalized_metadata: None,
                     live_photo: None,
                     evidence: vec![RuleEvidence {
                         rule_id: rule_id::REGULAR_MEDIA.to_owned(),
@@ -221,7 +222,7 @@ fn process_regular_file(
                     kind,
                     byte_len,
                     content_sha256,
-                    takeout_title: None,
+                    takeout_document: None,
                     takeout_parse_error: None,
                 });
             }

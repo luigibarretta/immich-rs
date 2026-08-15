@@ -6,8 +6,9 @@ use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 
 use immich_rs_core::{
-    Cancellation, LivePhotoMember, MediaKind, MetadataCandidate, MetadataKind, NormalizedPlan,
-    PROGRESS_EVENT_SCHEMA_VERSION, PlanDiagnostic, ProgressEvent, ProgressStage, RuleEvidence,
+    Cancellation, LivePhotoMember, MediaKind, MetadataCandidate, MetadataKind, NormalizedMetadata,
+    NormalizedPlan, PROGRESS_EVENT_SCHEMA_VERSION, PlanDiagnostic, ProgressEvent, ProgressStage,
+    RuleEvidence,
 };
 
 mod discovery;
@@ -16,6 +17,8 @@ mod identity;
 mod reconcile;
 mod scan;
 mod takeout_archive;
+mod takeout_metadata;
+mod takeout_reconcile;
 
 pub use google_takeout::{scan_google_takeout, scan_google_takeout_inputs};
 pub use scan::{FolderScanConfig, NoProgress, ProgressObserver, ScanError, TakeoutScanConfig};
@@ -30,6 +33,7 @@ struct DiscoveredMedia {
     byte_len: u64,
     content_sha256: String,
     metadata: Vec<MetadataCandidate>,
+    normalized_metadata: Option<NormalizedMetadata>,
     live_photo: Option<LivePhotoMember>,
     evidence: Vec<RuleEvidence>,
 }
@@ -41,8 +45,8 @@ struct DiscoveredSidecar {
     kind: MetadataKind,
     byte_len: u64,
     content_sha256: String,
-    takeout_title: Option<String>,
-    takeout_parse_error: Option<google_takeout::ParseError>,
+    takeout_document: Option<takeout_metadata::TakeoutDocument>,
+    takeout_parse_error: Option<takeout_metadata::ParseError>,
 }
 
 /// One normalized plan paired with ephemeral native source path resolution.
@@ -283,6 +287,8 @@ pub(crate) fn scan_resolved_internal(
 mod resolved_tests;
 #[cfg(test)]
 mod takeout_archive_tests;
+#[cfg(test)]
+mod takeout_reconcile_tests;
 #[cfg(test)]
 mod takeout_tests;
 #[cfg(test)]

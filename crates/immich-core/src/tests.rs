@@ -80,6 +80,29 @@ fn normalized_plan_v2_is_takeout_only_and_v1_rejects_resolved_metadata() {
 }
 
 #[test]
+fn normalized_metadata_rejects_noncanonical_values() {
+    let mut plan = valid_plan();
+    plan.schema_version = NORMALIZED_PLAN_SCHEMA_VERSION_V2;
+    plan.source.kind = SourceKind::GoogleTakeout;
+    let metadata = NormalizedMetadata {
+        description: Some("synthetic description".to_owned()),
+        taken_at_utc: Some("2024-01-01T00:00:00Z".to_owned()),
+        location: Some(GeoCoordinates {
+            latitude: "01.0".to_owned(),
+            longitude: "2".to_owned(),
+        }),
+        albums: vec!["Synthetic album".to_owned()],
+    };
+    plan.assets[0].normalized_metadata = Some(metadata);
+    assert!(plan.validate().is_err());
+    if let Some(metadata) = &mut plan.assets[0].normalized_metadata {
+        metadata.location = None;
+        metadata.taken_at_utc = Some("2024-99-99T00:00:00Z".to_owned());
+    }
+    assert!(plan.validate().is_err());
+}
+
+#[test]
 fn cancellation_is_explicit_and_clone_safe() {
     let token = CancellationToken::default();
     let observer = token.clone();

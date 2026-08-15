@@ -4,7 +4,8 @@ use std::fs;
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use immich_rs_core::{NORMALIZED_PLAN_SCHEMA_VERSION_V2, NormalizedPlan, SourceKind};
+use immich_rs_core::{NORMALIZED_PLAN_SCHEMA_VERSION_V2, NeverCancel, NormalizedPlan, SourceKind};
+use immich_rs_sources::{FolderScanConfig, NoProgress, scan_google_takeout};
 
 static DIRECTORY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 const SOURCE_EXIT_CODE: i32 = 4;
@@ -40,8 +41,7 @@ fn repository_root() -> Result<&'static std::path::Path, Box<dyn std::error::Err
 }
 
 #[test]
-fn synthetic_takeout_fixture_matches_the_versioned_golden() -> Result<(), Box<dyn std::error::Error>>
-{
+fn legacy_takeout_scanner_preserves_the_v1_golden() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new()?;
     let repository = repository_root()?;
     let fixture = repository.join("tests/fixtures/v1/synthetic-google-takeout-basic");
@@ -55,12 +55,40 @@ fn synthetic_takeout_fixture_matches_the_versioned_golden() -> Result<(), Box<dy
     assert!(materialized.stdout.is_empty());
     assert!(materialized.stderr.is_empty());
 
+    let plan = scan_google_takeout(
+        &source,
+        "synthetic-google-takeout-basic",
+        &FolderScanConfig::default(),
+        &NeverCancel,
+        &mut NoProgress,
+    )?;
+    let mut actual = serde_json::to_vec_pretty(&plan)?;
+    actual.push(b'\n');
+    assert_eq!(actual, fs::read(fixture.join("expected-plan.json"))?);
+    assert_eq!(plan.source.kind, SourceKind::GoogleTakeout);
+    plan.validate()?;
+    Ok(())
+}
+
+#[test]
+fn synthetic_takeout_directory_matches_the_v2_golden() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new()?;
+    let repository = repository_root()?;
+    let fixture = repository.join("tests/fixtures/v2/synthetic-google-takeout-complete");
+    let source = directory.0.join("source");
+    let materialized = Command::new("python3")
+        .arg(repository.join("scripts/materialize-fixture.py"))
+        .arg(fixture.join("manifest.json"))
+        .arg(&source)
+        .output()?;
+    assert!(materialized.status.success());
+
     let output = Command::new(env!("CARGO_BIN_EXE_immich-rs"))
         .args([
             "plan",
             "google-takeout",
             "--label",
-            "synthetic-google-takeout-basic",
+            "synthetic-google-takeout-complete",
         ])
         .arg(source)
         .output()?;
@@ -68,7 +96,7 @@ fn synthetic_takeout_fixture_matches_the_versioned_golden() -> Result<(), Box<dy
     assert!(output.stderr.is_empty());
     assert_eq!(output.stdout, fs::read(fixture.join("expected-plan.json"))?);
     let plan: NormalizedPlan = serde_json::from_slice(&output.stdout)?;
-    assert_eq!(plan.source.kind, SourceKind::GoogleTakeout);
+    assert_eq!(plan.schema_version, NORMALIZED_PLAN_SCHEMA_VERSION_V2);
     plan.validate()?;
     Ok(())
 }
@@ -92,32 +120,25 @@ fn takeout_plan_rejects_unknown_layout_without_network_access()
 fn synthetic_takeout_zip_is_planned_without_extraction() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new()?;
     let repository = repository_root()?;
-    let fixture = repository.join("tests/fixtures/v1/synthetic-google-takeout-basic");
-    let source = directory.0.join("source");
+    let fixture = repository.join("tests/fixtures/v2/synthetic-google-takeout-complete");
+    let archives = directory.0.join("archives");
     let materialized = Command::new("python3")
         .arg(repository.join("scripts/materialize-fixture.py"))
         .arg(fixture.join("manifest.json"))
-        .arg(&source)
+        .arg(&archives)
+        .args(["--archive-view", "split"])
         .output()?;
     assert!(materialized.status.success());
-
-    let archive = directory.0.join("takeout-001.zip");
-    let archived = Command::new("python3")
-        .args(["-m", "zipfile", "-c"])
-        .arg(&archive)
-        .arg("Takeout")
-        .current_dir(&source)
-        .output()?;
-    assert!(archived.status.success());
 
     let output = Command::new(env!("CARGO_BIN_EXE_immich-rs"))
         .args([
             "plan",
             "google-takeout",
             "--label",
-            "synthetic-google-takeout-zip",
+            "synthetic-google-takeout-complete",
         ])
-        .arg(archive)
+        .arg(archives.join("takeout-002.zip"))
+        .arg(archives.join("takeout-001.zip"))
         .output()?;
     assert!(
         output.status.success(),
@@ -125,11 +146,11 @@ fn synthetic_takeout_zip_is_planned_without_extraction() -> Result<(), Box<dyn s
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(output.stderr.is_empty());
+    assert_eq!(output.stdout, fs::read(fixture.join("expected-plan.json"))?);
     let plan: NormalizedPlan = serde_json::from_slice(&output.stdout)?;
     assert_eq!(plan.schema_version, NORMALIZED_PLAN_SCHEMA_VERSION_V2);
-    assert_eq!(plan.summary.assets, 2);
-    assert_eq!(plan.summary.sidecars, 2);
-    assert!(plan.warnings.is_empty());
+    assert_eq!(plan.summary.assets, 3);
+    assert_eq!(plan.summary.sidecars, 5);
     assert!(plan.errors.is_empty());
     plan.validate()?;
     Ok(())

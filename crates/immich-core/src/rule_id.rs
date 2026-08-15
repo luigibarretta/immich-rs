@@ -18,6 +18,14 @@ pub const GOOGLE_TAKEOUT_AMBIGUOUS: &str = "META_GOOGLE_TAKEOUT_AMBIGUOUS_V1";
 pub const GOOGLE_TAKEOUT_UNSUPPORTED: &str = "META_GOOGLE_TAKEOUT_UNSUPPORTED_V1";
 /// A Google Takeout media file had no associated JSON metadata candidate.
 pub const GOOGLE_TAKEOUT_UNMATCHED_MEDIA: &str = "META_GOOGLE_TAKEOUT_UNMATCHED_MEDIA_V1";
+/// A supplemental JSON basename selected one same-directory media file.
+pub const GOOGLE_TAKEOUT_SUPPLEMENTAL: &str = "META_GOOGLE_TAKEOUT_SUPPLEMENTAL_V1";
+/// Album metadata contributed a bounded album title to an asset.
+pub const GOOGLE_TAKEOUT_ALBUM: &str = "META_GOOGLE_TAKEOUT_ALBUM_V1";
+/// Conflicting normalized metadata was rejected without choosing a winner.
+pub const GOOGLE_TAKEOUT_METADATA_CONFLICT: &str = "META_GOOGLE_TAKEOUT_CONFLICT_V1";
+/// Content-identical Takeout paths were collapsed into one logical asset.
+pub const GOOGLE_TAKEOUT_CONTENT_ALIAS: &str = "META_GOOGLE_TAKEOUT_CONTENT_ALIAS_V1";
 /// Identical logical entries across independent Takeout archives were coalesced.
 pub const TAKEOUT_ARCHIVE_DUPLICATE: &str = "ARCHIVE_TAKEOUT_DUPLICATE_IDENTICAL_V1";
 /// Independent Takeout archives contain conflicting bytes at one logical path.

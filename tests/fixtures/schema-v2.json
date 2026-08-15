@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/immich-rs/fixture-manifest-v2.schema.json",
+  "title": "immich-rs synthetic fixture manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "fixture_id", "provenance", "files", "archive_views", "expected_plan"],
+  "properties": {
+    "schema": { "const": "fixture-manifest-v2" },
+    "fixture_id": { "type": "string", "pattern": "^synthetic-[a-z0-9-]+$" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "generator", "generator_version", "license"],
+      "properties": {
+        "kind": { "const": "synthetic" },
+        "generator": { "const": "scripts/materialize-fixture.py" },
+        "generator_version": { "const": "2" },
+        "license": { "const": "CC0-1.0" }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "recipe"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "recipe": { "enum": ["text", "synthetic_png", "synthetic_padded_png", "synthetic_isobmff"] }
+        }
+      }
+    },
+    "archive_views": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "parts"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "files"],
+              "properties": {
+                "path": { "type": "string", "pattern": "^[^/]+\\.zip$" },
+                "files": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "path", "sha256"],
+      "properties": {
+        "schema": { "const": "normalized-plan-v2" },
+        "path": { "const": "expected-plan.json" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

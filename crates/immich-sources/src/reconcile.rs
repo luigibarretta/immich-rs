@@ -35,7 +35,9 @@ pub fn complete(state: &mut ScanState) {
     detect_duplicate_basenames(&state.media, &mut state.warnings);
     for media in &mut state.media {
         media.metadata.sort();
+        media.metadata.dedup();
         media.evidence.sort();
+        media.evidence.dedup();
     }
     state.warnings.sort();
     state.warnings.dedup();
@@ -297,7 +299,7 @@ pub fn finalize_plan(
                 byte_len: media.byte_len,
                 content_sha256: media.content_sha256,
                 metadata: media.metadata,
-                normalized_metadata: None,
+                normalized_metadata: media.normalized_metadata,
                 live_photo: media.live_photo,
                 evidence: media.evidence,
             }

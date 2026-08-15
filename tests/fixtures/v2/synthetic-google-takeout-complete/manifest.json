@@ -1,0 +1,96 @@
+{
+  "schema": "fixture-manifest-v2",
+  "fixture_id": "synthetic-google-takeout-complete",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "2",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/alpha.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [18, 52, 86]
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"alpha.png\",\"description\":\"synthetic alpha description\",\"creationTime\":{\"timestamp\":\"1704060000\",\"formatted\":\"ignored creation display\"},\"photoTakenTime\":{\"timestamp\":\"1704067200\",\"formatted\":\"ignored capture display\"},\"geoData\":{\"latitude\":1.25,\"longitude\":2.5},\"geoDataExif\":{\"latitude\":3.5,\"longitude\":-4.25}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/beta.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 2,
+      "rgb": [90, 123, 156]
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/beta.png.supplemental-metadata.json",
+      "recipe": "text",
+      "content": "{\"title\":\"beta.png\",\"description\":\"synthetic beta description\",\"creationTime\":{\"timestamp\":\"1704153600\",\"formatted\":\"ignored local display\"},\"geoData\":{\"latitude\":0,\"longitude\":0}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/café.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 1,
+      "rgb": [33, 66, 99]
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/café.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"café.png\",\"description\":\"synthetic unicode description\",\"photoTakenTime\":{\"timestamp\":\"1704240000\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Synthetic Album/alpha.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [18, 52, 86]
+    },
+    {
+      "path": "Takeout/Google Photos/Synthetic Album/alpha.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"alpha.png\",\"description\":\"synthetic alpha description\",\"creationTime\":{\"timestamp\":\"1704060000\",\"formatted\":\"ignored creation display\"},\"photoTakenTime\":{\"timestamp\":\"1704067200\",\"formatted\":\"ignored capture display\"},\"geoData\":{\"latitude\":1.25,\"longitude\":2.5},\"geoDataExif\":{\"latitude\":3.5,\"longitude\":-4.25}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Synthetic Album/metadata.json",
+      "recipe": "text",
+      "content": "{\"title\":\"Synthetic Album\",\"description\":\"synthetic album description\"}\n"
+    }
+  ],
+  "archive_views": [
+    {
+      "name": "split",
+      "parts": [
+        {
+          "path": "takeout-001.zip",
+          "files": [
+            "Takeout/Google Photos/Photos from 2024/alpha.png",
+            "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+            "Takeout/Google Photos/Photos from 2024/beta.png",
+            "Takeout/Google Photos/Photos from 2024/beta.png.supplemental-metadata.json",
+            "Takeout/Google Photos/Photos from 2024/café.png"
+          ]
+        },
+        {
+          "path": "takeout-002.zip",
+          "files": [
+            "Takeout/Google Photos/Photos from 2024/café.png.json",
+            "Takeout/Google Photos/Synthetic Album/alpha.png",
+            "Takeout/Google Photos/Synthetic Album/alpha.png.json",
+            "Takeout/Google Photos/Synthetic Album/metadata.json"
+          ]
+        }
+      ]
+    }
+  ],
+  "expected_plan": {
+    "schema": "normalized-plan-v2",
+    "path": "expected-plan.json",
+    "sha256": "90d78576e6e3ddfd20165c59bd1cf9b81ee42a47ff18c2c71bc5a6b173f070af"
+  }
+}

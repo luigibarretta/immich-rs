@@ -1,8 +1,9 @@
 use super::{
-    Cancellation, CancellationToken, CandidateAsset, MediaKind, NORMALIZED_PLAN_SCHEMA_VERSION,
-    NeverCancel, NormalizedPlan, PlanSummary, ServerCompatibility, ServerVersion, SourceDescriptor,
-    SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization, UploadOperation, UploadPlan,
-    UploadPlanSummary, UploadRole,
+    Cancellation, CancellationToken, CandidateAsset, GeoCoordinates, MediaKind,
+    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2, NeverCancel,
+    NormalizedMetadata, NormalizedPlan, PlanSummary, ServerCompatibility, ServerVersion,
+    SourceDescriptor, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization,
+    UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
 };
 
 fn valid_plan() -> NormalizedPlan {
@@ -22,6 +23,7 @@ fn valid_plan() -> NormalizedPlan {
             byte_len: 4,
             content_sha256: "c".repeat(64),
             metadata: Vec::new(),
+            normalized_metadata: None,
             live_photo: None,
             evidence: Vec::new(),
         }],
@@ -55,6 +57,26 @@ fn normalized_plan_rejects_unsorted_assets() {
     plan.assets.push(second);
     plan.summary.assets = 2;
     assert!(plan.validate().is_err());
+}
+
+#[test]
+fn normalized_plan_v2_is_takeout_only_and_v1_rejects_resolved_metadata() {
+    let mut plan = valid_plan();
+    plan.assets[0].normalized_metadata = Some(NormalizedMetadata {
+        description: Some("synthetic description".to_owned()),
+        taken_at_utc: Some("2024-01-01T00:00:00Z".to_owned()),
+        location: Some(GeoCoordinates {
+            latitude: "0".to_owned(),
+            longitude: "1.5".to_owned(),
+        }),
+        albums: vec!["Synthetic album".to_owned()],
+    });
+    assert!(plan.validate().is_err());
+
+    plan.schema_version = NORMALIZED_PLAN_SCHEMA_VERSION_V2;
+    assert!(plan.validate().is_err());
+    plan.source.kind = SourceKind::GoogleTakeout;
+    assert!(plan.validate().is_ok());
 }
 
 #[test]

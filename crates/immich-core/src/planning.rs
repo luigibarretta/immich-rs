@@ -4,7 +4,9 @@ use std::fmt::{self, Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::NORMALIZED_PLAN_SCHEMA_VERSION;
+use crate::{
+    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2, NormalizedMetadata,
+};
 
 /// Kind of input adapter that produced a plan.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -118,6 +120,9 @@ pub struct CandidateAsset {
     pub content_sha256: String,
     /// Deterministically associated metadata candidates.
     pub metadata: Vec<MetadataCandidate>,
+    /// Resolved source-neutral metadata introduced by normalized-plan-v2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalized_metadata: Option<NormalizedMetadata>,
     /// Pair identifier and role when this asset is part of a live photo.
     pub live_photo: Option<LivePhotoMember>,
     /// Rules that explain why this asset is in the plan.
@@ -169,8 +174,16 @@ pub struct NormalizedPlan {
 impl NormalizedPlan {
     /// Validate schema, ordering and stable identifier invariants.
     pub fn validate(&self) -> Result<(), PlanValidationError> {
-        if self.schema_version != NORMALIZED_PLAN_SCHEMA_VERSION {
+        if !matches!(
+            self.schema_version,
+            NORMALIZED_PLAN_SCHEMA_VERSION | NORMALIZED_PLAN_SCHEMA_VERSION_V2
+        ) {
             return Err(PlanValidationError::UnsupportedSchema(self.schema_version));
+        }
+        if self.schema_version == NORMALIZED_PLAN_SCHEMA_VERSION_V2
+            && self.source.kind != SourceKind::GoogleTakeout
+        {
+            return Err(PlanValidationError::InvalidSchemaSource);
         }
         if self.source.label.is_empty() || self.source.fingerprint_sha256.len() != 64 {
             return Err(PlanValidationError::InvalidSourceDescriptor);
@@ -201,6 +214,15 @@ impl NormalizedPlan {
             {
                 return Err(PlanValidationError::MissingRuleId);
             }
+            if (self.schema_version == NORMALIZED_PLAN_SCHEMA_VERSION
+                && asset.normalized_metadata.is_some())
+                || asset
+                    .normalized_metadata
+                    .as_ref()
+                    .is_some_and(|metadata| !metadata.is_valid())
+            {
+                return Err(PlanValidationError::InvalidNormalizedMetadata);
+            }
             previous_path = Some(asset.relative_path.as_str());
         }
         let sidecar_count = self
@@ -224,6 +246,8 @@ impl NormalizedPlan {
 pub enum PlanValidationError {
     /// The plan schema is not supported by this binary.
     UnsupportedSchema(u32),
+    /// The schema version is not valid for the selected source adapter.
+    InvalidSchemaSource,
     /// The source descriptor is incomplete or malformed.
     InvalidSourceDescriptor,
     /// An asset has an empty path or malformed digest.
@@ -234,6 +258,8 @@ pub enum PlanValidationError {
     DuplicateOperationId,
     /// Explainable evidence omitted its stable rule identifier.
     MissingRuleId,
+    /// Resolved metadata is malformed or unavailable in this schema version.
+    InvalidNormalizedMetadata,
     /// Summary counters disagree with plan contents.
     SummaryMismatch,
 }
@@ -244,6 +270,9 @@ impl Display for PlanValidationError {
             Self::UnsupportedSchema(version) => {
                 write!(formatter, "unsupported normalized plan schema {version}")
             }
+            Self::InvalidSchemaSource => {
+                formatter.write_str("normalized plan schema is invalid for the source adapter")
+            }
             Self::InvalidSourceDescriptor => formatter.write_str("invalid source descriptor"),
             Self::InvalidAssetIdentity => formatter.write_str("invalid asset identity"),
             Self::AssetsNotStrictlySorted => {
@@ -251,6 +280,9 @@ impl Display for PlanValidationError {
             }
             Self::DuplicateOperationId => formatter.write_str("duplicate operation identifier"),
             Self::MissingRuleId => formatter.write_str("missing rule identifier"),
+            Self::InvalidNormalizedMetadata => {
+                formatter.write_str("invalid normalized asset metadata")
+            }
             Self::SummaryMismatch => formatter.write_str("plan summary does not match assets"),
         }
     }

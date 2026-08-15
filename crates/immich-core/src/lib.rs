@@ -2,12 +2,14 @@
 //! Source-neutral domain and execution contracts.
 
 mod cancellation;
+mod metadata;
 mod planning;
 mod progress;
 pub mod rule_id;
 mod upload;
 
 pub use cancellation::{Cancellation, CancellationToken, NeverCancel};
+pub use metadata::{GeoCoordinates, NormalizedMetadata};
 pub use planning::{
     CandidateAsset, LivePhotoMember, LivePhotoRole, MediaKind, MetadataCandidate, MetadataKind,
     NormalizedPlan, PlanDiagnostic, PlanSummary, PlanValidationError, RuleEvidence,
@@ -23,6 +25,8 @@ pub use upload::{
 pub const FIXTURE_SCHEMA_VERSION: u32 = 1;
 /// Schema version for normalized read-only plans.
 pub const NORMALIZED_PLAN_SCHEMA_VERSION: u32 = 1;
+/// Schema version for complete Google Takeout read-only plans.
+pub const NORMALIZED_PLAN_SCHEMA_VERSION_V2: u32 = 2;
 /// Schema version for progress events.
 pub const PROGRESS_EVENT_SCHEMA_VERSION: u32 = 1;
 /// Schema version for immutable upload plans.

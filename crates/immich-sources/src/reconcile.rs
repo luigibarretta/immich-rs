@@ -296,6 +296,7 @@ pub fn finalize_plan(
                 byte_len: media.byte_len,
                 content_sha256: media.content_sha256,
                 metadata: media.metadata,
+                normalized_metadata: None,
                 live_photo: media.live_photo,
                 evidence: media.evidence,
             }

@@ -73,3 +73,35 @@ The wall-time distribution is especially wide for immich-go on this tiny
 corpus. The report therefore makes no performance-improvement claim. Review
 the [raw evidence](evidence/phase2-2026-08-15.json) and ADR-0012 before drawing
 or publishing any comparison.
+
+## Phase 3 Google Takeout plan
+
+`scripts/benchmark-phase3.py` measures the public immich-rs Takeout planner and
+the pinned immich-go dry-run against the same deterministic two-part ZIP view,
+one worker and one loopback mock environment. Each pair rematerializes the
+versioned synthetic corpus; fixture generation, oracle verification and mock
+startup are outside the measured child-process interval. Order alternates
+after two warmups across six retained pairs.
+
+The exact implementation is
+`39876419b01359103f05add0108afb600fcc5fa0`. Every sample observed four
+physical media paths, five sidecars, three logical assets and zero retry. The
+oracle made 17 mock requests, including the five contained job-resume PUTs;
+immich-rs constructed no HTTP capability. Raw aggregates are:
+
+| Metric | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 0.005121 | 0.006169 | 0.013780 | 0.018062 |
+| User CPU (s) | 0.000000 | 0.003720 | 0.004292 | 0.019097 |
+| System CPU (s) | 0.004627 | 0.008522 | 0.009827 | 0.014333 |
+| Peak RSS (bytes) | 4,141,056 | 5,201,920 | 13,369,344 | 13,901,824 |
+| Peak file descriptors | 4.5 | 7 | 12 | 13 |
+| Characters read | 10,189.5 | 13,528 | 47,578.5 | 48,020 |
+| Characters written | 0 | 4,486 | 13,952 | 14,657 |
+| Storage bytes read | 0 | 0 | 0 | 0 |
+| Storage bytes written | 0 | 0 | 0 | 0 |
+
+This 1,296-byte corpus is a compatibility and harness reproducibility check,
+not a throughput or scale benchmark. The values do not support a generalized
+performance claim. Review the [raw evidence](evidence/phase3-2026-08-15.json)
+and ADR-0012 before making any comparison.

@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import re
 import statistics
+import subprocess
 import sys
 import tomllib
 from typing import Any
@@ -251,11 +252,14 @@ def validate_phase2(path: Path) -> None:
 def main() -> int:
     paths = sorted(EVIDENCE_ROOT.glob("phase1-*.json")) if EVIDENCE_ROOT.exists() else []
     phase2_paths = sorted(EVIDENCE_ROOT.glob("phase2-*.json")) if EVIDENCE_ROOT.exists() else []
+    phase3_paths = sorted(EVIDENCE_ROOT.glob("phase3-*.json")) if EVIDENCE_ROOT.exists() else []
     try:
         if not paths:
             raise EvidenceError("Phase 1 benchmark evidence is missing")
         if not phase2_paths:
             raise EvidenceError("Phase 2 benchmark evidence is missing")
+        if not phase3_paths:
+            raise EvidenceError("Phase 3 benchmark evidence is missing")
         for path in paths:
             validate(path)
         for path in phase2_paths:
@@ -263,7 +267,16 @@ def main() -> int:
     except (EvidenceError, OSError, UnicodeError) as error:
         print(f"benchmark evidence check failed: {error}", file=sys.stderr)
         return 1
-    print(f"benchmark evidence passed: {len(paths) + len(phase2_paths)} report(s)")
+    phase3 = subprocess.run(
+        [sys.executable, str(REPOSITORY_ROOT / "scripts/check-phase3-benchmark.py")],
+        check=False,
+    )
+    if phase3.returncode != 0:
+        return phase3.returncode
+    print(
+        "benchmark evidence passed: "
+        f"{len(paths) + len(phase2_paths) + len(phase3_paths)} report(s)"
+    )
     return 0
 
 

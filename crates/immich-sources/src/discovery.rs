@@ -12,6 +12,15 @@ use crate::{
 };
 
 pub fn validate_root_and_label(root: &Path, source_label: &str) -> Result<(), ScanError> {
+    validate_source_label(source_label)?;
+    let root_metadata = fs::symlink_metadata(root).map_err(|_| ScanError::InvalidRoot)?;
+    if !root_metadata.file_type().is_dir() || root_metadata.file_type().is_symlink() {
+        return Err(ScanError::InvalidRoot);
+    }
+    Ok(())
+}
+
+pub fn validate_source_label(source_label: &str) -> Result<(), ScanError> {
     if source_label.is_empty()
         || source_label.len() > 128
         || source_label.chars().any(char::is_control)
@@ -19,10 +28,6 @@ pub fn validate_root_and_label(root: &Path, source_label: &str) -> Result<(), Sc
         return Err(ScanError::InvalidConfiguration(
             "source label must be 1..=128 non-control characters",
         ));
-    }
-    let root_metadata = fs::symlink_metadata(root).map_err(|_| ScanError::InvalidRoot)?;
-    if !root_metadata.file_type().is_dir() || root_metadata.file_type().is_symlink() {
-        return Err(ScanError::InvalidRoot);
     }
     Ok(())
 }
@@ -216,6 +221,8 @@ fn process_regular_file(
                     kind,
                     byte_len,
                     content_sha256,
+                    takeout_title: None,
+                    takeout_parse_error: None,
                 });
             }
             state.progress(ProgressStage::ContentIdentity, observer);
@@ -297,7 +304,7 @@ pub fn extension(path: &str) -> Option<String> {
         .map(str::to_lowercase)
 }
 
-fn media_kind(path: &str) -> Option<MediaKind> {
+pub fn media_kind(path: &str) -> Option<MediaKind> {
     match extension(path)?.as_str() {
         "jpg" | "jpeg" | "png" | "heic" | "heif" | "webp" | "gif" | "tif" | "tiff" | "dng"
         | "cr2" | "cr3" | "arw" | "raf" | "nef" => Some(MediaKind::Image),
@@ -306,7 +313,7 @@ fn media_kind(path: &str) -> Option<MediaKind> {
     }
 }
 
-fn metadata_kind(path: &str) -> Option<MetadataKind> {
+pub fn metadata_kind(path: &str) -> Option<MetadataKind> {
     match extension(path)?.as_str() {
         "json" => Some(MetadataKind::Json),
         "xmp" => Some(MetadataKind::Xmp),

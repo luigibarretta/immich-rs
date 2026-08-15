@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 use immich_rs_executor::UploadExecutionConfig;
-use immich_rs_sources::FolderScanConfig;
+use immich_rs_sources::{FolderScanConfig, TakeoutScanConfig};
 
 use crate::failure::CliFailure;
 
@@ -10,6 +10,12 @@ pub struct FolderRequest {
     pub root: PathBuf,
     pub label: String,
     pub config: FolderScanConfig,
+}
+
+pub struct TakeoutRequest {
+    pub inputs: Vec<PathBuf>,
+    pub label: String,
+    pub config: TakeoutScanConfig,
 }
 
 pub struct UploadFolderRequest {
@@ -30,8 +36,43 @@ pub fn parse_folder(arguments: &[OsString]) -> Result<FolderRequest, CliFailure>
     parse_folder_options(arguments, false, "folder").map(|(request, _)| request)
 }
 
-pub fn parse_google_takeout(arguments: &[OsString]) -> Result<FolderRequest, CliFailure> {
-    parse_folder_options(arguments, false, "google-takeout").map(|(request, _)| request)
+pub fn parse_google_takeout(arguments: &[OsString]) -> Result<TakeoutRequest, CliFailure> {
+    let mut label = "google-takeout".to_owned();
+    let mut config = TakeoutScanConfig::default();
+    let mut inputs = Vec::new();
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].to_str() {
+            Some("--label") => label = string_value(arguments, index, "--label")?,
+            Some("--buffer-bytes") => {
+                config.scan.buffer_bytes = usize_value(arguments, index, "--buffer-bytes")?;
+            }
+            Some("--max-entries") => {
+                config.scan.max_entries = usize_value(arguments, index, "--max-entries")?;
+            }
+            Some("--max-directory-entries") => {
+                config.scan.max_directory_entries =
+                    usize_value(arguments, index, "--max-directory-entries")?;
+            }
+            Some(value) if value.starts_with('-') => {
+                return Err(CliFailure::usage("unsupported Takeout plan option"));
+            }
+            _ => {
+                inputs.push(PathBuf::from(&arguments[index]));
+                index += 1;
+                continue;
+            }
+        }
+        index += 2;
+    }
+    if inputs.is_empty() {
+        return Err(CliFailure::usage("at least one Takeout input is required"));
+    }
+    Ok(TakeoutRequest {
+        inputs,
+        label,
+        config,
+    })
 }
 
 pub fn parse_upload_folder(arguments: &[OsString]) -> Result<UploadFolderRequest, CliFailure> {

@@ -18,6 +18,10 @@ pub const GOOGLE_TAKEOUT_AMBIGUOUS: &str = "META_GOOGLE_TAKEOUT_AMBIGUOUS_V1";
 pub const GOOGLE_TAKEOUT_UNSUPPORTED: &str = "META_GOOGLE_TAKEOUT_UNSUPPORTED_V1";
 /// A Google Takeout media file had no associated JSON metadata candidate.
 pub const GOOGLE_TAKEOUT_UNMATCHED_MEDIA: &str = "META_GOOGLE_TAKEOUT_UNMATCHED_MEDIA_V1";
+/// Identical logical entries across independent Takeout archives were coalesced.
+pub const TAKEOUT_ARCHIVE_DUPLICATE: &str = "ARCHIVE_TAKEOUT_DUPLICATE_IDENTICAL_V1";
+/// Independent Takeout archives contain conflicting bytes at one logical path.
+pub const TAKEOUT_ARCHIVE_CONFLICT: &str = "ARCHIVE_TAKEOUT_PATH_CONFLICT_V1";
 /// A still image and video were associated as a live-photo pair.
 pub const LIVE_PHOTO_BASENAME: &str = "PAIR_LIVE_PHOTO_BASENAME_V1";
 /// A symbolic link was deliberately not followed.

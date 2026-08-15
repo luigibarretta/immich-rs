@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use immich_rs_core::{Cancellation, MetadataKind, NormalizedPlan, SourceKind, rule_id};
 use serde::Deserialize;
@@ -10,10 +10,10 @@ use sha2::{Digest, Sha256};
 use crate::reconcile::{attach_sidecar, complete, diagnostic, prepare};
 use crate::{
     DiscoveredSidecar, FolderScanConfig, MAX_DIAGNOSTIC_PATHS, ProgressObserver, ScanError,
-    ScanState, ScanStrategy, scan_resolved_internal,
+    ScanState, ScanStrategy, TakeoutScanConfig, scan_resolved_internal,
 };
 
-const MAX_JSON_BYTES: u64 = 256 * 1_024;
+pub const MAX_JSON_BYTES: u64 = 256 * 1_024;
 const MAX_TITLE_BYTES: usize = 4_096;
 
 #[derive(Deserialize)]
@@ -21,8 +21,8 @@ struct GoogleSidecar {
     title: String,
 }
 
-#[derive(Clone, Copy)]
-enum ParseError {
+#[derive(Clone, Copy, Debug)]
+pub enum ParseError {
     Invalid,
     Oversized,
     SourceChanged,
@@ -46,10 +46,37 @@ pub fn scan_google_takeout(
         &mut |_| {},
         ScanStrategy {
             source_kind: SourceKind::GoogleTakeout,
+            schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION,
             reconcile_state: reconcile,
         },
     )
     .map(|resolved| resolved.plan)
+}
+
+/// Scan one decompressed export or a bounded set of independent ZIP parts.
+pub fn scan_google_takeout_inputs(
+    inputs: &[PathBuf],
+    source_label: &str,
+    config: &TakeoutScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+) -> Result<NormalizedPlan, ScanError> {
+    config.validate()?;
+    if let [input] = inputs {
+        if std::fs::symlink_metadata(input).is_ok_and(|metadata| {
+            metadata.file_type().is_dir() && !metadata.file_type().is_symlink()
+        }) {
+            return scan_google_takeout(input, source_label, &config.scan, cancellation, observer);
+        }
+    }
+    if inputs.iter().any(|input| {
+        std::fs::symlink_metadata(input).is_ok_and(|metadata| metadata.file_type().is_dir())
+    }) {
+        return Err(ScanError::UnsupportedLayout(
+            "directory and ZIP inputs cannot be mixed",
+        ));
+    }
+    crate::takeout_archive::scan_archives(inputs, source_label, config, cancellation, observer)
 }
 
 pub fn validate_layout(root: &Path) -> Result<(), ScanError> {
@@ -143,6 +170,12 @@ pub fn reconcile(state: &mut ScanState) {
 }
 
 fn parse_title(sidecar: &DiscoveredSidecar) -> Result<String, ParseError> {
+    if let Some(error) = sidecar.takeout_parse_error {
+        return Err(error);
+    }
+    if let Some(title) = &sidecar.takeout_title {
+        return Ok(title.clone());
+    }
     if sidecar.byte_len == 0 {
         return Err(ParseError::Invalid);
     }
@@ -162,7 +195,11 @@ fn parse_title(sidecar: &DiscoveredSidecar) -> Result<String, ParseError> {
     if bytes.len() as u64 != sidecar.byte_len || digest != sidecar.content_sha256 {
         return Err(ParseError::SourceChanged);
     }
-    let parsed: GoogleSidecar = serde_json::from_slice(&bytes).map_err(|_| ParseError::Invalid)?;
+    parse_title_bytes(&bytes)
+}
+
+pub fn parse_title_bytes(bytes: &[u8]) -> Result<String, ParseError> {
+    let parsed: GoogleSidecar = serde_json::from_slice(bytes).map_err(|_| ParseError::Invalid)?;
     if parsed.title.is_empty()
         || parsed.title.len() > MAX_TITLE_BYTES
         || parsed.title.chars().any(char::is_control)

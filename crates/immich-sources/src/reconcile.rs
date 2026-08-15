@@ -3,8 +3,8 @@ use std::path::Path;
 
 use immich_rs_core::{
     CandidateAsset, LivePhotoMember, LivePhotoRole, MediaKind, MetadataCandidate, MetadataKind,
-    NORMALIZED_PLAN_SCHEMA_VERSION, NormalizedPlan, PlanDiagnostic, PlanSummary, RuleEvidence,
-    SourceDescriptor, SourceKind, UnicodeNormalization, rule_id,
+    NormalizedPlan, PlanDiagnostic, PlanSummary, RuleEvidence, SourceDescriptor, SourceKind,
+    UnicodeNormalization, rule_id,
 };
 use sha2::{Digest, Sha256};
 
@@ -274,6 +274,7 @@ pub fn diagnostic(rule: &str, code: &str, mut paths: Vec<String>) -> PlanDiagnos
 }
 
 pub fn finalize_plan(
+    schema_version: u32,
     source_kind: SourceKind,
     source_label: &str,
     config: &FolderScanConfig,
@@ -307,7 +308,7 @@ pub fn finalize_plan(
         source_fingerprint(&assets, &state.sidecars, &state.warnings, &state.errors);
     let sidecars = assets.iter().map(|asset| asset.metadata.len() as u64).sum();
     NormalizedPlan {
-        schema_version: NORMALIZED_PLAN_SCHEMA_VERSION,
+        schema_version,
         source: SourceDescriptor {
             kind: source_kind,
             label: source_label.to_owned(),

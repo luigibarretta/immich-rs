@@ -2,142 +2,25 @@
 //! Deterministic, bounded and read-only source adapters.
 
 use std::collections::BTreeMap;
-use std::error::Error;
-use std::fmt::{self, Display, Formatter};
 use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 
 use immich_rs_core::{
     Cancellation, LivePhotoMember, MediaKind, MetadataCandidate, MetadataKind, NormalizedPlan,
-    PROGRESS_EVENT_SCHEMA_VERSION, PlanDiagnostic, PlanValidationError, ProgressEvent,
-    ProgressStage, RuleEvidence,
+    PROGRESS_EVENT_SCHEMA_VERSION, PlanDiagnostic, ProgressEvent, ProgressStage, RuleEvidence,
 };
 
 mod discovery;
 mod google_takeout;
 mod identity;
 mod reconcile;
+mod scan;
+mod takeout_archive;
 
-pub use google_takeout::scan_google_takeout;
+pub use google_takeout::{scan_google_takeout, scan_google_takeout_inputs};
+pub use scan::{FolderScanConfig, NoProgress, ProgressObserver, ScanError, TakeoutScanConfig};
 
-const MIN_BUFFER_BYTES: usize = 4 * 1024;
-const MAX_BUFFER_BYTES: usize = 4 * 1024 * 1024;
 const MAX_DIAGNOSTIC_PATHS: usize = 8;
-
-/// Explicit memory and portability limits for one folder scan.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FolderScanConfig {
-    /// Read buffer used for one media file at a time.
-    pub buffer_bytes: usize,
-    /// Maximum total entries retained by discovery and reconciliation.
-    pub max_entries: usize,
-    /// Maximum entries accepted in one directory before failing closed.
-    pub max_directory_entries: usize,
-    /// Maximum UTF-8 bytes in one portable relative path.
-    pub max_path_bytes: usize,
-    /// Case policy used for the portable source description.
-    pub case_sensitive: bool,
-}
-
-impl Default for FolderScanConfig {
-    fn default() -> Self {
-        Self {
-            buffer_bytes: 64 * 1024,
-            max_entries: 100_000,
-            max_directory_entries: 10_000,
-            max_path_bytes: 4_096,
-            case_sensitive: true,
-        }
-    }
-}
-
-impl FolderScanConfig {
-    fn validate(&self) -> Result<(), ScanError> {
-        if !(MIN_BUFFER_BYTES..=MAX_BUFFER_BYTES).contains(&self.buffer_bytes) {
-            return Err(ScanError::InvalidConfiguration(
-                "buffer_bytes must be in 4096..=4194304",
-            ));
-        }
-        if self.max_entries == 0 || self.max_directory_entries == 0 {
-            return Err(ScanError::InvalidConfiguration(
-                "entry limits must be greater than zero",
-            ));
-        }
-        if !(64..=65_536).contains(&self.max_path_bytes) {
-            return Err(ScanError::InvalidConfiguration(
-                "max_path_bytes must be in 64..=65536",
-            ));
-        }
-        Ok(())
-    }
-}
-
-/// Low-cardinality observer called synchronously by the scanner.
-pub trait ProgressObserver {
-    /// Receive one monotonic read-only progress event.
-    fn observe(&mut self, event: ProgressEvent);
-}
-
-/// Observer used when callers do not request progress events.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NoProgress;
-
-impl ProgressObserver for NoProgress {
-    fn observe(&mut self, _event: ProgressEvent) {}
-}
-
-/// Fail-closed folder scan failure.
-#[derive(Debug)]
-pub enum ScanError {
-    /// A configured resource limit is invalid.
-    InvalidConfiguration(&'static str),
-    /// The source root is not a readable real directory.
-    InvalidRoot,
-    /// The source does not match the requested adapter layout.
-    UnsupportedLayout(&'static str),
-    /// A deterministic memory or path limit was reached.
-    LimitExceeded(&'static str),
-    /// Cooperative cancellation stopped discovery or hashing.
-    Cancelled,
-    /// The produced plan violated a core invariant.
-    InvalidPlan(PlanValidationError),
-}
-
-impl Display for ScanError {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidConfiguration(message) => {
-                write!(formatter, "invalid scan configuration: {message}")
-            }
-            Self::InvalidRoot => {
-                formatter.write_str("source root must be a readable real directory")
-            }
-            Self::UnsupportedLayout(message) => {
-                write!(formatter, "unsupported source layout: {message}")
-            }
-            Self::LimitExceeded(limit) => write!(formatter, "scan limit exceeded: {limit}"),
-            Self::Cancelled => formatter.write_str("scan cancelled cleanly"),
-            Self::InvalidPlan(error) => {
-                write!(formatter, "scanner produced an invalid plan: {error}")
-            }
-        }
-    }
-}
-
-impl Error for ScanError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::InvalidPlan(error) => Some(error),
-            _ => None,
-        }
-    }
-}
-
-impl From<PlanValidationError> for ScanError {
-    fn from(error: PlanValidationError) -> Self {
-        Self::InvalidPlan(error)
-    }
-}
 
 #[derive(Clone, Debug)]
 struct DiscoveredMedia {
@@ -158,6 +41,8 @@ struct DiscoveredSidecar {
     kind: MetadataKind,
     byte_len: u64,
     content_sha256: String,
+    takeout_title: Option<String>,
+    takeout_parse_error: Option<google_takeout::ParseError>,
 }
 
 /// One normalized plan paired with ephemeral native source path resolution.
@@ -232,11 +117,13 @@ struct ScanState {
 #[derive(Clone, Copy)]
 pub(crate) struct ScanStrategy {
     pub source_kind: immich_rs_core::SourceKind,
+    pub schema_version: u32,
     pub reconcile_state: fn(&mut ScanState),
 }
 
 const FOLDER_SCAN: ScanStrategy = ScanStrategy {
     source_kind: immich_rs_core::SourceKind::Folder,
+    schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION,
     reconcile_state: reconcile::reconcile,
 };
 
@@ -374,7 +261,13 @@ pub(crate) fn scan_resolved_internal(
             )
         }))
         .collect::<BTreeMap<_, _>>();
-    let plan = reconcile::finalize_plan(strategy.source_kind, source_label, config, state);
+    let plan = reconcile::finalize_plan(
+        strategy.schema_version,
+        strategy.source_kind,
+        source_label,
+        config,
+        state,
+    );
     plan.validate()?;
     observer.observe(ProgressEvent {
         schema_version: PROGRESS_EVENT_SCHEMA_VERSION,
@@ -388,6 +281,8 @@ pub(crate) fn scan_resolved_internal(
 
 #[cfg(test)]
 mod resolved_tests;
+#[cfg(test)]
+mod takeout_archive_tests;
 #[cfg(test)]
 mod takeout_tests;
 #[cfg(test)]

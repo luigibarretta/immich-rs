@@ -1,9 +1,9 @@
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use immich_rs_core::{NORMALIZED_PLAN_SCHEMA_VERSION_V2, NeverCancel, rule_id};
+use immich_rs_core::{CancellationToken, NORMALIZED_PLAN_SCHEMA_VERSION_V2, NeverCancel, rule_id};
 use zip::CompressionMethod;
 use zip::write::{SimpleFileOptions, ZipWriter};
 
@@ -66,6 +66,44 @@ fn scan_with_config(
         &NeverCancel,
         &mut NoProgress,
     )
+}
+
+fn patch_header_u16(
+    path: &Path,
+    local_offset: usize,
+    central_offset: usize,
+    update: impl Fn(u16) -> u16,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut bytes = fs::read(path)?;
+    for (signature, offset) in [
+        ([0x50, 0x4b, 0x03, 0x04], local_offset),
+        ([0x50, 0x4b, 0x01, 0x02], central_offset),
+    ] {
+        let start = bytes
+            .windows(signature.len())
+            .position(|window| window == signature)
+            .ok_or("missing ZIP header")?
+            .saturating_add(offset);
+        let end = start.saturating_add(2);
+        let value = u16::from_le_bytes(bytes[start..end].try_into()?);
+        bytes[start..end].copy_from_slice(&update(value).to_le_bytes());
+    }
+    fs::write(path, bytes)?;
+    Ok(())
+}
+
+fn corrupt_central_crc(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let mut bytes = fs::read(path)?;
+    let signature = [0x50, 0x4b, 0x01, 0x02];
+    let start = bytes
+        .windows(signature.len())
+        .position(|window| window == signature)
+        .ok_or("missing ZIP central directory")?
+        .saturating_add(16);
+    let end = start.saturating_add(4);
+    bytes[start..end].copy_from_slice(&0_u32.to_le_bytes());
+    fs::write(path, bytes)?;
+    Ok(())
 }
 
 #[test]
@@ -193,5 +231,60 @@ fn archive_traversal_and_compression_bombs_fail_closed() -> Result<(), Box<dyn s
     std::io::copy(&mut std::io::repeat(0).take(2_000_000), &mut writer)?;
     writer.finish()?;
     assert!(matches!(scan(&[path]), Err(ScanError::InvalidArchive(_))));
+    Ok(())
+}
+
+#[test]
+fn archive_cancellation_returns_no_partial_plan() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("cancel")?;
+    let archive = directory.archive(
+        "cancel.zip",
+        &[(
+            "Takeout/Google Photos/Photos from 2024/alpha.png",
+            b"synthetic-alpha",
+        )],
+    )?;
+    let cancellation = CancellationToken::default();
+    cancellation.cancel();
+    let result = scan_google_takeout_inputs(
+        &[archive],
+        "synthetic-cancelled",
+        &TakeoutScanConfig::default(),
+        &cancellation,
+        &mut NoProgress,
+    );
+    assert!(matches!(result, Err(ScanError::Cancelled)));
+    Ok(())
+}
+
+#[test]
+fn encrypted_unsupported_and_corrupt_archives_fail_closed() -> Result<(), Box<dyn std::error::Error>>
+{
+    let directory = TestDirectory::new("invalid-entry")?;
+    let entry = [(
+        "Takeout/Google Photos/Photos from 2024/alpha.png",
+        b"synthetic-alpha".as_slice(),
+    )];
+
+    let encrypted = directory.archive("encrypted.zip", &entry)?;
+    patch_header_u16(&encrypted, 6, 8, |flags| flags | 1)?;
+    assert!(matches!(
+        scan(&[encrypted]),
+        Err(ScanError::InvalidArchive(_))
+    ));
+
+    let unsupported = directory.archive("unsupported.zip", &entry)?;
+    patch_header_u16(&unsupported, 8, 10, |_| 99)?;
+    assert!(matches!(
+        scan(&[unsupported]),
+        Err(ScanError::InvalidArchive(_))
+    ));
+
+    let corrupt = directory.archive("corrupt.zip", &entry)?;
+    corrupt_central_crc(&corrupt)?;
+    assert!(matches!(
+        scan(&[corrupt]),
+        Err(ScanError::InvalidArchive(_))
+    ));
     Ok(())
 }

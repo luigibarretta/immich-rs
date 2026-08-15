@@ -37,10 +37,10 @@ def object_value(value: object, label: str) -> dict[str, Any]:
     return value
 
 
-def validate_report(report: object, expected: tuple[str, int]) -> None:
+def validate_report(report: object, planned: int, expected: tuple[str, int]) -> None:
     value = object_value(report, f"report {expected[0]}")
     counters = {
-        "planned": 1,
+        "planned": planned,
         "would_upload": 0,
         "created": 0,
         "duplicate": 0,
@@ -66,7 +66,8 @@ def validate(path: Path) -> None:
         evidence = object_value(json.loads(path.read_text(encoding="utf-8")), str(path))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise EvidenceError(f"cannot load {path}: {error}") from error
-    if evidence.get("schema") != "phase2-disposable-v1":
+    schema = evidence.get("schema")
+    if schema not in {"phase2-disposable-v1", "phase2-disposable-v2"}:
         raise EvidenceError("unsupported disposable evidence schema")
     if not isinstance(evidence.get("commit_sha"), str) or not COMMIT.fullmatch(evidence["commit_sha"]):
         raise EvidenceError("invalid implementation commit")
@@ -79,10 +80,15 @@ def validate(path: Path) -> None:
     if evidence.get("images") != EXPECTED_IMAGES:
         raise EvidenceError("disposable image digest drift")
     fixture = object_value(evidence.get("fixture"), "fixture")
-    if fixture.get("kind") != "synthetic" or fixture.get("license") != "CC0-1.0" or fixture.get("assets") != 1:
-        raise EvidenceError("disposable fixture provenance drift")
-    if not isinstance(fixture.get("sha256"), str) or not SHA256.fullmatch(fixture["sha256"]):
-        raise EvidenceError("invalid disposable fixture digest")
+    if schema == "phase2-disposable-v1":
+        if fixture.get("kind") != "synthetic" or fixture.get("license") != "CC0-1.0" or fixture.get("assets") != 1:
+            raise EvidenceError("disposable fixture provenance drift")
+        if not isinstance(fixture.get("sha256"), str) or not SHA256.fullmatch(fixture["sha256"]):
+            raise EvidenceError("invalid disposable fixture digest")
+        planned = 1
+    else:
+        validate_corpus(fixture)
+        planned = 4
     plan_digest = evidence.get("plan_sha256")
     if not isinstance(plan_digest, str) or not SHA256.fullmatch(plan_digest):
         raise EvidenceError("invalid upload plan digest")
@@ -92,20 +98,69 @@ def validate(path: Path) -> None:
     if evidence.get("server_version") != {"major": 3, "minor": 1, "patch": 0, "prerelease": None}:
         raise EvidenceError("disposable server version drift")
     reports = object_value(evidence.get("reports"), "reports")
-    validate_report(reports.get("dry_run"), ("would_upload", 1))
-    validate_report(reports.get("first"), ("created", 1))
-    validate_report(reports.get("resume"), ("resumed", 1))
-    validate_report(reports.get("duplicate"), ("duplicate", 1))
-    if evidence.get("asset_count") != 1:
-        raise EvidenceError("disposable asset count drift")
-    if evidence.get("cleanup") != {
+    validate_report(reports.get("dry_run"), planned, ("would_upload", planned))
+    validate_report(reports.get("first"), planned, ("created", planned))
+    validate_report(reports.get("resume"), planned, ("resumed", planned))
+    validate_report(reports.get("duplicate"), planned, ("duplicate", planned))
+    expected_visible = 1 if schema == "phase2-disposable-v1" else 3
+    if evidence.get("asset_count") != expected_visible:
+        raise EvidenceError("disposable visible asset count drift")
+    if schema == "phase2-disposable-v2" and evidence.get("live_photo_links") != 1:
+        raise EvidenceError("disposable live-photo relationship drift")
+    cleanup = object_value(evidence.get("cleanup"), "cleanup")
+    expected_cleanup = {
         "verified": True,
         "labelled_containers": 0,
         "labelled_volumes": 0,
         "labelled_networks": 0,
-        "downloaded_images_removed": 3,
-    }:
+    }
+    if any(cleanup.get(key) != value for key, value in expected_cleanup.items()):
         raise EvidenceError("disposable cleanup drift")
+    removed = cleanup.get("downloaded_images_removed")
+    if not isinstance(removed, int) or isinstance(removed, bool) or removed < 0 or removed > 3:
+        raise EvidenceError("disposable image cleanup count drift")
+    if schema == "phase2-disposable-v1" and removed != 3:
+        raise EvidenceError("historical disposable cleanup drift")
+
+
+def validate_corpus(fixture: dict[str, Any]) -> None:
+    expected_roles = {
+        "clip.mp4": "standalone-video",
+        "image.jpg": "standalone-image",
+        "image.xmp": "xmp-sidecar",
+        "live.jpg": "live-photo-image",
+        "live.mov": "live-photo-video",
+    }
+    if (
+        fixture.get("schema") != "phase2-corpus-v1"
+        or fixture.get("fixture_id") != "synthetic-phase2-media-matrix"
+        or fixture.get("synthetic") is not True
+        or fixture.get("license") != "CC0-1.0"
+        or fixture.get("verified_materializations") != 2
+        or fixture.get("expected") != {"upload_operations": 4, "xmp_sidecars": 1, "live_photo_pairs": 1}
+    ):
+        raise EvidenceError("Phase-2 corpus contract drift")
+    generator = object_value(fixture.get("generator"), "fixture generator")
+    if (
+        generator.get("network") != "none"
+        or generator.get("image") != EXPECTED_IMAGES["server"]
+        or generator.get("recipe") != "ffmpeg-lavfi-v1"
+    ):
+        raise EvidenceError("Phase-2 corpus provenance drift")
+    files = fixture.get("files")
+    if not isinstance(files, list) or [entry.get("path") for entry in files if isinstance(entry, dict)] != sorted(expected_roles):
+        raise EvidenceError("Phase-2 corpus file matrix drift")
+    for entry in files:
+        value = object_value(entry, "fixture file")
+        if value.get("role") != expected_roles.get(value.get("path")):
+            raise EvidenceError("Phase-2 corpus role drift")
+        if not isinstance(value.get("bytes"), int) or isinstance(value.get("bytes"), bool) or value["bytes"] <= 0:
+            raise EvidenceError("Phase-2 corpus file length is invalid")
+        if not isinstance(value.get("sha256"), str) or not SHA256.fullmatch(value["sha256"]):
+            raise EvidenceError("Phase-2 corpus file digest is invalid")
+    manifest_digest = fixture.get("manifest_sha256")
+    if not isinstance(manifest_digest, str) or not SHA256.fullmatch(manifest_digest):
+        raise EvidenceError("Phase-2 corpus manifest digest is invalid")
 
 
 def main() -> int:

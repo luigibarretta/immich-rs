@@ -57,6 +57,7 @@ NETWORK="$PREFIX-network"
 DATABASE="$PREFIX-database"
 VALKEY="$PREFIX-valkey"
 SERVER="$PREFIX-server"
+GENERATOR="$PREFIX-generator"
 DATABASE_VOLUME="$PREFIX-database"
 UPLOAD_VOLUME="$PREFIX-upload"
 WORKSPACE=$(mktemp -d "/tmp/immich-rs-disposable.XXXXXX")
@@ -77,7 +78,7 @@ cleanup() {
     wait "$PROXY_PID" >/dev/null 2>&1
     PROXY_PID=''
   fi
-  for resource in "$SERVER" "$VALKEY" "$DATABASE"; do
+  for resource in "$GENERATOR" "$SERVER" "$VALKEY" "$DATABASE"; do
     label=$(label_value "$resource")
     if [[ "$label" == "$RUN_ID" ]]; then
       docker rm --force --volumes "$resource" >/dev/null 2>&1
@@ -231,14 +232,28 @@ KEY_RESPONSE=$(curl --fail --silent --show-error \
 API_KEY=$(jq -er '.secret | select(type == "string" and length > 0)' <<<"$KEY_RESPONSE")
 
 SOURCE="$WORKSPACE/source"
+CORPUS_MANIFEST="$WORKSPACE/corpus-manifest.json"
 PLAN="$WORKSPACE/upload-plan.json"
 CHECKPOINT="$WORKSPACE/checkpoint.sqlite"
 DUPLICATE_CHECKPOINT="$WORKSPACE/duplicate-checkpoint.sqlite"
-mkdir -- "$SOURCE"
-base64 --decode >"$SOURCE/synthetic.png" <<'PNG'
-iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=
-PNG
-FIXTURE_SHA256=$(sha256sum "$SOURCE/synthetic.png" | cut -d' ' -f1)
+"$REPOSITORY_ROOT/scripts/materialize-phase2-corpus.sh" \
+  --image "$SERVER_IMAGE" \
+  --source "$SOURCE" \
+  --manifest "$CORPUS_MANIFEST" \
+  --container "$GENERATOR" \
+  --run-label "$RESOURCE_LABEL=$RUN_ID"
+CORPUS_MANIFEST_SHA256=$(sha256sum "$CORPUS_MANIFEST" | cut -d' ' -f1)
+"$REPOSITORY_ROOT/scripts/materialize-phase2-corpus.sh" \
+  --image "$SERVER_IMAGE" \
+  --source "$SOURCE" \
+  --manifest "$CORPUS_MANIFEST" \
+  --container "$GENERATOR" \
+  --run-label "$RESOURCE_LABEL=$RUN_ID"
+[[ $(sha256sum "$CORPUS_MANIFEST" | cut -d' ' -f1) == "$CORPUS_MANIFEST_SHA256" ]] || {
+  echo 'synthetic corpus materialization is not deterministic' >&2
+  exit 1
+}
+CORPUS_JSON=$(<"$CORPUS_MANIFEST")
 
 echo 'disposable stage: plan' >&2
 IMMICH_RS_API_KEY="$API_KEY" "$BINARY" plan upload folder \
@@ -246,6 +261,9 @@ IMMICH_RS_API_KEY="$API_KEY" "$BINARY" plan upload folder \
   --label synthetic-disposable \
   "$SOURCE" >"$PLAN"
 PLAN_SHA256=$(sha256sum "$PLAN" | cut -d' ' -f1)
+[[ $(jq -r '.summary.operations' "$PLAN") == 4 ]]
+[[ $(jq -r '.summary.xmp_sidecars' "$PLAN") == 1 ]]
+[[ $(jq -r '.summary.live_photo_pairs' "$PLAN") == 1 ]]
 echo 'disposable stage: dry-run' >&2
 DRY_REPORT=$("$BINARY" apply upload --dry-run \
   --plan "$PLAN" --source "$SOURCE" --checkpoint "$CHECKPOINT")
@@ -260,15 +278,23 @@ echo 'disposable stage: duplicate apply' >&2
 DUPLICATE_REPORT=$(IMMICH_RS_API_KEY="$API_KEY" "$BINARY" apply upload \
   --server "$ENDPOINT" --plan "$PLAN" --source "$SOURCE" --checkpoint "$DUPLICATE_CHECKPOINT")
 
-[[ $(jq -r '.would_upload' <<<"$DRY_REPORT") == 1 ]]
-[[ $(jq -r '.created' <<<"$FIRST_REPORT") == 1 ]]
-[[ $(jq -r '.resumed' <<<"$RESUME_REPORT") == 1 ]]
-[[ $(jq -r '.duplicate' <<<"$DUPLICATE_REPORT") == 1 ]]
+[[ $(jq -r '.would_upload' <<<"$DRY_REPORT") == 4 ]]
+[[ $(jq -r '.created' <<<"$FIRST_REPORT") == 4 ]]
+[[ $(jq -r '.resumed' <<<"$RESUME_REPORT") == 4 ]]
+[[ $(jq -r '.duplicate' <<<"$DUPLICATE_REPORT") == 4 ]]
 STATISTICS=$(curl --fail --silent --show-error \
   --header "Authorization: Bearer $ACCESS_TOKEN" \
   "$ENDPOINT/api/assets/statistics")
 ASSET_COUNT=$(jq -er '.total' <<<"$STATISTICS")
-[[ "$ASSET_COUNT" == 1 ]] || { echo 'disposable asset count did not converge' >&2; exit 1; }
+SEARCH=$(curl --fail --silent --show-error \
+  --header 'Content-Type: application/json' \
+  --header "Authorization: Bearer $ACCESS_TOKEN" \
+  --request POST \
+  --data '{"size":100}' \
+  "$ENDPOINT/api/search/metadata")
+LIVE_PHOTO_LINKS=$(jq '[.assets.items[] | select(.livePhotoVideoId != null)] | length' <<<"$SEARCH")
+[[ "$ASSET_COUNT" == 3 ]] || { echo "disposable visible asset count was $ASSET_COUNT, expected 3" >&2; exit 1; }
+[[ "$LIVE_PHOTO_LINKS" == 1 ]] || { echo "disposable live-photo link count was $LIVE_PHOTO_LINKS, expected 1" >&2; exit 1; }
 SERVER_VERSION=$(curl --fail --silent --show-error "$ENDPOINT/api/server/version")
 
 cleanup
@@ -294,7 +320,8 @@ jq -n \
   --arg server_image "$SERVER_IMAGE" \
   --arg valkey_image "$VALKEY_IMAGE" \
   --arg database_image "$DATABASE_IMAGE" \
-  --arg fixture_sha256 "$FIXTURE_SHA256" \
+  --arg corpus_manifest_sha256 "$CORPUS_MANIFEST_SHA256" \
+  --argjson fixture "$CORPUS_JSON" \
   --arg plan_sha256 "$PLAN_SHA256" \
   --argjson server_version "$SERVER_VERSION" \
   --argjson dry_run "$DRY_REPORT" \
@@ -302,7 +329,8 @@ jq -n \
   --argjson resume "$RESUME_REPORT" \
   --argjson duplicate "$DUPLICATE_REPORT" \
   --argjson asset_count "$ASSET_COUNT" \
+  --argjson live_photo_links "$LIVE_PHOTO_LINKS" \
   --argjson cleanup_verified "$CLEANED" \
   --argjson downloaded_images "${#PULLED_IMAGES[@]}" \
-  '{schema:"phase2-disposable-v1",commit_sha:$commit,environment:{os:$host_os,architecture:$host_arch,docker_server_version:$docker_version,binary_sha256:$binary_sha256},images:{server:$server_image,valkey:$valkey_image,database:$database_image},fixture:{kind:"synthetic",license:"CC0-1.0",sha256:$fixture_sha256,assets:1},plan_sha256:$plan_sha256,methodology:{network:"dedicated non-masquerading bridge; ephemeral 127.0.0.1 endpoint",commands:["plan upload folder","apply upload --dry-run","apply upload","apply upload (checkpoint resume)","apply upload (fresh checkpoint duplicate check)"]},server_version:$server_version,reports:{dry_run:$dry_run,first:$first,resume:$resume,duplicate:$duplicate},asset_count:$asset_count,cleanup:{verified:($cleanup_verified == 1),labelled_containers:0,labelled_volumes:0,labelled_networks:0,downloaded_images_removed:$downloaded_images}}' \
+  '{schema:"phase2-disposable-v2",commit_sha:$commit,environment:{os:$host_os,architecture:$host_arch,docker_server_version:$docker_version,binary_sha256:$binary_sha256},images:{server:$server_image,valkey:$valkey_image,database:$database_image},fixture:($fixture + {manifest_sha256:$corpus_manifest_sha256,verified_materializations:2}),plan_sha256:$plan_sha256,methodology:{network:"dedicated non-masquerading bridge; loopback-only 127.0.0.1 client endpoint",commands:["plan upload folder","apply upload --dry-run","apply upload","apply upload (checkpoint resume)","apply upload (fresh checkpoint duplicate check)"],observables:"four source operations; three visible assets because the live-photo video is linked to its image"},server_version:$server_version,reports:{dry_run:$dry_run,first:$first,resume:$resume,duplicate:$duplicate},asset_count:$asset_count,live_photo_links:$live_photo_links,cleanup:{verified:($cleanup_verified == 1),labelled_containers:0,labelled_volumes:0,labelled_networks:0,downloaded_images_removed:$downloaded_images}}' \
   >"$OUTPUT"

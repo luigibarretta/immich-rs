@@ -12,6 +12,14 @@ are green. The first Phase 2 vertical adds an explicit, idempotent folder-upload
 workflow restricted to disposable loopback Immich instances. Delete, replace
 and independent metadata mutation remain unavailable.
 
+The first Phase 3 vertical adds read-only planning for one decompressed Google
+Takeout layout. It validates `Takeout/Google Photos`, parses JSON sidecars with
+a hard limit, and associates a unique same-directory media filename through
+the sidecar `title`. Verification uses only synthetic fixtures. Archives and
+Takeout apply remain unavailable. Implementation SHA
+`a31c30714d879e5b63996d5ce258d70761f799ad` is green in Gitea push CI
+[run 5240](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5240).
+
 The expanded synthetic image/XMP, video and live-photo matrix and its paired
 raw upload benchmark are verified on implementation SHA
 `3ed13d3293baf197fa5a21e624a828c201d7b763`: Gitea benchmark
@@ -37,6 +45,8 @@ is green and published both reports. Evidence enforcement commit
 - disposable Immich v3.1.0 and loopback mock integration gates;
 - paired raw upload benchmarks against immich-go on one disposable server and
   one derived standalone synthetic corpus.
+- decompressed Google Takeout planning with a 256 KiB JSON metadata limit,
+  deterministic title matching and explicit unsupported/ambiguous outcomes.
 
 Run a plan:
 
@@ -48,6 +58,16 @@ cargo run --locked --release -p immich-rs-cli -- \
 The normalized JSON plan is written to stdout. Errors use stderr and stable
 exit classes. Running the same command over unchanged bytes and configuration
 produces byte-identical output.
+
+Plan the supported decompressed Google Takeout layout:
+
+```bash
+cargo run --locked --release -p immich-rs-cli -- \
+  plan google-takeout --label synthetic-takeout /path/to/export-root
+```
+
+The export root must contain non-symlink `Takeout/Google Photos` directories. This
+command is read-only and cannot create a Takeout upload capability.
 
 Plan and validate a disposable upload before applying it:
 
@@ -73,7 +93,8 @@ disposable instance.
 - Maintained Rust, Python and shell files have a 400-LOC hard limit with no
   baseline exceptions.
 - Media are never buffered as whole files; configured limits fail closed.
-- Phase 1 and upload dry-run dependency paths cannot construct an HTTP client.
+- Folder and Takeout read-only planners plus upload dry-run cannot construct an
+  HTTP client or upload capability.
 - Phase 2 accepts only `127.0.0.1`, `[::1]` or `localhost` server origins.
 - API keys exist only in `IMMICH_RS_API_KEY` and are redacted from outputs.
 - Test media, API responses, credentials and identities are synthetic.
@@ -91,6 +112,8 @@ and contained by the loopback mock; any drift or asset mutation fails closed.
 See the [Phase 1 compatibility matrix](docs/compatibility/phase1-folder.md).
 The upload boundary and current evidence are recorded in the
 [Phase 2 gate matrix](docs/compatibility/phase2-folder-upload.md).
+The bounded Takeout surface is recorded in the
+[Phase 3 compatibility matrix](docs/compatibility/phase3-google-takeout.md).
 
 ## Baselines
 
@@ -113,7 +136,8 @@ The upload boundary and current evidence are recorded in the
   capabilities;
 - `immich-executor`: immutable upload planning, verification, retry and journal
   orchestration;
-- `immich-sources`: bounded folder discovery and reconciliation.
+- `immich-sources`: bounded folder and Google Takeout discovery and
+  reconciliation.
 
 The crate boundaries are dependency rules, not microservices. See
 [ADR-0004](docs/adr/ADR-0004-modular-workspace-architecture.md).
@@ -147,6 +171,13 @@ python3 scripts/run-oracle.py tests/oracle/cases/folder-matrix-v1.json \
 python3 scripts/compare-oracle.py \
   tests/oracle/compatibility/folder-matrix-v1.json \
   /path/to/observation.json
+python3 scripts/run-oracle.py \
+  tests/oracle/cases/google-takeout-basic-v1.json \
+  --oracle /path/to/verified/immich-go \
+  --output /path/to/takeout-observation.json
+python3 scripts/compare-takeout-oracle.py \
+  tests/oracle/compatibility/google-takeout-basic-v1.json \
+  /path/to/takeout-observation.json
 ```
 
 The full Phase 2 disposable gate is manual and removes its exact containers,

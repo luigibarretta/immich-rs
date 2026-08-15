@@ -69,13 +69,33 @@ CI run 5235 is green for evidence-enforcement SHA
 `6975633920117948b709bd7e5170c1246bd73b89`.
 
 The benchmark is evidence for this exact small synthetic corpus, not a
-generalized performance claim. Production remains unauthorized. The next
-vertical is a synthetic, read-only Phase 3 Google Takeout reconciliation slice.
+generalized performance claim. Production remains unauthorized, and the
+read-only Phase 3 work does not change that boundary.
 
 ## Phase 3 — Google Takeout
 
+The first read-only vertical is implemented on SHA
+`a31c30714d879e5b63996d5ce258d70761f799ad`:
+
+- one decompressed root containing `Takeout/Google Photos`;
+- additive `google_takeout` source kind in `normalized-plan-v1`;
+- 256 KiB bounded JSON parsing and deterministic same-directory `title`
+  matching;
+- explicit malformed, oversized, unsupported, ambiguous and unmatched-media
+  diagnostics;
+- exact golden, creation-order property, cancellation and black-box
+  differential tests;
+- four passing compatibility rows over two generated PNGs and two generated
+  sidecars, with the oracle's five job-resume PUTs contained by the mock;
+- no Takeout apply, upload or other mutation path.
+
+Gitea push CI run 5240 is green for the exact implementation SHA and executes
+the Takeout differential on every push.
+
+This is not the full Phase 3 gate. Remaining work is:
+
 - multi-archive virtual input;
-- JSON sidecar matching and filename/time normalization;
+- truncated/supplemental JSON filename and time normalization;
 - albums, descriptions, locations and timezone behavior;
 - adversarial split/duplicate metadata fixtures.
 

@@ -14,6 +14,12 @@ use crate::{
 };
 
 pub fn reconcile(state: &mut ScanState) {
+    prepare(state);
+    reconcile_sidecars(state);
+    complete(state);
+}
+
+pub fn prepare(state: &mut ScanState) {
     remove_unicode_collisions(state);
     state
         .media
@@ -21,7 +27,9 @@ pub fn reconcile(state: &mut ScanState) {
     state
         .sidecars
         .sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
-    reconcile_sidecars(state);
+}
+
+pub fn complete(state: &mut ScanState) {
     reconcile_live_photos(&mut state.media);
     detect_case_collisions(&state.media, &mut state.errors);
     detect_duplicate_basenames(&state.media, &mut state.warnings);
@@ -129,7 +137,11 @@ fn reconcile_sidecars(state: &mut ScanState) {
     }
 }
 
-fn attach_sidecar(media: &mut DiscoveredMedia, sidecar: &DiscoveredSidecar, selected_rule: &str) {
+pub fn attach_sidecar(
+    media: &mut DiscoveredMedia,
+    sidecar: &DiscoveredSidecar,
+    selected_rule: &str,
+) {
     media.metadata.push(MetadataCandidate {
         relative_path: sidecar.relative_path.clone(),
         kind: sidecar.kind,
@@ -262,6 +274,7 @@ pub fn diagnostic(rule: &str, code: &str, mut paths: Vec<String>) -> PlanDiagnos
 }
 
 pub fn finalize_plan(
+    source_kind: SourceKind,
     source_label: &str,
     config: &FolderScanConfig,
     state: ScanState,
@@ -295,7 +308,7 @@ pub fn finalize_plan(
     NormalizedPlan {
         schema_version: NORMALIZED_PLAN_SCHEMA_VERSION,
         source: SourceDescriptor {
-            kind: SourceKind::Folder,
+            kind: source_kind,
             label: source_label.to_owned(),
             fingerprint_sha256: source_fingerprint,
             case_sensitive: config.case_sensitive,

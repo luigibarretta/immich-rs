@@ -570,6 +570,8 @@ name = "immich-rs-sources"
 version = "0.0.0"
 dependencies = [
  "immich-rs-core",
+ "serde",
+ "serde_json",
  "sha2",
  "unicode-normalization",
 ]

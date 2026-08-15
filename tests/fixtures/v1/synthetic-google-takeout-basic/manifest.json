@@ -1,0 +1,41 @@
+{
+  "schema": "fixture-manifest-v1",
+  "fixture_id": "synthetic-google-takeout-basic",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "1",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/alpha.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 1,
+      "rgb": [24, 48, 72]
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"alpha.png\",\"description\":\"synthetic generated record alpha\",\"imageViews\":\"0\",\"creationTime\":{\"timestamp\":\"1704067200\",\"formatted\":\"synthetic UTC instant\"},\"photoTakenTime\":{\"timestamp\":\"1704067200\",\"formatted\":\"synthetic UTC instant\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/beta.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 2,
+      "rgb": [96, 120, 144]
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/beta.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"beta.png\",\"description\":\"synthetic generated record beta\",\"imageViews\":\"0\",\"creationTime\":{\"timestamp\":\"1704153600\",\"formatted\":\"synthetic UTC instant\"},\"photoTakenTime\":{\"timestamp\":\"1704153600\",\"formatted\":\"synthetic UTC instant\"}}\n"
+    }
+  ],
+  "expected_plan": {
+    "schema": "normalized-plan-v1",
+    "path": "expected-plan.json",
+    "sha256": "5bfe5db7a905b2713f03586efaed9fc5d8b862246693ebac5f07dc421b52fa80"
+  }
+}

@@ -6,6 +6,16 @@ pub const REGULAR_MEDIA: &str = "FS_REGULAR_MEDIA_V1";
 pub const SIDECAR_EXACT_NAME: &str = "META_SIDECAR_EXACT_NAME_V1";
 /// A sidecar was associated by an unambiguous basename.
 pub const SIDECAR_BASENAME: &str = "META_SIDECAR_BASENAME_V1";
+/// A Google Takeout JSON title selected one same-directory media file.
+pub const GOOGLE_TAKEOUT_TITLE: &str = "META_GOOGLE_TAKEOUT_TITLE_V1";
+/// A Google Takeout JSON sidecar was malformed or had an invalid title.
+pub const GOOGLE_TAKEOUT_JSON_INVALID: &str = "META_GOOGLE_TAKEOUT_JSON_INVALID_V1";
+/// A Google Takeout JSON sidecar exceeded the bounded parser limit.
+pub const GOOGLE_TAKEOUT_JSON_OVERSIZED: &str = "META_GOOGLE_TAKEOUT_JSON_OVERSIZED_V1";
+/// Multiple Google Takeout JSON sidecars selected the same media file.
+pub const GOOGLE_TAKEOUT_AMBIGUOUS: &str = "META_GOOGLE_TAKEOUT_AMBIGUOUS_V1";
+/// A metadata family is outside the first Google Takeout vertical.
+pub const GOOGLE_TAKEOUT_UNSUPPORTED: &str = "META_GOOGLE_TAKEOUT_UNSUPPORTED_V1";
 /// A still image and video were associated as a live-photo pair.
 pub const LIVE_PHOTO_BASENAME: &str = "PAIR_LIVE_PHOTO_BASENAME_V1";
 /// A symbolic link was deliberately not followed.

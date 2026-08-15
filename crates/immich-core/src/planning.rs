@@ -12,6 +12,8 @@ use crate::NORMALIZED_PLAN_SCHEMA_VERSION;
 pub enum SourceKind {
     /// A recursively enumerated filesystem folder.
     Folder,
+    /// A decompressed Google Takeout export.
+    GoogleTakeout,
 }
 
 /// Explicit Unicode normalization policy applied to portable relative paths.

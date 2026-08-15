@@ -27,11 +27,15 @@ pub struct ApplyRequest {
 }
 
 pub fn parse_folder(arguments: &[OsString]) -> Result<FolderRequest, CliFailure> {
-    parse_folder_options(arguments, false).map(|(request, _)| request)
+    parse_folder_options(arguments, false, "folder").map(|(request, _)| request)
+}
+
+pub fn parse_google_takeout(arguments: &[OsString]) -> Result<FolderRequest, CliFailure> {
+    parse_folder_options(arguments, false, "google-takeout").map(|(request, _)| request)
 }
 
 pub fn parse_upload_folder(arguments: &[OsString]) -> Result<UploadFolderRequest, CliFailure> {
-    let (folder, server) = parse_folder_options(arguments, true)?;
+    let (folder, server) = parse_folder_options(arguments, true, "folder")?;
     Ok(UploadFolderRequest {
         folder,
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
@@ -41,8 +45,9 @@ pub fn parse_upload_folder(arguments: &[OsString]) -> Result<UploadFolderRequest
 fn parse_folder_options(
     arguments: &[OsString],
     allow_server: bool,
+    default_label: &str,
 ) -> Result<(FolderRequest, Option<String>), CliFailure> {
-    let mut label = "folder".to_owned();
+    let mut label = default_label.to_owned();
     let mut config = FolderScanConfig::default();
     let mut root = None;
     let mut server = None;

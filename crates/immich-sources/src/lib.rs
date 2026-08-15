@@ -14,8 +14,11 @@ use immich_rs_core::{
 };
 
 mod discovery;
+mod google_takeout;
 mod identity;
 mod reconcile;
+
+pub use google_takeout::scan_google_takeout;
 
 const MIN_BUFFER_BYTES: usize = 4 * 1024;
 const MAX_BUFFER_BYTES: usize = 4 * 1024 * 1024;
@@ -90,6 +93,8 @@ pub enum ScanError {
     InvalidConfiguration(&'static str),
     /// The source root is not a readable real directory.
     InvalidRoot,
+    /// The source does not match the requested adapter layout.
+    UnsupportedLayout(&'static str),
     /// A deterministic memory or path limit was reached.
     LimitExceeded(&'static str),
     /// Cooperative cancellation stopped discovery or hashing.
@@ -106,6 +111,9 @@ impl Display for ScanError {
             }
             Self::InvalidRoot => {
                 formatter.write_str("source root must be a readable real directory")
+            }
+            Self::UnsupportedLayout(message) => {
+                write!(formatter, "unsupported source layout: {message}")
             }
             Self::LimitExceeded(limit) => write!(formatter, "scan limit exceeded: {limit}"),
             Self::Cancelled => formatter.write_str("scan cancelled cleanly"),
@@ -221,6 +229,17 @@ struct ScanState {
     event_sequence: u64,
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct ScanStrategy {
+    pub source_kind: immich_rs_core::SourceKind,
+    pub reconcile_state: fn(&mut ScanState),
+}
+
+const FOLDER_SCAN: ScanStrategy = ScanStrategy {
+    source_kind: immich_rs_core::SourceKind::Folder,
+    reconcile_state: reconcile::reconcile,
+};
+
 impl ScanState {
     const fn new() -> Self {
         Self {
@@ -254,13 +273,14 @@ pub fn scan_folder(
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
 ) -> Result<NormalizedPlan, ScanError> {
-    scan_folder_resolved_internal(
+    scan_resolved_internal(
         root,
         source_label,
         config,
         cancellation,
         observer,
         &mut |_| {},
+        FOLDER_SCAN,
     )
     .map(|resolved| resolved.plan)
 }
@@ -273,13 +293,14 @@ pub fn scan_folder_resolved(
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
 ) -> Result<ResolvedFolderPlan, ScanError> {
-    scan_folder_resolved_internal(
+    scan_resolved_internal(
         root,
         source_label,
         config,
         cancellation,
         observer,
         &mut |_| {},
+        FOLDER_SCAN,
     )
 }
 
@@ -292,24 +313,26 @@ fn scan_folder_internal(
     observer: &mut impl ProgressObserver,
     before_read: &mut impl FnMut(&Path),
 ) -> Result<NormalizedPlan, ScanError> {
-    scan_folder_resolved_internal(
+    scan_resolved_internal(
         root,
         source_label,
         config,
         cancellation,
         observer,
         before_read,
+        FOLDER_SCAN,
     )
     .map(|resolved| resolved.plan)
 }
 
-fn scan_folder_resolved_internal(
+pub(crate) fn scan_resolved_internal(
     root: &Path,
     source_label: &str,
     config: &FolderScanConfig,
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
     before_read: &mut impl FnMut(&Path),
+    strategy: ScanStrategy,
 ) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
     discovery::validate_root_and_label(root, source_label)?;
@@ -324,7 +347,7 @@ fn scan_folder_resolved_internal(
         &mut state,
     )?;
     discovery::check_cancelled(cancellation)?;
-    reconcile::reconcile(&mut state);
+    (strategy.reconcile_state)(&mut state);
     state.progress(ProgressStage::Reconciliation, observer);
     let complete_sequence = state.event_sequence.saturating_add(1);
     let files = state
@@ -351,7 +374,7 @@ fn scan_folder_resolved_internal(
             )
         }))
         .collect::<BTreeMap<_, _>>();
-    let plan = reconcile::finalize_plan(source_label, config, state);
+    let plan = reconcile::finalize_plan(strategy.source_kind, source_label, config, state);
     plan.validate()?;
     observer.observe(ProgressEvent {
         schema_version: PROGRESS_EVENT_SCHEMA_VERSION,
@@ -365,5 +388,7 @@ fn scan_folder_resolved_internal(
 
 #[cfg(test)]
 mod resolved_tests;
+#[cfg(test)]
+mod takeout_tests;
 #[cfg(test)]
 mod tests;

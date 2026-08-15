@@ -50,6 +50,18 @@ def check() -> list[str]:
     forbidden_dry_run_tokens = ("immich_rs_client", "api_key", "server", "authorize_upload")
     if any(token in dry_run_source.casefold() for token in forbidden_dry_run_tokens):
         failures.append("dry-run source can reach a server or upload capability")
+    takeout_source = (
+        REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "google_takeout.rs"
+    ).read_text(encoding="utf-8")
+    forbidden_takeout_tokens = (
+        "immich_rs_client",
+        "immich_rs_executor",
+        "api_key",
+        "server",
+        "upload",
+    )
+    if any(token in takeout_source.casefold() for token in forbidden_takeout_tokens):
+        failures.append("Google Takeout plan source can reach a mutation capability")
     client_root = REPOSITORY_ROOT / "crates" / "immich-client" / "src"
     client_source = (client_root / "lib.rs").read_text(encoding="utf-8")
     upload_source = (client_root / "upload.rs").read_text(encoding="utf-8")

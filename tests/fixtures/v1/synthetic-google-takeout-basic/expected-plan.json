@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "source": {
+    "kind": "google_takeout",
+    "label": "synthetic-google-takeout-basic",
+    "fingerprint_sha256": "017ba0750eeef1bbec1d45c794d8092bd7fa6068164f68df2aea8b8e365fa8c5",
+    "case_sensitive": true,
+    "unicode_normalization": "nfc"
+  },
+  "assets": [
+    {
+      "operation_id": "10f02c7c682be86d2a97615ac46df24aace7b0f00ba048d932adf8d9c76bb331",
+      "relative_path": "Takeout/Google Photos/Photos from 2024/alpha.png",
+      "media_kind": "image",
+      "byte_len": 70,
+      "content_sha256": "31011553abf2de219678417e94c56fe9b2f2813f4cf429e2719f26b97a84ce8c",
+      "metadata": [
+        {
+          "relative_path": "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1"
+        }
+      ],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1",
+          "outcome": "metadata_candidate_associated"
+        }
+      ]
+    },
+    {
+      "operation_id": "3ebe9ac691c409338693e777f356cd4bf27f5dfe321cfd67e59ff16e4755af3d",
+      "relative_path": "Takeout/Google Photos/Photos from 2024/beta.png",
+      "media_kind": "image",
+      "byte_len": 71,
+      "content_sha256": "b9235fd80ca87ddb0e69864e4b7b8b344a13001569db8ae758dc38a753ab5c46",
+      "metadata": [
+        {
+          "relative_path": "Takeout/Google Photos/Photos from 2024/beta.png.json",
+          "kind": "json",
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1"
+        }
+      ],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_GOOGLE_TAKEOUT_TITLE_V1",
+          "outcome": "metadata_candidate_associated"
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "summary": {
+    "assets": 2,
+    "sidecars": 2,
+    "bytes_read": 631
+  }
+}

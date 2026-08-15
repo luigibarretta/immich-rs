@@ -113,6 +113,14 @@ jobs:
             tests/oracle/compatibility/google-takeout-basic-v1.json \
             .artifacts/oracle/google-takeout-observation.json \
             --output .artifacts/oracle/google-takeout-report.json
+          python3 scripts/run-oracle.py \
+            tests/oracle/cases/google-takeout-complete-v2.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --output .artifacts/oracle/google-takeout-complete-observation.json
+          python3 scripts/compare-takeout-complete.py \
+            tests/oracle/compatibility/google-takeout-complete-v2.json \
+            .artifacts/oracle/google-takeout-complete-observation.json \
+            --output .artifacts/oracle/google-takeout-complete-report.json
       - name: Preserve normalized evidence without redistributing the oracle
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

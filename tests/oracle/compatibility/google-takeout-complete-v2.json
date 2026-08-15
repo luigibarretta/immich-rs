@@ -1,0 +1,16 @@
+{
+  "schema": "takeout-differential-expectation-v2",
+  "case_id": "google-takeout-complete-v2",
+  "expected_plan": "../../fixtures/v2/synthetic-google-takeout-complete/expected-plan.json",
+  "matrix": [
+    { "id": "split_zip_layout", "outcome": "parity" },
+    { "id": "title_metadata", "outcome": "parity" },
+    { "id": "supplemental_filename", "outcome": "declared_oracle_divergence" },
+    { "id": "content_alias", "outcome": "parity_after_logical_deduplication" },
+    { "id": "album_membership", "outcome": "parity_after_logical_deduplication" },
+    { "id": "normalized_description_location", "outcome": "immich_rs_stronger_normalized_contract" },
+    { "id": "utc_timestamp", "outcome": "parity_except_supplemental_oracle_divergence" },
+    { "id": "unicode_nfc", "outcome": "parity_after_normalization" },
+    { "id": "dry_run_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

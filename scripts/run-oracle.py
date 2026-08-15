@@ -17,20 +17,12 @@ import tempfile
 import tomllib
 from types import ModuleType
 from typing import Any
-import unicodedata
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = REPOSITORY_ROOT / "tests" / "oracle" / "baseline.toml"
-FIXTURE_ROOT = (REPOSITORY_ROOT / "tests" / "fixtures" / "v1").resolve()
+FIXTURE_ROOT = (REPOSITORY_ROOT / "tests" / "fixtures").resolve()
 ORACLE_OBSERVATION_SCHEMA = "oracle-observation-v1"
-CASE_SCHEMA = "oracle-case-v1"
-ANSI_ESCAPE = re.compile(r"\x1b(?:[@-_][0-?]*[ -/]*[@-~]|\[[0-?]*[ -/]*[@-~])")
-UUID = re.compile(r"(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b")
-RFC3339 = re.compile(r"\b\d{4}-\d{2}-\d{2}[T ][0-9:.+-]+Z?\b")
-CLOCK_TIME = re.compile(r"\b\d{2}:\d{2}:\d{2}(?:\.\d+)?\b")
-LOG_TIMESTAMP = re.compile(r"(?<!\d)\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?!\d)")
-COORDINATE_FIELDS = re.compile(r"\s+file\.(?:Latitude|Longitude)=[^\s]+")
-LOGGED_API_KEY = re.compile(r"--api-key=[^\s]+ origin=cli")
+CASE_SCHEMAS = {"oracle-case-v1", "oracle-case-v2"}
 
 
 class OracleError(ValueError):
@@ -107,7 +99,7 @@ def _safe_fixture_manifest(case_path: Path, raw_path: object) -> Path:
         raise OracleError("oracle case fixture must be a string")
     manifest = (case_path.parent / raw_path).resolve()
     if FIXTURE_ROOT not in manifest.parents or manifest.name != "manifest.json":
-        raise OracleError("oracle fixture must be a v1 manifest inside tests/fixtures/v1")
+        raise OracleError("oracle fixture must be a manifest inside tests/fixtures")
     return manifest
 
 
@@ -117,8 +109,8 @@ def load_case(path: Path) -> dict[str, Any]:
         case = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise OracleError(f"cannot read oracle case: {error}") from error
-    if not isinstance(case, dict) or case.get("schema") != CASE_SCHEMA:
-        raise OracleError(f"oracle case schema must be {CASE_SCHEMA}")
+    if not isinstance(case, dict) or case.get("schema") not in CASE_SCHEMAS:
+        raise OracleError(f"oracle case schema must be one of {sorted(CASE_SCHEMAS)}")
     if not isinstance(case.get("case_id"), str) or not case["case_id"]:
         raise OracleError("oracle case_id must be a non-empty string")
     arguments = case.get("arguments")
@@ -127,7 +119,15 @@ def load_case(path: Path) -> dict[str, Any]:
     supported_sources = (["upload", "from-folder"], ["upload", "from-google-photos"])
     if arguments[:2] not in supported_sources or "--dry-run" not in arguments:
         raise OracleError("oracle case must use a supported dry-run upload source")
-    required_placeholders = {"{server_url}", "{fixture_root}", "{synthetic_api_key}"}
+    archive_view = case.get("archive_view")
+    if archive_view is not None and (
+        case.get("schema") != "oracle-case-v2"
+        or not isinstance(archive_view, str)
+        or not archive_view
+    ):
+        raise OracleError("archive_view requires a non-empty oracle-case-v2 value")
+    fixture_placeholder = "{fixture_inputs}" if archive_view else "{fixture_root}"
+    required_placeholders = {"{server_url}", fixture_placeholder, "{synthetic_api_key}"}
     if any(arguments.count(placeholder) != 1 for placeholder in required_placeholders):
         raise OracleError("oracle case must use each synthetic placeholder exactly once")
     if any(re.search(r"(?i)https?://", argument) for argument in arguments):
@@ -158,59 +158,13 @@ def load_case(path: Path) -> dict[str, Any]:
         for item in expected_mutations
     ):
         raise OracleError("expected oracle mutations must be explicit oracle-defect records")
-    return {**case, "fixture_path": fixture, "timeout_seconds": timeout_seconds}
-
-
-def _normalize_text(text: str, fixture_root: Path, workspace_root: Path, server_url: str) -> list[str]:
-    normalized = ANSI_ESCAPE.sub("", text).replace(str(fixture_root), "<FIXTURE_ROOT>")
-    normalized = normalized.replace(str(workspace_root), "<WORKSPACE>").replace(server_url, "<MOCK_SERVER>")
-    normalized = UUID.sub("<ID>", normalized)
-    normalized = RFC3339.sub("<TIMESTAMP>", normalized)
-    normalized = CLOCK_TIME.sub("<TIME>", normalized)
-    normalized = LOG_TIMESTAMP.sub("<TIMESTAMP>", normalized)
-    normalized = normalized.replace("synthetic-oracle-key", "<SYNTHETIC_API_KEY>")
-    normalized = normalized.replace("synthetic-user@example.invalid", "<SYNTHETIC_USER>")
-    normalized = COORDINATE_FIELDS.sub("", normalized)
-    normalized = LOGGED_API_KEY.sub("--api-key=<REDACTED> origin=cli", normalized)
-    normalized = unicodedata.normalize("NFC", normalized)
-    return [line.rstrip() for line in normalized.replace("\r", "\n").splitlines() if line.strip()]
-
-
-def _captured_logs(process_home: Path, fixture_root: Path, workspace_root: Path, server_url: str) -> list[dict[str, Any]]:
-    log_root = process_home / ".cache" / "immich-go"
-    if not log_root.exists():
-        return []
-    captured = []
-    total_bytes = 0
-    for path in sorted(log_root.glob("*.log")):
-        data = path.read_bytes()
-        total_bytes += len(data)
-        if total_bytes > 4 * 1024 * 1024:
-            raise OracleError("oracle logs exceeded the synthetic capture limit")
-        text = data.decode("utf-8", errors="replace")
-        normalized_lines = _normalize_text(text, fixture_root, workspace_root, server_url)
-        semantic_markers = (
-            " discovered ",
-            " uploaded successfully ",
-            " discarded local duplicate ",
-            " metadata updated ",
-            " stacked ",
-            "JSON file detected",
-            "Total Assets:",
-            "  Processed:",
-            "  Discarded:",
-            "  Errors:",
-            "  Pending:",
-        )
-        captured.append(
-            {
-                "name": LOG_TIMESTAMP.sub("<TIMESTAMP>", path.name),
-                "lines": sorted(
-                    line for line in normalized_lines if any(marker in line for marker in semantic_markers)
-                ),
-            }
-        )
-    return captured
+    return {
+        **case,
+        "archive_view": archive_view,
+        "fixture_path": fixture,
+        "fixture_placeholder": fixture_placeholder,
+        "timeout_seconds": timeout_seconds,
+    }
 
 
 def run_case(
@@ -227,6 +181,7 @@ def run_case(
     materializer = _load_python(REPOSITORY_ROOT / "scripts" / "materialize-fixture.py", "oracle_fixture_materializer")
     mock_module = _load_python(REPOSITORY_ROOT / "tests" / "oracle" / "mock_immich_server.py", "oracle_mock_immich")
     capture_module = _load_python(REPOSITORY_ROOT / "scripts" / "bounded-process.py", "oracle_bounded_process")
+    normalization = _load_python(REPOSITORY_ROOT / "scripts" / "oracle_capture.py", "oracle_capture")
     fixture_path = case["fixture_path"]
     fixture_manifest = materializer.load_manifest(fixture_path)
     fixture_digest = _sha256_file(fixture_path)
@@ -236,14 +191,22 @@ def run_case(
         source_root = temporary_root / "fixture"
         process_home = temporary_root / "home"
         process_home.mkdir()
-        materializer.materialize(fixture_path, source_root)
+        materializer.materialize(fixture_path, source_root, case["archive_view"])
         with mock_module.running_mock() as server:
             substitutions = {
                 "{server_url}": server.url,
                 "{fixture_root}": str(source_root),
                 "{synthetic_api_key}": mock_module.SYNTHETIC_API_KEY,
             }
-            arguments = [substitutions.get(argument, argument) for argument in case["arguments"]]
+            arguments = []
+            for argument in case["arguments"]:
+                if argument == "{fixture_inputs}":
+                    inputs = sorted(source_root.glob("*.zip"))
+                    if not inputs:
+                        raise OracleError("archive view did not produce ZIP inputs")
+                    arguments.extend(str(path) for path in inputs)
+                else:
+                    arguments.append(substitutions.get(argument, argument))
             environment = {
                 "HOME": str(process_home),
                 "LANG": "C.UTF-8",
@@ -314,12 +277,19 @@ def run_case(
                 "schema": fixture_manifest["schema"],
                 "fixture_id": fixture_manifest["fixture_id"],
                 "manifest_sha256": fixture_digest,
+                "archive_view": case["archive_view"],
             },
             "process": {
                 "exit_code": result.returncode,
-                "stdout": _normalize_text(result.stdout, source_root, temporary_root, server.url),
-                "stderr": _normalize_text(result.stderr, source_root, temporary_root, server.url),
-                "logs": _captured_logs(process_home, source_root, temporary_root, server.url),
+                "stdout": normalization.normalize_text(
+                    result.stdout, source_root, temporary_root, server.url
+                ),
+                "stderr": normalization.normalize_text(
+                    result.stderr, source_root, temporary_root, server.url
+                ),
+                "logs": normalization.captured_logs(
+                    process_home, source_root, temporary_root, server.url
+                ),
             },
             "observable": {
                 "all_requests_authenticated": all(request["authenticated"] for request in requests),

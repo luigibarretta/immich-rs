@@ -38,6 +38,15 @@ class OracleRunnerTests(unittest.TestCase):
         self.assertEqual(case["arguments"][:2], ["upload", "from-google-photos"])
         self.assertIn("--dry-run", case["arguments"])
         self.assertEqual(case["fixture_path"].name, "manifest.json")
+        complete = runner.load_case(
+            REPOSITORY_ROOT
+            / "tests"
+            / "oracle"
+            / "cases"
+            / "google-takeout-complete-v2.json"
+        )
+        self.assertEqual(complete["archive_view"], "split")
+        self.assertEqual(complete["fixture_placeholder"], "{fixture_inputs}")
 
     def test_version_and_digest_are_both_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

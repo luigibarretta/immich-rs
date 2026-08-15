@@ -105,9 +105,17 @@ jobs:
             tests/oracle/compatibility/folder-matrix-v1.json \
             .artifacts/oracle/observation.json \
             --output .artifacts/oracle/differential-report.json
+          python3 scripts/run-oracle.py \
+            tests/oracle/cases/google-takeout-basic-v1.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --output .artifacts/oracle/google-takeout-observation.json
+          python3 scripts/compare-takeout-oracle.py \
+            tests/oracle/compatibility/google-takeout-basic-v1.json \
+            .artifacts/oracle/google-takeout-observation.json \
+            --output .artifacts/oracle/google-takeout-report.json
       - name: Preserve normalized evidence without redistributing the oracle
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
-          name: phase1-differential-${{ github.sha }}
+          name: read-only-differential-${{ github.sha }}
           path: .artifacts/oracle
           retention-days: 14

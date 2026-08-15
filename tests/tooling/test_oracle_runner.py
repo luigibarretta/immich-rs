@@ -31,6 +31,14 @@ runner = load_runner()
 
 
 class OracleRunnerTests(unittest.TestCase):
+    def test_takeout_case_is_supported_only_as_a_synthetic_dry_run(self) -> None:
+        case = runner.load_case(
+            REPOSITORY_ROOT / "tests" / "oracle" / "cases" / "google-takeout-basic-v1.json"
+        )
+        self.assertEqual(case["arguments"][:2], ["upload", "from-google-photos"])
+        self.assertIn("--dry-run", case["arguments"])
+        self.assertEqual(case["fixture_path"].name, "manifest.json")
+
     def test_version_and_digest_are_both_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             executable = Path(temporary) / "oracle"

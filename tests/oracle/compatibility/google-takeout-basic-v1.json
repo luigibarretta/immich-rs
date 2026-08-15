@@ -1,0 +1,11 @@
+{
+  "schema": "takeout-differential-expectation-v1",
+  "case_id": "google-takeout-basic-v1",
+  "expected_plan": "../../fixtures/v1/synthetic-google-takeout-basic/expected-plan.json",
+  "matrix": [
+    { "id": "decompressed_layout", "outcome": "parity" },
+    { "id": "json_title_match", "outcome": "parity" },
+    { "id": "metadata_association", "outcome": "parity" },
+    { "id": "dry_run_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

@@ -124,8 +124,9 @@ def load_case(path: Path) -> dict[str, Any]:
     arguments = case.get("arguments")
     if not isinstance(arguments, list) or not arguments or not all(isinstance(value, str) for value in arguments):
         raise OracleError("oracle case arguments must be a non-empty string array")
-    if arguments[:2] != ["upload", "from-folder"] or "--dry-run" not in arguments:
-        raise OracleError("oracle case must be a dry-run folder upload")
+    supported_sources = (["upload", "from-folder"], ["upload", "from-google-photos"])
+    if arguments[:2] not in supported_sources or "--dry-run" not in arguments:
+        raise OracleError("oracle case must use a supported dry-run upload source")
     required_placeholders = {"{server_url}", "{fixture_root}", "{synthetic_api_key}"}
     if any(arguments.count(placeholder) != 1 for placeholder in required_placeholders):
         raise OracleError("oracle case must use each synthetic placeholder exactly once")

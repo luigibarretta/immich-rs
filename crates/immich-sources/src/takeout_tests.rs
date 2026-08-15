@@ -158,3 +158,18 @@ fn missing_takeout_layout_is_rejected() -> Result<(), Box<dyn std::error::Error>
     assert!(matches!(result, Err(ScanError::UnsupportedLayout(_))));
     Ok(())
 }
+
+#[cfg(unix)]
+#[test]
+fn symlinked_takeout_layout_is_rejected() -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::symlink;
+
+    let directory = TestDirectory::new("symlinked-layout")?;
+    let takeout = directory.0.join("Takeout");
+    let target = directory.0.join("takeout-target");
+    fs::rename(&takeout, &target)?;
+    symlink("takeout-target", &takeout)?;
+    let result = scan(&directory.0);
+    assert!(matches!(result, Err(ScanError::UnsupportedLayout(_))));
+    Ok(())
+}

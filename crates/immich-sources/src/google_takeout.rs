@@ -53,16 +53,19 @@ pub fn scan_google_takeout(
 }
 
 pub fn validate_layout(root: &Path) -> Result<(), ScanError> {
-    let photos = root.join("Takeout").join("Google Photos");
-    let metadata = std::fs::symlink_metadata(&photos)
-        .map_err(|_| ScanError::UnsupportedLayout("expected Takeout/Google Photos directory"))?;
-    if metadata.file_type().is_dir() && !metadata.file_type().is_symlink() {
-        Ok(())
-    } else {
-        Err(ScanError::UnsupportedLayout(
-            "expected Takeout/Google Photos directory",
-        ))
+    let takeout = root.join("Takeout");
+    let photos = takeout.join("Google Photos");
+    for directory in [&takeout, &photos] {
+        let metadata = std::fs::symlink_metadata(directory).map_err(|_| {
+            ScanError::UnsupportedLayout("expected real Takeout/Google Photos directories")
+        })?;
+        if !metadata.file_type().is_dir() || metadata.file_type().is_symlink() {
+            return Err(ScanError::UnsupportedLayout(
+                "expected real Takeout/Google Photos directories",
+            ));
+        }
     }
+    Ok(())
 }
 
 pub fn reconcile(state: &mut ScanState) {

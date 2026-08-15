@@ -1,6 +1,7 @@
 # ADR-0021: Google Takeout read-only foundation
 
-- Status: Accepted
+- Status: Superseded
+- Superseded by: ADR-0022
 - Date: 2026-08-15
 - Owners: project maintainers
 

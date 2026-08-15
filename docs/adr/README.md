@@ -37,7 +37,8 @@ Run `scripts/check-adrs.sh` before committing.
 | [0018](ADR-0018-source-file-size-policy.md) | Source file size policy | Accepted |
 | [0019](ADR-0019-phase-two-folder-upload.md) | Phase-two folder upload execution | Superseded by ADR-0020 |
 | [0020](ADR-0020-containerized-disposable-transport.md) | Containerized disposable transport | Accepted |
-| [0021](ADR-0021-google-takeout-read-only-foundation.md) | Google Takeout read-only foundation | Accepted |
+| [0021](ADR-0021-google-takeout-read-only-foundation.md) | Google Takeout read-only foundation | Superseded by ADR-0022 |
+| [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Accepted |
 
 ## Template
 

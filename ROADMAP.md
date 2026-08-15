@@ -55,17 +55,22 @@ exact implementation SHA; run 5170 uploaded the raw JSON report.
 - explicit immutable plan, dry-run and apply separation;
 - loopback-only disposable-server authorization boundary;
 - synthetic mock coverage for retry, refusal and cancellation behavior;
-- real Immich v3.1.0 create, resume and duplicate convergence evidence.
+- real Immich v3.1.0 create, resume and duplicate convergence evidence;
+- offline, byte-reproducible image/XMP, video and Apple live-photo corpus;
+- six paired raw upload samples against immich-go after two warmups on one
+  server, environment and derived standalone corpus.
 
 Exit gate: isolated disposable Immich test instance, fault-injection recovery,
-idempotent second run and no duplicate assets. The implementation and committed
-evidence satisfy this first vertical's local gate. Push CI and the full
-disposable workflow remain required for every release candidate SHA.
+idempotent second run and no duplicate assets. The folder-upload MVP gate is
+complete on implementation SHA `3ed13d3293baf197fa5a21e624a828c201d7b763`:
+Gitea run 5234 verified four operations, one linked live photo, six paired
+samples and complete disposable cleanup, then published both raw reports. Push
+CI run 5235 is green for evidence-enforcement SHA
+`6975633920117948b709bd7e5170c1246bd73b89`.
 
-The current real-server corpus is one synthetic PNG. The richer video, XMP and
-live-photo matrix is mock-backed, and Phase 2 has no paired performance claim.
-Expanding both items is the next Phase 2 evidence vertical; production remains
-unauthorized.
+The benchmark is evidence for this exact small synthetic corpus, not a
+generalized performance claim. Production remains unauthorized. The next
+vertical is a synthetic, read-only Phase 3 Google Takeout reconciliation slice.
 
 ## Phase 3 — Google Takeout
 

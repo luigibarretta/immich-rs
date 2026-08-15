@@ -12,6 +12,14 @@ are green. The first Phase 2 vertical adds an explicit, idempotent folder-upload
 workflow restricted to disposable loopback Immich instances. Delete, replace
 and independent metadata mutation remain unavailable.
 
+The expanded synthetic image/XMP, video and live-photo matrix and its paired
+raw upload benchmark are verified on implementation SHA
+`3ed13d3293baf197fa5a21e624a828c201d7b763`: Gitea benchmark
+[run 5234](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5234)
+is green and published both reports. Evidence enforcement commit
+`6975633920117948b709bd7e5170c1246bd73b89` is green in push CI
+[run 5235](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5235).
+
 ## Current capabilities
 
 - deterministic recursive folder discovery with bounded entry and path limits;
@@ -26,7 +34,9 @@ and independent metadata mutation remain unavailable.
 - immutable `upload-plan-v1` generation after authenticated version probing;
 - bounded streaming upload with duplicate convergence and capped retries;
 - durable SQLite checkpoints, clean cancellation and explicit dry-run;
-- disposable Immich v3.1.0 and loopback mock integration gates.
+- disposable Immich v3.1.0 and loopback mock integration gates;
+- paired raw upload benchmarks against immich-go on one disposable server and
+  one derived standalone synthetic corpus.
 
 Run a plan:
 
@@ -146,14 +156,16 @@ volumes, network, temporary workspace and test-only images on every exit:
 scripts/run-disposable-immich.sh \
   --binary target/release/immich-rs \
   --commit-sha "$(git rev-parse HEAD)" \
-  --output /path/to/phase2-disposable.json
+  --output .artifacts/phase2-disposable.json
 ```
 
 Full paired benchmarks are manual and separate from push CI. Read the
 [methodology](benchmarks/README.md) and the committed
-[raw evidence](benchmarks/evidence/phase1-2026-08-14.json). Those measurements
-are not a generalized performance claim. The same harness completed in Gitea
-run 5170 and uploaded the raw JSON evidence for the exact implementation SHA.
+[Phase 1](benchmarks/evidence/phase1-2026-08-14.json) and
+[Phase 2](benchmarks/evidence/phase2-2026-08-15.json) raw evidence. Those
+measurements are not generalized performance claims. The Phase 2 harness
+completed in Gitea run 5234 and uploaded the raw benchmark plus disposable
+cleanup evidence for the exact implementation SHA.
 
 Read [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the full
 [ADR index](docs/adr/README.md) before implementing a new vertical.

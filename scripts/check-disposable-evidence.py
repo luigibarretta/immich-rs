@@ -165,9 +165,12 @@ def validate_corpus(fixture: dict[str, Any]) -> None:
 
 def main() -> int:
     paths = sorted(EVIDENCE_ROOT.glob("phase2-disposable-*.json"))
+    matrix_paths = sorted(EVIDENCE_ROOT.glob("phase2-disposable-matrix-*.json"))
     try:
         if not paths:
             raise EvidenceError("Phase-2 disposable evidence is missing")
+        if not matrix_paths:
+            raise EvidenceError("Phase-2 disposable media-matrix evidence is missing")
         for path in paths:
             validate(path)
     except EvidenceError as error:

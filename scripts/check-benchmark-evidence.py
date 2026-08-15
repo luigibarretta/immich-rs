@@ -37,8 +37,8 @@ PHASE2_FILES = {
     "clip.mp4": ("standalone-video", 294_437, "0a8fecdcd3acc4d48f86556019a116e949e8b54259bf37b368e957fa11863092"),
     "image.jpg": ("standalone-image", 229, "1ddf2520656768129b504be9d3c54b8b722a7b5e03bbd68dbd1c8006fe27969b"),
     "image.xmp": ("xmp-sidecar", 289, "f8dc98bef622f83d65bd58cdc957d1bdf349ccfd8fe87391a474c3bf558e92fa"),
-    "motion.mov": ("standalone-video", 291_962, "9b45455a0279ac0ec5be05f94f157497165064f1269daf93ebc0c7fc1ad29cb8"),
-    "still.jpg": ("standalone-image", 387, "70e4a5c7ac4a99e89e5cdbf6cd7a27da7bf143450ee1ad9b24eb02e29ed92fc2"),
+    "motion.mov": ("standalone-video", 291_962, "d0c1752c8234bdc5381d641dfc7bd9c364e561db193e0f80eef60c6585b9ae34"),
+    "still.jpg": ("standalone-image", 387, "5848cb1b560f914347478da69f98fabb37e2e61fdcc47a630093a27332475e3e"),
 }
 
 
@@ -184,10 +184,11 @@ def validate_phase2(path: Path) -> None:
     derived = fixture.get("derived_from")
     if (
         fixture.get("expected") != expected
-        or fixture.get("manifest_sha256") != "2eb2efe0668bf113dc8901459c5efb9f7da215f0a448d1e57f6e63b420d53640"
+        or fixture.get("manifest_sha256") != "9efa46724d28a59e245b316ccacb3c11d452510e3c2c61e7ae7664ac98ee8dbf"
         or not isinstance(derived, dict)
         or derived.get("schema") != "phase2-corpus-v1"
         or derived.get("manifest_sha256") != "5288a0548d947d22e2e693ef958db00215a562ffa3172a26861d569ae5927a61"
+        or derived.get("mapping") != "live media renamed and assigned distinct fixed-size synthetic identifiers"
     ):
         raise EvidenceError(f"{path}: Phase-2 fixture identity drift")
     files = fixture.get("files")
@@ -221,7 +222,7 @@ def validate_phase2(path: Path) -> None:
     samples = report.get("raw_samples")
     if not isinstance(methodology, dict) or not isinstance(samples, list):
         raise EvidenceError(f"{path}: Phase-2 methodology or samples are missing")
-    if methodology.get("samples") != len(samples) or len(samples) < 2:
+    if methodology.get("samples") != 6 or methodology.get("warmups") != 2 or len(samples) != 6:
         raise EvidenceError(f"{path}: Phase-2 sample count mismatch")
     if methodology.get("percentiles") != "nearest-rank p95 over the raw samples":
         raise EvidenceError(f"{path}: Phase-2 percentile method is missing")
@@ -253,6 +254,8 @@ def main() -> int:
     try:
         if not paths:
             raise EvidenceError("Phase 1 benchmark evidence is missing")
+        if not phase2_paths:
+            raise EvidenceError("Phase 2 benchmark evidence is missing")
         for path in paths:
             validate(path)
         for path in phase2_paths:

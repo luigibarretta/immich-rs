@@ -1,0 +1,147 @@
+{
+  "schema": "phase2-disposable-v2",
+  "commit_sha": "3ed13d3293baf197fa5a21e624a828c201d7b763",
+  "environment": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "docker_server_version": "29.7.2",
+    "binary_sha256": "542ede3ef5e52b242ec04547daed0ec9099e684e761cbf47d4355d0679c88f2a"
+  },
+  "images": {
+    "server": "ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa",
+    "valkey": "docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411",
+    "database": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23"
+  },
+  "fixture": {
+    "schema": "phase2-corpus-v1",
+    "fixture_id": "synthetic-phase2-media-matrix",
+    "synthetic": true,
+    "license": "CC0-1.0",
+    "generator": {
+      "network": "none",
+      "image": "ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa",
+      "recipe": "ffmpeg-lavfi-apple-live-v2",
+      "determinism": "pinned image, fixed filters, single-thread video encoding, stripped metadata, fixed synthetic live-photo identifier"
+    },
+    "files": [
+      {
+        "path": "clip.mp4",
+        "role": "standalone-video",
+        "bytes": 294437,
+        "sha256": "0a8fecdcd3acc4d48f86556019a116e949e8b54259bf37b368e957fa11863092"
+      },
+      {
+        "path": "image.jpg",
+        "role": "standalone-image",
+        "bytes": 229,
+        "sha256": "1ddf2520656768129b504be9d3c54b8b722a7b5e03bbd68dbd1c8006fe27969b"
+      },
+      {
+        "path": "image.xmp",
+        "role": "xmp-sidecar",
+        "bytes": 289,
+        "sha256": "f8dc98bef622f83d65bd58cdc957d1bdf349ccfd8fe87391a474c3bf558e92fa"
+      },
+      {
+        "path": "live.jpg",
+        "role": "live-photo-image",
+        "bytes": 387,
+        "sha256": "70e4a5c7ac4a99e89e5cdbf6cd7a27da7bf143450ee1ad9b24eb02e29ed92fc2"
+      },
+      {
+        "path": "live.mov",
+        "role": "live-photo-video",
+        "bytes": 291962,
+        "sha256": "9b45455a0279ac0ec5be05f94f157497165064f1269daf93ebc0c7fc1ad29cb8"
+      }
+    ],
+    "expected": {
+      "upload_operations": 4,
+      "xmp_sidecars": 1,
+      "live_photo_pairs": 1
+    },
+    "manifest_sha256": "5288a0548d947d22e2e693ef958db00215a562ffa3172a26861d569ae5927a61",
+    "verified_materializations": 2
+  },
+  "plan_sha256": "b96084b594f42d777399e7866e51d1f63a1c08db8e43600ac7e024093829dea1",
+  "methodology": {
+    "network": "dedicated non-masquerading bridge; loopback-only 127.0.0.1 client endpoint",
+    "commands": [
+      "plan upload folder",
+      "apply upload --dry-run",
+      "apply upload",
+      "apply upload (checkpoint resume)",
+      "apply upload (fresh checkpoint duplicate check)"
+    ],
+    "observables": "four source operations; three visible assets because the live-photo video is linked to its image"
+  },
+  "server_version": {
+    "major": 3,
+    "minor": 1,
+    "patch": 0,
+    "prerelease": null
+  },
+  "reports": {
+    "dry_run": {
+      "schema_version": 1,
+      "dry_run": true,
+      "planned": 4,
+      "would_upload": 4,
+      "created": 0,
+      "duplicate": 0,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "first": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 4,
+      "would_upload": 0,
+      "created": 4,
+      "duplicate": 0,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "resume": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 4,
+      "would_upload": 0,
+      "created": 0,
+      "duplicate": 0,
+      "resumed": 4,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "duplicate": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 4,
+      "would_upload": 0,
+      "created": 0,
+      "duplicate": 4,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    }
+  },
+  "asset_count": 3,
+  "live_photo_links": 1,
+  "cleanup": {
+    "verified": true,
+    "labelled_containers": 0,
+    "labelled_volumes": 0,
+    "labelled_networks": 0,
+    "downloaded_images_removed": 3
+  }
+}

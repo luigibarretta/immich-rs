@@ -12,13 +12,15 @@ are green. The first Phase 2 vertical adds an explicit, idempotent folder-upload
 workflow restricted to disposable loopback Immich instances. Delete, replace
 and independent metadata mutation remain unavailable.
 
-The first Phase 3 vertical adds read-only planning for one decompressed Google
-Takeout layout. It validates `Takeout/Google Photos`, parses JSON sidecars with
-a hard limit, and associates a unique same-directory media filename through
-the sidecar `title`. Verification uses only synthetic fixtures. Archives and
-Takeout apply remain unavailable. Implementation SHA
-`a31c30714d879e5b63996d5ce258d70761f799ad` is green in Gitea push CI
-[run 5240](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5240).
+Phase 3 completes the read-only Google Takeout planner for one decompressed
+root or up to 64 independent split ZIP files. It streams archives without
+extraction, reconciles title and supplemental sidecars, collapses
+content-identical aliases, preserves album membership and emits source-neutral
+description, UTC timestamp and location metadata in `normalized-plan-v2`.
+Verification uses only synthetic fixtures and the pinned black-box oracle.
+Takeout apply remains unavailable. Implementation and evidence SHA
+`430e7fb95f11188c7c854721ef5ede19cbc2e933` is green in Gitea push CI
+[run 5263](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5263).
 
 The expanded synthetic image/XMP, video and live-photo matrix and its paired
 raw upload benchmark are verified on implementation SHA
@@ -45,8 +47,10 @@ is green and published both reports. Evidence enforcement commit
 - disposable Immich v3.1.0 and loopback mock integration gates;
 - paired raw upload benchmarks against immich-go on one disposable server and
   one derived standalone synthetic corpus.
-- decompressed Google Takeout planning with a 256 KiB JSON metadata limit,
-  deterministic title matching and explicit unsupported/ambiguous outcomes.
+- decompressed or split-ZIP Google Takeout planning with bounded archive and
+  JSON reads, deterministic metadata reconciliation and explicit ambiguity;
+- source-neutral Takeout descriptions, UTC timestamps, locations and sorted
+  album membership in `normalized-plan-v2`.
 
 Run a plan:
 
@@ -59,15 +63,24 @@ The normalized JSON plan is written to stdout. Errors use stderr and stable
 exit classes. Running the same command over unchanged bytes and configuration
 produces byte-identical output.
 
-Plan the supported decompressed Google Takeout layout:
+Plan a decompressed Google Takeout layout:
 
 ```bash
 cargo run --locked --release -p immich-rs-cli -- \
   plan google-takeout --label synthetic-takeout /path/to/export-root
 ```
 
-The export root must contain non-symlink `Takeout/Google Photos` directories. This
-command is read-only and cannot create a Takeout upload capability.
+Or plan independent parts of one split export without extracting them:
+
+```bash
+cargo run --locked --release -p immich-rs-cli -- \
+  plan google-takeout --label synthetic-takeout \
+  /path/to/takeout-001.zip /path/to/takeout-002.zip
+```
+
+The directory root or ZIP entries must contain `Takeout/Google Photos`.
+Directory and archive inputs cannot be mixed. This command is read-only and
+cannot create a Takeout upload capability.
 
 Plan and validate a disposable upload before applying it:
 
@@ -123,7 +136,7 @@ The bounded Takeout surface is recorded in the
 | First Immich target | Immich v3.1 synthetic mock fixtures |
 | Rust toolchain | 1.88.0, edition 2024 |
 | License | AGPL-3.0-only |
-| Normalized plan | `normalized-plan-v1` |
+| Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for complete Takeout metadata |
 | Upload plan | `upload-plan-v1` |
 | Upload checkpoint | `checkpoint-v1` |
 | Disposable Immich | exact v3.1.x release, currently v3.1.0 |
@@ -178,6 +191,13 @@ python3 scripts/run-oracle.py \
 python3 scripts/compare-takeout-oracle.py \
   tests/oracle/compatibility/google-takeout-basic-v1.json \
   /path/to/takeout-observation.json
+python3 scripts/run-oracle.py \
+  tests/oracle/cases/google-takeout-complete-v2.json \
+  --oracle /path/to/verified/immich-go \
+  --output /path/to/takeout-complete-observation.json
+python3 scripts/compare-takeout-complete.py \
+  tests/oracle/compatibility/google-takeout-complete-v2.json \
+  /path/to/takeout-complete-observation.json
 ```
 
 The full Phase 2 disposable gate is manual and removes its exact containers,
@@ -193,10 +213,13 @@ scripts/run-disposable-immich.sh \
 Full paired benchmarks are manual and separate from push CI. Read the
 [methodology](benchmarks/README.md) and the committed
 [Phase 1](benchmarks/evidence/phase1-2026-08-14.json) and
-[Phase 2](benchmarks/evidence/phase2-2026-08-15.json) raw evidence. Those
-measurements are not generalized performance claims. The Phase 2 harness
-completed in Gitea run 5234 and uploaded the raw benchmark plus disposable
-cleanup evidence for the exact implementation SHA.
+[Phase 2](benchmarks/evidence/phase2-2026-08-15.json) upload evidence plus the
+[Phase 3](benchmarks/evidence/phase3-2026-08-15.json) Takeout planning
+evidence. Those measurements are not generalized performance claims. The
+Phase 2 harness completed in Gitea run 5234 and uploaded the raw benchmark plus
+disposable cleanup evidence for its exact implementation SHA. The Phase 3
+harness completed in Gitea run 5264 for implementation SHA
+`430e7fb95f11188c7c854721ef5ede19cbc2e933`.
 
 Read [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the full
 [ADR index](docs/adr/README.md) before implementing a new vertical.

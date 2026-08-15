@@ -105,3 +105,7 @@ This 1,296-byte corpus is a compatibility and harness reproducibility check,
 not a throughput or scale benchmark. The values do not support a generalized
 performance claim. Review the [raw evidence](evidence/phase3-2026-08-15.json)
 and ADR-0012 before making any comparison.
+
+Verification record: Gitea run 5264 repeated six paired samples after two
+warmups on implementation SHA
+`430e7fb95f11188c7c854721ef5ede19cbc2e933` and uploaded the raw report.

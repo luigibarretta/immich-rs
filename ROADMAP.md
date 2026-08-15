@@ -74,32 +74,36 @@ read-only Phase 3 work does not change that boundary.
 
 ## Phase 3 — Google Takeout
 
-The first read-only vertical is implemented on SHA
-`a31c30714d879e5b63996d5ce258d70761f799ad`:
+The complete read-only planner is implemented and evidence-enforced:
 
-- one decompressed root containing `Takeout/Google Photos`;
-- additive `google_takeout` source kind in `normalized-plan-v1`;
-- 256 KiB bounded JSON parsing and deterministic same-directory `title`
-  matching;
-- explicit malformed, oversized, unsupported, ambiguous and unmatched-media
-  diagnostics;
-- exact golden, creation-order property, cancellation and black-box
-  differential tests;
-- four passing compatibility rows over two generated PNGs and two generated
-  sidecars, with the oracle's five job-resume PUTs contained by the mock;
-- no Takeout apply, upload or other mutation path.
+- one decompressed root or one to 64 independent split ZIP files, with no
+  implicit extraction and no semantic input-order dependency;
+- `normalized-plan-v2` source-neutral descriptions, canonical UTC timestamps,
+  canonical coordinates and sorted album membership;
+- deterministic title and supplemental filename reconciliation;
+- content-identical alias collapse with year-folder canonical preference and
+  preserved album evidence;
+- fail-closed conflicting paths, metadata, encryption, unsafe paths,
+  unsupported compression, suspicious ratios, CRC/read failures and source
+  changes;
+- exact directory/ZIP golden parity, order/buffer property tests, clean archive
+  cancellation and the nine-row black-box compatibility matrix;
+- six paired raw samples after two warmups over the same deterministic split
+  corpus and environment;
+- no Takeout upload, album creation or other mutation capability.
 
-Gitea push CI run 5240 is green for the exact implementation SHA and executes
-the Takeout differential on every push.
+The local differential observes three normalized logical assets, four oracle
+physical assets, two oracle dry-run uploads, five sidecars and only the five
+contained job-resume PUTs. The supplemental filename behavior is an explicit
+immich-go v0.32.0 divergence: the oracle classifies that sidecar as album
+metadata and leaves its media pending. The committed 1,296-byte benchmark is
+harness reproducibility evidence, not a throughput or performance claim.
 
-This is not the full Phase 3 gate. Remaining work is:
-
-- multi-archive virtual input;
-- truncated/supplemental JSON filename and time normalization;
-- albums, descriptions, locations and timezone behavior;
-- adversarial split/duplicate metadata fixtures.
-
-Exit gate: declared compatibility matrix fully green against the oracle.
+Exit gate: the declared matrix, dependency boundary, deterministic tests,
+bounded streaming contract and raw benchmark evidence are complete. Apply and
+all Takeout mutations remain outside Phase 3. Gitea push CI run 5263 and manual
+paired-benchmark run 5264 are green for exact implementation SHA
+`430e7fb95f11188c7c854721ef5ede19cbc2e933`.
 
 ## Phase 4 — iCloud and Photos exports
 

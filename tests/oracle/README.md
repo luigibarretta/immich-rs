@@ -14,11 +14,14 @@ The verifier checks both the reported version and the exact Linux x86-64
 binary digest. It does not call Immich or inspect media.
 
 `scripts/run-oracle.py` invokes the oracle as a subprocess over a declared v1
-synthetic fixture and the bounded local mock server. It verifies the baseline
-version and executable digest first, captures stdout, stderr, exit status and
-server-side requests, then emits `oracle-observation-v1` with volatile values
-normalized. A mutating request fails unless the case declares the exact method,
-path, JSON body and `oracle_defect` classification. The folder case records a
+or v2 synthetic fixture and the bounded local mock server. Version 2 manifests
+can materialize deterministic independent split-ZIP views for the subprocess;
+no binary fixture or oracle executable is committed. The runner verifies the
+baseline version and executable digest first, captures stdout, stderr, exit
+status and server-side requests, then emits `oracle-observation-v1` with
+volatile values normalized. A mutating request fails unless the case declares
+the exact method, path, JSON body and `oracle_defect` classification. The
+folder case records a
 v0.32.0 defect: immich-go sends five job-resume `PUT` requests even with
 `--dry-run --pause-immich-jobs=false`. The loopback mock contains those calls;
 no asset or metadata mutation is accepted. Any drift or additional mutation
@@ -33,6 +36,14 @@ in repository or CI evidence artifacts.
 declared Phase 1 compatibility matrix and compares it with the versioned golden
 plan. It never imports Go packages, copies source, bundles the executable in
 releases or accepts a production server target.
+
+`scripts/compare-takeout-oracle.py` preserves the first decompressed Takeout v1
+baseline. `scripts/compare-takeout-complete.py` separately checks the complete
+v2 directory/split-ZIP plan, normalized metadata and nine declared observable
+outcomes. The oracle's supplemental-sidecar limitation is classified as an
+explicit divergence; the five job-resume PUTs remain the only accepted
+mutation set. Both comparators fail if counts, paths, classifications or mock
+requests drift.
 
 `tests/oracle/mock_immich_server.py` records bounded requests and supports
 authentication rejection, incompatible versions, timeout, 429, 5xx,

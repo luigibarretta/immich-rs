@@ -14,7 +14,7 @@ use crate::{
 pub enum SourceKind {
     /// A recursively enumerated filesystem folder.
     Folder,
-    /// A decompressed Google Takeout export.
+    /// A decompressed or split-archive Google Takeout export.
     GoogleTakeout,
 }
 

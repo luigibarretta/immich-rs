@@ -1,6 +1,7 @@
 # ADR-0019: Phase-two folder upload execution
 
-- Status: Accepted
+- Status: Superseded
+- Superseded by: ADR-0020
 - Date: 2026-08-15
 - Owners: project maintainers
 

@@ -1,0 +1,55 @@
+---
+name: phase3-benchmark
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-phase3-benchmark
+  cancel-in-progress: false
+
+jobs:
+  paired-benchmark:
+    runs-on: docker
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Restore the pinned Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/1.88.0-x86_64-unknown-linux-gnu
+            ~/.rustup/update-hashes/1.88.0-x86_64-unknown-linux-gnu
+          key: rustup-linux-x86-64-1.88.0
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Restore the pinned oracle cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/oracle
+          key: immich-go-v0.32.0-linux-x86-64-6e2ad86b
+      - name: Fetch and verify the official oracle on cache miss
+        run: python3 scripts/fetch-oracle.py
+      - name: Build the measured immich-rs release binary
+        run: cargo build --locked --release -p immich-rs-cli
+      - name: Run six paired samples after two warmups
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          python3 scripts/benchmark-phase3.py \
+            --samples 6 \
+            --warmups 2 \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --immich-rs target/release/immich-rs \
+            --output benchmarks/results/phase3-${{ github.sha }}.json
+      - name: Preserve raw samples and the reproducibility manifest
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: phase3-benchmark-${{ github.sha }}
+          path: benchmarks/results/phase3-${{ github.sha }}.json
+          retention-days: 30

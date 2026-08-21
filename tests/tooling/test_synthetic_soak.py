@@ -27,7 +27,11 @@ class SyntheticSoakTests(unittest.TestCase):
             right = SOAK.materialize(Path(second), 2, SOAK.BUFFER_BYTES)
             self.assertEqual(left, right)
             self.assertEqual(left["assets"], 2)
-            self.assertGreaterEqual(left["allocated_bytes"], left["logical_media_bytes"])
+            self.assertEqual(
+                left["logical_source_bytes"],
+                left["logical_media_bytes"] + left["logical_sidecar_bytes"],
+            )
+            self.assertGreaterEqual(left["allocated_bytes"], left["logical_source_bytes"])
 
     def test_asset_content_is_unique_and_bounded(self) -> None:
         first = SOAK.media_block(0)

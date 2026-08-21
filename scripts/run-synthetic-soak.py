@@ -56,6 +56,7 @@ def materialize(root: Path, asset_count: int, media_bytes: int) -> dict[str, Any
         raise SoakError("synthetic corpus dimensions are invalid")
     corpus_digest = hashlib.sha256()
     allocated_bytes = 0
+    sidecar_bytes = 0
     for index in range(asset_count):
         album = root / "Takeout" / "Google Photos" / f"Synthetic Album {index // ASSETS_PER_ALBUM:03d}"
         album.mkdir(parents=True, exist_ok=True)
@@ -76,6 +77,7 @@ def materialize(root: Path, asset_count: int, media_bytes: int) -> dict[str, Any
         encoded = (json.dumps(document, separators=(",", ":"), sort_keys=True) + "\n").encode()
         with sidecar.open("xb") as output:
             output.write(encoded)
+        sidecar_bytes += len(encoded)
         relative = media.relative_to(root).as_posix().encode()
         corpus_digest.update(relative)
         corpus_digest.update(content_digest.digest())
@@ -85,6 +87,8 @@ def materialize(root: Path, asset_count: int, media_bytes: int) -> dict[str, Any
         "assets": asset_count,
         "sidecars": asset_count,
         "logical_media_bytes": asset_count * media_bytes,
+        "logical_sidecar_bytes": sidecar_bytes,
+        "logical_source_bytes": asset_count * media_bytes + sidecar_bytes,
         "allocated_bytes": allocated_bytes,
         "corpus_sha256": corpus_digest.hexdigest(),
         "generator": "phase6-deterministic-block-v1",
@@ -154,7 +158,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         source = temporary_path / "source"
         source.mkdir()
         fixture = materialize(source, ASSET_COUNT, MEDIA_BYTES)
-        if fixture["allocated_bytes"] < fixture["logical_media_bytes"]:
+        if fixture["allocated_bytes"] < fixture["logical_source_bytes"]:
             raise SoakError("synthetic corpus was not fully allocated")
         os.sync()
         measurements = []
@@ -171,9 +175,11 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         expected = {
             "assets": ASSET_COUNT,
             "sidecars": ASSET_COUNT,
-            "bytes_read": ASSET_COUNT * MEDIA_BYTES,
+            "bytes_read": fixture["logical_source_bytes"],
         }
-        if any(summary != expected for summary in summaries) or len(set(plan_digests)) != 1:
+        if any(summary != expected for summary in summaries):
+            raise SoakError("synthetic soak plan counters drifted")
+        if len(set(plan_digests)) != 1:
             raise SoakError("unchanged synthetic corpus produced nondeterministic plans")
         peak_rss = max(value["peak_rss_bytes"] for value in measurements)
         if peak_rss > MAX_RSS_BYTES:

@@ -190,7 +190,10 @@ def run_go(
         180,
     )
     if completed.returncode != 0:
-        raise BenchmarkError("immich-go archive failed")
+        details = (completed.stdout + "\n" + completed.stderr).strip()
+        for sensitive in (api_key, endpoint, str(workspace)):
+            details = details.replace(sensitive, "<REDACTED>")
+        raise BenchmarkError(f"immich-go archive failed: {details[-2_000:]}")
     measured["logical_media_bytes_read"] = media_bytes
     measured["logical_media_bytes_written"] = media_bytes
     measured["operations"] = verify_archive(destination, expected, media_bytes)

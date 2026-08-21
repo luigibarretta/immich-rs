@@ -180,7 +180,7 @@ ACCESS_TOKEN=$(curl --fail --silent --header 'Content-Type: application/json' \
   jq -er '.accessToken | select(type == "string" and length > 0)')
 KEY_RESPONSE=$(curl --fail --silent --header 'Content-Type: application/json' \
   --header "Authorization: Bearer $ACCESS_TOKEN" --request POST \
-  --data '{"name":"immich-rs disposable archive","permissions":["asset.upload","asset.read","asset.download","user.read"]}' \
+  --data '{"name":"immich-rs disposable archive","permissions":["asset.upload","asset.read","asset.download","server.about","user.read"]}' \
   "$ENDPOINT/api/api-keys")
 API_KEY=$(jq -er '.secret | select(type == "string" and length > 0)' <<<"$KEY_RESPONSE")
 

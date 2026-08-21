@@ -3,11 +3,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use immich_rs_core::{CancellationToken, NeverCancel, ServerCompatibility, ServerVersion};
+use immich_rs_client::RemoteArchiveAsset;
+use immich_rs_core::{
+    CancellationToken, MediaKind, NeverCancel, ServerCompatibility, ServerVersion,
+};
 use immich_rs_sources::{NoProgress, scan_folder_resolved};
 
 use crate::journal::{Journal, JournalEvent, OutcomeKind};
-use crate::{ExecutorErrorClass, UploadExecutionConfig, create_upload_plan, dry_run_upload};
+use crate::{
+    ArchivePlanningConfig, ExecutorErrorClass, UploadExecutionConfig, create_archive_manifest,
+    create_upload_plan, dry_run_upload,
+};
 
 static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -167,5 +173,40 @@ fn json_sidecar_is_rejected_until_metadata_reconciliation() -> Result<(), Box<dy
     .err()
     .ok_or("JSON sidecar was accepted")?;
     assert_eq!(error.class(), ExecutorErrorClass::UnsupportedMetadata);
+    Ok(())
+}
+
+#[test]
+fn archive_manifest_is_sorted_and_configuration_bound() -> Result<(), Box<dyn Error>> {
+    let server = ServerCompatibility {
+        version: ServerVersion {
+            major: 3,
+            minor: 1,
+            patch: 0,
+        },
+        identity_sha256: "a".repeat(64),
+    };
+    let assets = vec![
+        RemoteArchiveAsset {
+            asset_id: "00000000-0000-4000-8000-000000000002".to_owned(),
+            original_file_name: "synthetic-b.jpg".to_owned(),
+            media_kind: MediaKind::Image,
+            byte_len: 20,
+            checksum_sha1: "b".repeat(40),
+        },
+        RemoteArchiveAsset {
+            asset_id: "00000000-0000-4000-8000-000000000001".to_owned(),
+            original_file_name: "synthetic-a.mov".to_owned(),
+            media_kind: MediaKind::Video,
+            byte_len: 10,
+            checksum_sha1: "a".repeat(40),
+        },
+    ];
+    let manifest = create_archive_manifest(assets, server, &ArchivePlanningConfig::default())?;
+
+    assert_eq!(manifest.summary.assets, 2);
+    assert_eq!(manifest.summary.media_bytes, 30);
+    assert!(manifest.assets[0].target_path.ends_with("synthetic-a.mov"));
+    manifest.validate()?;
     Ok(())
 }

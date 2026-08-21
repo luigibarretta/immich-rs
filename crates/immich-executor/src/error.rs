@@ -18,6 +18,8 @@ pub enum ExecutorErrorClass {
     Cancelled,
     /// A checkpoint is invalid, corrupt or bound to other inputs.
     Checkpoint,
+    /// The local archive destination is unsafe or inconsistent.
+    Destination,
     /// An Immich request failed definitively.
     Client,
     /// Serialization or an internal invariant failed closed.
@@ -44,7 +46,7 @@ impl ExecutorError {
 
 impl Display for ExecutorError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
-        write!(formatter, "upload execution failed: {:?}", self.class)
+        write!(formatter, "execution failed: {:?}", self.class)
     }
 }
 

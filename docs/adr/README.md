@@ -40,6 +40,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0021](ADR-0021-google-takeout-read-only-foundation.md) | Google Takeout read-only foundation | Superseded by ADR-0022 |
 | [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Accepted |
 | [0023](ADR-0023-apple-photos-read-only-planning.md) | Apple Photos export read-only planning | Accepted |
+| [0024](ADR-0024-read-only-immich-archive.md) | Read-only Immich archive | Accepted |
 
 ## Template
 

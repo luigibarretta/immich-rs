@@ -61,7 +61,7 @@ pub struct ImmichReadClient {
 #[derive(Clone)]
 pub struct NegotiatedServer {
     compatibility: ServerCompatibility,
-    origin_sha256: String,
+    pub(crate) origin_sha256: String,
 }
 
 impl NegotiatedServer {
@@ -163,7 +163,10 @@ impl ImmichReadClient {
         ))
     }
 
-    async fn get_json<T: serde::de::DeserializeOwned>(&self, path: &str) -> Result<T, ClientError> {
+    pub(crate) async fn get_json<T: serde::de::DeserializeOwned>(
+        &self,
+        path: &str,
+    ) -> Result<T, ClientError> {
         let url = self
             .endpoint
             .api_url(path)
@@ -203,7 +206,7 @@ fn identity_digest(origin: &str, user_id: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-fn check_cancelled(cancellation: &impl Cancellation) -> Result<(), ClientError> {
+pub fn check_cancelled(cancellation: &impl Cancellation) -> Result<(), ClientError> {
     if cancellation.is_cancelled() {
         Err(ClientError::new(ClientErrorClass::Cancelled))
     } else {

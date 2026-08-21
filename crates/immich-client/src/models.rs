@@ -51,6 +51,59 @@ pub struct UploadResponse {
     pub status: UploadStatus,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveSearchRequest<'a> {
+    pub page: u64,
+    pub size: usize,
+    pub order: &'static str,
+    pub with_exif: bool,
+    pub visibility: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trashed_after: Option<&'static str>,
+}
+
+#[derive(Deserialize)]
+pub struct ArchiveSearchResponse {
+    pub assets: ArchiveSearchAssets,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveSearchAssets {
+    pub items: Vec<ArchiveAssetResponse>,
+    pub count: u64,
+    #[serde(default)]
+    pub next_page: Option<String>,
+    #[serde(default)]
+    pub total: u64,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveAssetResponse {
+    pub id: String,
+    pub original_file_name: String,
+    pub checksum: String,
+    pub r#type: AssetTypeResponse,
+    pub exif_info: Option<ArchiveExifResponse>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveExifResponse {
+    pub file_size_in_byte: Option<u64>,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AssetTypeResponse {
+    Image,
+    Video,
+    Audio,
+    Other,
+}
+
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum UploadStatus {

@@ -1,11 +1,40 @@
 use super::{
-    Cancellation, CancellationToken, CandidateAsset, GeoCoordinates, MediaKind,
-    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2,
-    NORMALIZED_PLAN_SCHEMA_VERSION_V3, NeverCancel, NormalizedMetadata, NormalizedPlan,
-    PlanSummary, ServerCompatibility, ServerVersion, SourceDescriptor, SourceKind,
-    UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization, UploadOperation, UploadPlan,
-    UploadPlanSummary, UploadRole,
+    ARCHIVE_APPLY_REPORT_SCHEMA_VERSION, ARCHIVE_MANIFEST_SCHEMA_VERSION, ArchiveApplyReport,
+    ArchiveAsset, ArchiveManifest, ArchiveManifestSummary, Cancellation, CancellationToken,
+    CandidateAsset, GeoCoordinates, MediaKind, NORMALIZED_PLAN_SCHEMA_VERSION,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V2, NORMALIZED_PLAN_SCHEMA_VERSION_V3, NeverCancel,
+    NormalizedMetadata, NormalizedPlan, PlanSummary, ServerCompatibility, ServerVersion,
+    SourceDescriptor, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization,
+    UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
 };
+
+fn valid_archive_manifest() -> ArchiveManifest {
+    ArchiveManifest {
+        schema_version: ARCHIVE_MANIFEST_SCHEMA_VERSION,
+        server: ServerCompatibility {
+            version: ServerVersion {
+                major: 3,
+                minor: 1,
+                patch: 0,
+            },
+            identity_sha256: "a".repeat(64),
+        },
+        configuration_sha256: "b".repeat(64),
+        assets: vec![ArchiveAsset {
+            asset_id: "00000000-0000-4000-8000-000000000001".to_owned(),
+            original_file_name: "synthetic-image.jpg".to_owned(),
+            target_path: "assets/00000000-0000-4000-8000-000000000001/synthetic-image.jpg"
+                .to_owned(),
+            media_kind: MediaKind::Image,
+            byte_len: 4,
+            checksum_sha1: "c".repeat(40),
+        }],
+        summary: ArchiveManifestSummary {
+            assets: 1,
+            media_bytes: 4,
+        },
+    }
+}
 
 fn valid_plan() -> NormalizedPlan {
     NormalizedPlan {
@@ -188,4 +217,44 @@ fn upload_plan_validates_live_photo_dependencies() -> Result<(), Box<dyn std::er
     let decoded: UploadPlan = serde_json::from_slice(&encoded)?;
     assert_eq!(decoded, plan);
     Ok(())
+}
+
+#[test]
+fn archive_manifest_and_report_are_stable_and_strict() -> Result<(), Box<dyn std::error::Error>> {
+    let manifest = valid_archive_manifest();
+    manifest.validate()?;
+    let encoded = serde_json::to_vec(&manifest)?;
+    let decoded: ArchiveManifest = serde_json::from_slice(&encoded)?;
+    assert_eq!(decoded, manifest);
+    let report = ArchiveApplyReport {
+        schema_version: ARCHIVE_APPLY_REPORT_SCHEMA_VERSION,
+        manifest_sha256: "d".repeat(64),
+        downloaded: 1,
+        already_complete: 0,
+        bytes_written: 4,
+        retries: 0,
+    };
+    report.validate(1)?;
+    Ok(())
+}
+
+#[test]
+fn archive_manifest_rejects_unsafe_names_duplicates_and_ordering() {
+    let mut manifest = valid_archive_manifest();
+    manifest.assets[0].original_file_name = "../escape.jpg".to_owned();
+    assert!(manifest.validate().is_err());
+
+    manifest = valid_archive_manifest();
+    let mut duplicate = manifest.assets[0].clone();
+    duplicate.target_path.push('z');
+    manifest.assets.push(duplicate);
+    manifest.summary.assets = 2;
+    manifest.summary.media_bytes = 8;
+    assert!(manifest.validate().is_err());
+
+    manifest = valid_archive_manifest();
+    manifest.assets[0].original_file_name = "CON.jpg".to_owned();
+    manifest.assets[0].target_path =
+        "assets/00000000-0000-4000-8000-000000000001/CON.jpg".to_owned();
+    assert!(manifest.validate().is_err());
 }

@@ -566,6 +566,7 @@ dependencies = [
 name = "immich-rs-client"
 version = "0.0.0"
 dependencies = [
+ "base64",
  "immich-rs-core",
  "reqwest",
  "serde",

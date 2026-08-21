@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 //! Source-neutral domain and execution contracts.
 
+mod archive;
 mod cancellation;
 mod metadata;
 mod planning;
@@ -8,6 +9,10 @@ mod progress;
 pub mod rule_id;
 mod upload;
 
+pub use archive::{
+    ArchiveApplyReport, ArchiveAsset, ArchiveManifest, ArchiveManifestSummary,
+    ArchiveManifestValidationError,
+};
 pub use cancellation::{Cancellation, CancellationToken, NeverCancel};
 pub use metadata::{GeoCoordinates, NormalizedMetadata};
 pub use planning::{
@@ -35,6 +40,10 @@ pub const PROGRESS_EVENT_SCHEMA_VERSION: u32 = 1;
 pub const UPLOAD_PLAN_SCHEMA_VERSION: u32 = 1;
 /// Schema version for privacy-aware apply reports.
 pub const APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
+/// Schema version for immutable read-only Immich archive manifests.
+pub const ARCHIVE_MANIFEST_SCHEMA_VERSION: u32 = 1;
+/// Schema version for privacy-aware local archive apply reports.
+pub const ARCHIVE_APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
 
 #[cfg(test)]
 mod tests;

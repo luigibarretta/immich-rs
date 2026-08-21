@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 //! Version-aware, bounded Immich HTTP capabilities.
 
+mod archive;
 mod auth;
 mod endpoint;
 mod error;
@@ -9,6 +10,7 @@ mod read;
 mod response;
 mod upload;
 
+pub use archive::{ArchiveDownload, ArchiveListConfig, ArchiveVisibility, RemoteArchiveAsset};
 pub use auth::{ApiKey, ApiKeyError};
 pub use endpoint::{EndpointError, ImmichEndpoint};
 pub use error::{ClientError, ClientErrorClass};

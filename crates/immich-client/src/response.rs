@@ -44,7 +44,7 @@ pub fn classify_transport(error: &reqwest::Error) -> ClientError {
     ClientError::new(class)
 }
 
-fn status_error(response: &Response, retry_after_cap: Duration) -> ClientError {
+pub fn status_error(response: &Response, retry_after_cap: Duration) -> ClientError {
     let status = response.status().as_u16();
     let class = match status {
         401 | 403 => ClientErrorClass::Authentication,

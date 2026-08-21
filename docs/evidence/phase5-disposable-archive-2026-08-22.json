@@ -1,0 +1,61 @@
+{
+  "schema": "phase5-disposable-archive-v1",
+  "commit_sha": "d3039c908d22249eeb6eb7c4c96500d80e1d6e04",
+  "environment": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "binary_sha256": "c4b2f6f48ceb4bd3adb413dc2d5a94cdae798b5cf9b2237b16228f2f74c7817c"
+  },
+  "images": {
+    "server": "ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa",
+    "valkey": "docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411",
+    "database": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23"
+  },
+  "fixture": {
+    "kind": "synthetic",
+    "license": "CC0-1.0",
+    "manifest_sha256": "5288a0548d947d22e2e693ef958db00215a562ffa3172a26861d569ae5927a61"
+  },
+  "archive_manifest_sha256": "dcc0cb0de66004d5c065daf9066d9e4f2571858d4f64cb0997847c19074743aa",
+  "server_version": {
+    "major": 3,
+    "minor": 1,
+    "patch": 0,
+    "prerelease": null
+  },
+  "methodology": {
+    "network": "dedicated non-masquerading bridge; loopback-only client endpoint",
+    "commands": [
+      "seed synthetic folder upload",
+      "plan archive immich",
+      "apply archive",
+      "apply archive (verified resume)"
+    ],
+    "verification": "source and archived SHA-256 multisets are equal"
+  },
+  "reports": {
+    "first": {
+      "schema_version": 1,
+      "manifest_sha256": "49fb260444cccf2c5000a82bb6132daf73f588289568545cc82d9742cd99fc34",
+      "downloaded": 4,
+      "already_complete": 0,
+      "bytes_written": 587015,
+      "retries": 0
+    },
+    "second": {
+      "schema_version": 1,
+      "manifest_sha256": "49fb260444cccf2c5000a82bb6132daf73f588289568545cc82d9742cd99fc34",
+      "downloaded": 0,
+      "already_complete": 4,
+      "bytes_written": 0,
+      "retries": 0
+    }
+  },
+  "archive_assets": 4,
+  "cleanup": {
+    "verified": true,
+    "labelled_containers": 0,
+    "labelled_volumes": 0,
+    "labelled_networks": 0
+  }
+}

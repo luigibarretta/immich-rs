@@ -1,0 +1,35 @@
+{
+  "authorization": "explicit user-provided private read-only corpus",
+  "cleanup_verified": true,
+  "deterministic_retained_runs": 3,
+  "environment": {
+    "architecture": "x86_64",
+    "binary_sha256": "c4b2f6f48ceb4bd3adb413dc2d5a94cdae798b5cf9b2237b16228f2f74c7817c",
+    "hostname": "<REDACTED_HOST>",
+    "logical_cpus": 8,
+    "source_revision": "faf645d80e0103d7238d68d43986986a3eb7dc6b",
+    "system": "Linux"
+  },
+  "fixture": {
+    "archive_bytes": 455403635,
+    "archive_entries": 1778,
+    "media_candidates": 889
+  },
+  "metrics": {
+    "median_wall_time_seconds": 0.468806658,
+    "peak_open_file_descriptors": 7,
+    "peak_rss_bytes": 8466432,
+    "wall_time_seconds": [
+      0.480629968,
+      0.468806658,
+      0.467049808
+    ]
+  },
+  "plan_summary": {
+    "assets": 889,
+    "bytes_read": 455403635,
+    "sidecars": 889
+  },
+  "privacy": "aggregate counters only; no paths, names, metadata or content digests",
+  "schema": "authorized-takeout-shadow-v1"
+}

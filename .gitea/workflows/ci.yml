@@ -38,6 +38,7 @@ jobs:
           python3 scripts/check-architecture.py
           python3 scripts/check-benchmark-evidence.py
           python3 scripts/check-disposable-evidence.py
+          python3 scripts/check-phase5-evidence.py
           python3 scripts/check-loc.py
       - name: Validate synthetic fixtures and repository safety
         run: |

@@ -29,7 +29,8 @@ SOURCE_MANIFEST=$(realpath -- "$SOURCE_MANIFEST")
 OUTPUT=$(realpath -m -- "$OUTPUT")
 OUTPUT_MANIFEST=$(realpath -m -- "$OUTPUT_MANIFEST")
 case "$SOURCE:$SOURCE_MANIFEST:$OUTPUT:$OUTPUT_MANIFEST" in
-  /tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/*) ;;
+  /tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/* | \
+    /tmp/immich-rs-archive.*/*:/tmp/immich-rs-archive.*/*:/tmp/immich-rs-archive.*/*:/tmp/immich-rs-archive.*/*) ;;
   *) echo 'benchmark corpus paths must remain inside one disposable workspace' >&2; exit 2 ;;
 esac
 [[ "$OUTPUT_MANIFEST" != "$OUTPUT"/* ]] || { echo 'output manifest must remain outside the media source' >&2; exit 2; }

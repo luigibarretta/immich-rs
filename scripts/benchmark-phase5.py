@@ -80,7 +80,7 @@ def environment(api_key: str | None = None) -> dict[str, str]:
 
 def fixture_identity(path: Path, source: Path) -> tuple[dict[str, Any], Counter[str], int]:
     value = json.loads(path.read_text(encoding="utf-8"))
-    if value.get("schema") != "phase2-corpus-v1" or value.get("synthetic") is not True:
+    if value.get("schema") != "phase2-benchmark-corpus-v1" or value.get("synthetic") is not True:
         raise BenchmarkError("synthetic fixture contract drifted")
     hashes: Counter[str] = Counter()
     media_bytes = 0
@@ -111,7 +111,11 @@ def verify_archive(destination: Path, expected: Counter[str], expected_bytes: in
             observed[digest] += 1
             total_bytes += path.stat().st_size
     if observed != expected or total_bytes != expected_bytes:
-        raise BenchmarkError("archived original-byte multiset differs from the fixture")
+        raise BenchmarkError(
+            "archived original-byte multiset differs from the fixture: "
+            f"expected_assets={sum(expected.values())}, observed_assets={sum(observed.values())}, "
+            f"expected_bytes={expected_bytes}, observed_bytes={total_bytes}"
+        )
     return {"original_assets": sum(observed.values()), "media_bytes": total_bytes, "retries": 0}
 
 

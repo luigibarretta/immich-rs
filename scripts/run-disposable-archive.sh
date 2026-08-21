@@ -224,11 +224,38 @@ find "$DESTINATION/assets" -type f -print0 | sort -z | xargs -0 sha256sum | cut 
 cmp --silent "$SOURCE_HASHES" "$ARCHIVE_HASHES" || { echo 'archived bytes differ from sources' >&2; exit 1; }
 if [[ -n "$BENCHMARK_OUTPUT" ]]; then
   echo 'disposable archive stage: paired benchmark' >&2
+  BENCH_SOURCE="$WORKSPACE/benchmark-source"
+  BENCH_FIXTURE="$WORKSPACE/benchmark-fixture.json"
+  BENCH_PLAN="$WORKSPACE/benchmark-upload-plan.json"
+  BENCH_CHECKPOINT="$WORKSPACE/benchmark-checkpoint.sqlite"
+  "$REPOSITORY_ROOT/scripts/prepare-phase2-benchmark-corpus.sh" \
+    --source "$SOURCE" --source-manifest "$CORPUS_MANIFEST" \
+    --output "$BENCH_SOURCE" --output-manifest "$BENCH_FIXTURE"
+  BENCH_EMAIL="synthetic-benchmark-$RUN_SUFFIX@example.invalid"
+  BENCH_PASSWORD="synthetic-benchmark-$RUN_SUFFIX"
+  BENCH_USER=$(jq -nc --arg email "$BENCH_EMAIL" --arg password "$BENCH_PASSWORD" \
+    '{email:$email,password:$password,name:"Synthetic Archive Benchmark",shouldChangePassword:false}')
+  curl --fail --silent --header 'Content-Type: application/json' \
+    --header "Authorization: Bearer $ACCESS_TOKEN" --request POST \
+    --data "$BENCH_USER" "$ENDPOINT/api/admin/users" >/dev/null
+  BENCH_LOGIN=$(jq -nc --arg email "$BENCH_EMAIL" --arg password "$BENCH_PASSWORD" \
+    '{email:$email,password:$password}')
+  BENCH_TOKEN=$(curl --fail --silent --header 'Content-Type: application/json' \
+    --request POST --data "$BENCH_LOGIN" "$ENDPOINT/api/auth/login" | \
+    jq -er '.accessToken | select(type == "string" and length > 0)')
+  BENCH_KEY=$(curl --fail --silent --header 'Content-Type: application/json' \
+    --header "Authorization: Bearer $BENCH_TOKEN" --request POST \
+    --data '{"name":"immich-rs paired archive","permissions":["asset.upload","asset.read","asset.download","server.about","user.read"]}' \
+    "$ENDPOINT/api/api-keys" | jq -er '.secret | select(type == "string" and length > 0)')
+  IMMICH_RS_API_KEY="$BENCH_KEY" "$BINARY" plan upload folder --server "$ENDPOINT" \
+    --label synthetic-archive-benchmark "$BENCH_SOURCE" >"$BENCH_PLAN"
+  IMMICH_RS_API_KEY="$BENCH_KEY" "$BINARY" apply upload --server "$ENDPOINT" \
+    --plan "$BENCH_PLAN" --source "$BENCH_SOURCE" --checkpoint "$BENCH_CHECKPOINT" >/dev/null
   mkdir -- "$WORKSPACE/benchmark"
-  IMMICH_RS_BENCHMARK_API_KEY="$API_KEY" python3 \
+  IMMICH_RS_BENCHMARK_API_KEY="$BENCH_KEY" python3 \
     "$REPOSITORY_ROOT/scripts/benchmark-phase5.py" \
     --endpoint "$ENDPOINT" --source-revision "$COMMIT_SHA" \
-    --source "$SOURCE" --fixture-manifest "$CORPUS_MANIFEST" \
+    --source "$BENCH_SOURCE" --fixture-manifest "$BENCH_FIXTURE" \
     --workspace "$WORKSPACE/benchmark" --immich-rs "$BINARY" \
     --oracle "$ORACLE" --samples 6 --warmups 2 --output "$BENCHMARK_OUTPUT"
 fi

@@ -39,6 +39,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0020](ADR-0020-containerized-disposable-transport.md) | Containerized disposable transport | Accepted |
 | [0021](ADR-0021-google-takeout-read-only-foundation.md) | Google Takeout read-only foundation | Superseded by ADR-0022 |
 | [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Accepted |
+| [0023](ADR-0023-apple-photos-read-only-planning.md) | Apple Photos export read-only planning | Accepted |
 
 ## Template
 

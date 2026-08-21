@@ -111,16 +111,57 @@ paired-benchmark run 5264 are green for exact implementation SHA
 
 ## Phase 4 — iCloud and Photos exports
 
-- iCloud archive/folder layouts;
-- XMP and live-photo pairing;
-- edited/original asset policy;
-- albums and metadata parity.
+The complete read-only Apple Photos planner is implemented and
+evidence-enforced:
+
+- one directory or up to 64 independent iCloud-style ZIP parts, streamed
+  without extraction;
+- XMP association, Live Photo pairing, Unicode NFC and known-export-noise
+  diagnostics;
+- lossless preserve-all handling for edited/original variants;
+- explicit none, immediate-folder or full-path album derivation;
+- deterministic `normalized-plan-v3`, exact directory/ZIP goldens, property
+  tests, cancellation and the eight-row black-box compatibility matrix;
+- six paired raw samples after two warmups on the same 426-byte synthetic
+  corpus and loopback mock;
+- no Immich client, upload or mutation capability in the dependency graph.
+
+Exit gate: all declared compatibility rows pass. The tiny paired corpus is
+reproducibility evidence and makes no performance claim. Implementation SHA
+`a1e4f5d5c62aa8f336fe8773d5e7c6f0f404f453`, benchmark SHA
+`b55132625ab6b1effbb07e42e79b357ae7c7de3f` and evidence SHA
+`e02222bfdb253dfc3d2e1f5b6a61d2226c639f83` are green in Gitea run 5373.
 
 ## Phase 5 — archive and maintenance commands
 
-- read-only archive from Immich;
-- replacement and maintenance operations only behind explicit mutation gates;
-- stable machine-readable reports and exit codes.
+The first read-only archive vertical is implemented and evidence-enforced:
+
+- bounded, paginated timeline/archive/hidden/trash inventory from loopback-only
+  Immich v3.1 with linked Live Photo original discovery;
+- immutable `archive-manifest-v1` with exact IDs, safe names, sizes, SHA-1 and
+  server/configuration binding;
+- bounded original streaming, sibling partial files, checksum/length
+  verification, flush and atomic rename;
+- idempotent existing-file verification, local conflict exit class 9, clean
+  cancellation and bounded retry/fault recovery;
+- synthetic mock coverage plus a real disposable Immich canary with exact byte
+  multiset verification and complete resource cleanup;
+- six paired raw archive samples after two warmups against immich-go v0.32.0
+  on the same owner, originals, server, warm cache and concurrency one;
+- dependency enforcement proving that the archive path cannot construct a
+  server mutation capability.
+
+Exit gate: the synthetic disposable archive downloaded four originals, then
+verified four and downloaded zero on rerun. On this exact 587,015-byte
+four-asset corpus, immich-rs median wall time was 40.964 ms versus 93.808 ms
+for immich-go, 56.3% lower; this is not a large-library or production claim.
+Implementation and benchmark evidence are bound to SHA
+`d3039c908d22249eeb6eb7c4c96500d80e1d6e04`. Evidence enforcement was added
+in `d3229cb1f2917a3a806f864a6d30f8fd4dd98930`.
+
+Replacement, delete, metadata mutation and maintenance writes remain absent.
+They require explicit mutation gates and are not prerequisites for this
+read-only Phase 5 vertical.
 
 ## Phase 6 — release candidate
 
@@ -129,5 +170,11 @@ paired-benchmark run 5264 are green for exact implementation SHA
 - migration guide and rollback to immich-go;
 - soak against a large synthetic library and an explicitly authorized,
   read-only production shadow run.
+
+An explicitly authorized private Google Photos Takeout shadow has already
+proven deterministic read-only planning for 889 media plus 889 sidecars and
+455,403,635 bytes with an 8,466,432-byte client RSS peak. Only aggregate
+counters are committed and every temporary NAS resource was removed. This is
+scale/boundedness evidence, not a public performance comparison.
 
 No replacement of immich-go is considered before Phase 6 evidence.

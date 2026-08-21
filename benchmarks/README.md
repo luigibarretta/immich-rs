@@ -122,3 +122,73 @@ and ADR-0012 before making any comparison.
 Verification record: Gitea run 5264 repeated six paired samples after two
 warmups on implementation SHA
 `430e7fb95f11188c7c854721ef5ede19cbc2e933` and uploaded the raw report.
+
+## Phase 4 Apple Photos plan
+
+`scripts/benchmark-phase4.py` measures the public read-only Apple planner and
+the pinned oracle dry-run on the same two deterministic iCloud-style ZIP
+parts. The logical corpus is five assets, one XMP sidecar and 426 source bytes.
+Both tools use concurrency one and the same loopback mock; order alternates
+after two warmups across six retained pairs. Archive materialization, oracle
+verification and mock startup are outside the measured interval.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 0.002867 | 0.009472 | 0.014914 | 0.031508 |
+| Peak file descriptors | 4 | 6 | 14 | 14 |
+
+The processes are too short and the corpus too small for a performance claim;
+the report explicitly records raw measurements only. Its purpose is to prove
+the paired harness, asset/sidecar counts, contained oracle mutations and exact
+fixture identities. See the [raw evidence](evidence/phase4-2026-08-21.json).
+Implementation SHA `b55132625ab6b1effbb07e42e79b357ae7c7de3f` and evidence
+SHA `e02222bfdb253dfc3d2e1f5b6a61d2226c639f83` are green in Gitea run 5373.
+
+## Phase 5 read-only archive
+
+`scripts/benchmark-phase5.py` measures inventory plus original-byte archive
+for immich-rs and immich-go on the same owner, four standalone originals and
+disposable Immich v3.1.0 server. The logical payload is exactly 587,015 bytes.
+Both tools use concurrency one and a warm cache. Owner/server setup, fixture
+upload and post-run byte verification are outside the measured interval. The
+complete public command workflow is timed, including two immich-rs child
+commands (plan plus apply) and the oracle's single archive command. Execution
+order alternates after two warmups across six retained pairs.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 0.040964 | 0.055234 | 0.093808 | 0.101784 |
+| User CPU (s) | 0.004252 | 0.015031 | 0.008831 | 0.019603 |
+| System CPU (s) | 0.008232 | 0.010629 | 0.008692 | 0.011583 |
+| Peak RSS (bytes) | 6,787,072 | 7,065,600 | 15,642,624 | 16,613,376 |
+| Peak file descriptors | 7.5 | 8 | 12 | 13 |
+| Logical bytes read | 587,015 | 587,015 | 587,015 | 587,015 |
+| Logical bytes written | 587,015 | 587,015 | 587,015 | 587,015 |
+
+Median wall time is 56.3% lower for immich-rs, and its slowest retained sample
+(55.234 ms) is below the oracle's fastest (77.248 ms). This statement applies
+only to this exact small synthetic, warm-cache, loopback archive. It is not a
+large-library, cold-storage, WAN or production claim. Review the
+[raw evidence](evidence/phase5-2026-08-22.json), which binds both binaries,
+fixture, server methodology, raw samples and exact source revision.
+
+The companion [disposable evidence](../docs/evidence/phase5-disposable-archive-2026-08-22.json)
+proves four first-run downloads, four verified resume hits, byte-multiset
+equality and zero remaining labelled containers, volumes or networks. Push CI
+recalculates every aggregate and rejects unsupported claim text.
+
+## Authorized private Takeout shadow
+
+An explicitly authorized private Google Photos Takeout was used only for an
+immich-rs read-only scale sanity check. The runner selected one complete,
+bounded top-level group, streamed its extraction on the NAS and committed only
+aggregate counters. The selected view contained 1,778 files, 889 media
+candidates and 455,403,635 bytes. All three retained runs produced 889 assets,
+889 sidecars and the same byte count after one warmup.
+
+Median wall time was 0.468807 seconds, peak client RSS was 8,466,432 bytes and
+peak open file descriptors were 7. This is not a public benchmark corpus and
+has no immich-go comparison, so it supports boundedness and determinism only.
+No path, filename, metadata, media digest or content was committed. The
+extracted subset and remote runner were removed, as recorded by the redacted
+[aggregate evidence](../docs/evidence/phase6-private-takeout-shadow-2026-08-22.json).

@@ -40,6 +40,7 @@ jobs:
           python3 scripts/check-disposable-evidence.py
           python3 scripts/check-phase5-evidence.py
           python3 scripts/check-phase6-evidence.py
+          python3 scripts/check-release.py
           python3 scripts/check-loc.py
       - name: Validate synthetic fixtures and repository safety
         run: |

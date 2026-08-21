@@ -234,6 +234,7 @@ python3 scripts/check-benchmark-evidence.py
 python3 scripts/check-disposable-evidence.py
 python3 scripts/check-phase5-evidence.py
 python3 scripts/check-phase6-evidence.py
+python3 scripts/check-release.py
 python3 scripts/check-fixtures.py
 python3 scripts/check-loc.py
 python3 -m unittest discover -s tests/tooling -p 'test_*.py'

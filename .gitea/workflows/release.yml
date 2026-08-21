@@ -1,0 +1,135 @@
+---
+name: release-candidate-artifacts
+
+on:
+  push:
+    tags: ["v*-rc.*"]
+
+concurrency:
+  group: immich-rs-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: docker
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Import and verify the committed release identity
+        run: |
+          gpg --batch --import docs/release-signing-key.asc
+          python3 scripts/release-preflight.py \
+            --tag "${{ github.ref_name }}" \
+            --revision "${{ github.sha }}"
+      - name: Revalidate every committed gate
+        run: |
+          scripts/check-adrs.sh
+          python3 scripts/check-architecture.py
+          python3 scripts/check-benchmark-evidence.py
+          python3 scripts/check-disposable-evidence.py
+          python3 scripts/check-phase5-evidence.py
+          python3 scripts/check-phase6-evidence.py
+          python3 scripts/check-fixtures.py
+          python3 scripts/check-loc.py
+          python3 -m unittest discover -s tests/tooling -p 'test_*.py'
+
+  native:
+    needs: preflight
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: docker
+            target: x86_64-unknown-linux-gnu
+            binary: target/release/immich-rs
+          - runner: linux-arm64
+            target: aarch64-unknown-linux-gnu
+            binary: target/release/immich-rs
+          - runner: macos-x64
+            target: x86_64-apple-darwin
+            binary: target/release/immich-rs
+          - runner: macos-arm64
+            target: aarch64-apple-darwin
+            binary: target/release/immich-rs
+          - runner: windows-x64
+            target: x86_64-pc-windows-msvc
+            binary: target/release/immich-rs.exe
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-cyclonedx@0.5.9
+      - name: Test and build on the exact native target
+        run: |
+          cargo test --locked --workspace --all-targets
+          cargo build --locked --release -p immich-rs-cli
+          cargo cyclonedx --manifest-path crates/immich-cli/Cargo.toml --format json --describe binaries --target "${{ matrix.target }}" --spec-version 1.5 --override-filename sbom.cdx.json
+          python scripts/package-release.py --binary "${{ matrix.binary }}" --sbom crates/immich-cli/sbom.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
+      - name: Preserve the native candidate
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: native-${{ matrix.target }}-${{ github.sha }}
+          path: dist/*
+          retention-days: 30
+
+  signed-bundle:
+    needs: native
+    runs-on: docker
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Validate, checksum, sign and verify the complete target set
+        env:
+          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
+          RELEASE_SIGNING_FINGERPRINT: ${{ secrets.RELEASE_SIGNING_FINGERPRINT }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python3 scripts/finalize-release.py \
+            --input dist \
+            --version "$VERSION" \
+            --revision "${{ github.sha }}" \
+            --output dist/SHA256SUMS
+          test -n "$RELEASE_SIGNING_PRIVATE_KEY"
+          test -n "$RELEASE_SIGNING_FINGERPRINT"
+          printf '%s' "$RELEASE_SIGNING_PRIVATE_KEY" | gpg --batch --import
+          PUBLIC_FINGERPRINT=$(gpg --batch --show-keys --with-colons \
+            docs/release-signing-key.asc | awk -F: '$1 == "fpr" {print $10; exit}')
+          test "$PUBLIC_FINGERPRINT" = "$RELEASE_SIGNING_FINGERPRINT"
+          gpg --batch --local-user "$RELEASE_SIGNING_FINGERPRINT" \
+            --armor --detach-sign --output dist/SHA256SUMS.asc dist/SHA256SUMS
+          gpg --batch --verify dist/SHA256SUMS.asc dist/SHA256SUMS
+      - name: Preserve the signed immutable candidate bundle
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: immich-rs-${{ github.ref_name }}-${{ github.sha }}
+          path: dist/*
+          retention-days: 90

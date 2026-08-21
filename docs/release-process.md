@@ -1,0 +1,39 @@
+# Release candidate process
+
+No supported release exists yet. This procedure becomes active only after the
+ADR-0025 prerequisites are provisioned.
+
+## One-time prerequisites
+
+1. Register protected native Gitea runners named `linux-arm64`, `macos-x64`,
+   `macos-arm64` and `windows-x64`; retain the existing `docker` Linux x86-64
+   runner.
+2. Create the project release OpenPGP identity offline under maintainer
+   control. Commit only its armored public key as `docs/release-signing-key.asc`.
+3. Store the armored private key and its fingerprint as protected Gitea release
+   secrets. Do not expose them to pull requests or ordinary push jobs.
+4. Validate all five host targets, repository secrets and runner isolation with
+   a non-publishing workflow dispatch.
+
+The project does not download or redistribute Apple SDKs. Both macOS artifacts
+must be built and tested on native Apple hosts.
+
+## Candidate checklist
+
+1. Confirm `main` is clean, equal to `origin/main` and green on its exact SHA.
+2. Confirm Phase 0–5 evidence validators and both Phase 6 scale validators pass.
+3. Set the Cargo workspace version to the candidate version and update
+   `CHANGELOG.md`, compatibility matrices and this guide with verified facts.
+4. Create an annotated signed tag such as `v0.1.0-rc.1`; verify it locally with
+   `git verify-tag` against the committed public key.
+5. Push only the signed tag. The release workflow must build/test all five
+   native targets, generate CycloneDX SBOMs and provenance, create deterministic
+   archives, sign `SHA256SUMS` and verify the detached signature.
+6. Download the workflow artifact into a new directory. Verify the signature,
+   every checksum, SBOM schema, provenance source SHA and `immich-rs --version`
+   before publishing the immutable candidate.
+7. Record the exact tag, workflow run and artifact digests in `ROADMAP.md` and
+   project memory. Never replace an artifact under an existing tag.
+
+Any missing target, signature, SBOM, provenance statement or compatibility
+gate aborts publication. `latest` aliases are not release evidence.

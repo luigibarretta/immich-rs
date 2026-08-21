@@ -41,6 +41,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Accepted |
 | [0023](ADR-0023-apple-photos-read-only-planning.md) | Apple Photos export read-only planning | Accepted |
 | [0024](ADR-0024-read-only-immich-archive.md) | Read-only Immich archive | Accepted |
+| [0025](ADR-0025-native-release-candidate-pipeline.md) | Native release-candidate pipeline | Accepted |
 
 ## Template
 

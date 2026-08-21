@@ -180,4 +180,18 @@ with an 8,466,432-byte client RSS peak. Only aggregate private counters are
 committed and every temporary local/NAS resource was removed. These are
 scale/boundedness results, not public performance comparisons.
 
+The migration/rollback guide and fail-closed release pipeline are implemented.
+The pipeline requires an annotated signed RC tag, a clean exact revision,
+native tests/builds for all five ADR-0014 targets, CycloneDX 1.5 SBOMs,
+deterministic archives, redacted provenance, a complete SHA-256 manifest and a
+verified OpenPGP signature. Push CI enforces this contract.
+
+The Phase 6 release gate is **not passed**. The current Gitea installation has
+only the Linux x86-64 `docker` runner; `linux-arm64`, `macos-x64`,
+`macos-arm64` and `windows-x64` are not provisioned. No maintainer-controlled
+release private/public key pair or protected signing secrets exist. ADR-0025
+forbids generating that identity automatically, skipping a target or using an
+unprovisioned Apple SDK. Version remains `0.0.0` and no RC tag/artifact is
+published until those explicit security/operations prerequisites are met.
+
 No replacement of immich-go is considered before Phase 6 evidence.

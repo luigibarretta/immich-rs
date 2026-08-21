@@ -65,6 +65,17 @@ is green and published both reports. Evidence enforcement commit
 `6975633920117948b709bd7e5170c1246bd73b89` is green in push CI
 [run 5235](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5235).
 
+## Release status
+
+No supported release or production cutover exists. Phase 0–5 read-only gates,
+the disposable upload vertical and both Phase 6 scale gates are implemented,
+but ADR-0014/ADR-0025 require five native target builds and an explicitly
+provisioned OpenPGP release identity before an RC can exist. The repository now
+contains a fail-closed signed-tag pipeline, deterministic packaging, CycloneDX
+SBOM/provenance checks and a [migration/rollback guide](docs/migration-from-immich-go.md).
+It cannot publish until the missing native runners and protected signing
+material are supplied by the maintainer.
+
 ## Current capabilities
 
 - deterministic recursive folder discovery with bounded entry and path limits;

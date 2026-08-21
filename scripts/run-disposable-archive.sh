@@ -7,23 +7,31 @@ DATABASE_IMAGE='ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@s
 RESOURCE_LABEL='io.immich-rs.disposable.archive'
 
 usage() {
-  echo 'usage: run-disposable-archive.sh --binary <path> --commit-sha <sha> --output <path>' >&2
+  echo 'usage: run-disposable-archive.sh --binary <path> --commit-sha <sha> --output <path> [--oracle <path> --benchmark-output <path>]' >&2
   exit 2
 }
 
 BINARY=''
 COMMIT_SHA=''
 OUTPUT=''
+ORACLE=''
+BENCHMARK_OUTPUT=''
 while (($# > 0)); do
   case "$1" in
     --binary) (($# >= 2)) || usage; BINARY=$2; shift 2 ;;
     --commit-sha) (($# >= 2)) || usage; COMMIT_SHA=$2; shift 2 ;;
     --output) (($# >= 2)) || usage; OUTPUT=$2; shift 2 ;;
+    --oracle) (($# >= 2)) || usage; ORACLE=$2; shift 2 ;;
+    --benchmark-output) (($# >= 2)) || usage; BENCHMARK_OUTPUT=$2; shift 2 ;;
     *) usage ;;
   esac
 done
 [[ -x "$BINARY" && "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || usage
 BINARY=$(realpath -- "$BINARY")
+if [[ -n "$ORACLE$BENCHMARK_OUTPUT" ]]; then
+  [[ -x "$ORACLE" && -n "$BENCHMARK_OUTPUT" ]] || usage
+  ORACLE=$(realpath -- "$ORACLE")
+fi
 REPOSITORY_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 OUTPUT=$(realpath -m -- "$OUTPUT")
 case "$OUTPUT" in
@@ -32,6 +40,14 @@ case "$OUTPUT" in
 esac
 [[ ! -e "$OUTPUT" ]] || { echo 'evidence output already exists' >&2; exit 2; }
 mkdir -p -- "$REPOSITORY_ROOT/.artifacts"
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  BENCHMARK_OUTPUT=$(realpath -m -- "$BENCHMARK_OUTPUT")
+  case "$BENCHMARK_OUTPUT" in
+    "$REPOSITORY_ROOT"/.artifacts/*) ;;
+    *) echo 'benchmark output must be inside .artifacts' >&2; exit 2 ;;
+  esac
+  [[ ! -e "$BENCHMARK_OUTPUT" ]] || { echo 'benchmark output already exists' >&2; exit 2; }
+fi
 
 RUN_SUFFIX="$(date -u +%Y%m%dT%H%M%SZ)-$$-$(openssl rand -hex 4)"
 RUN_ID="phase5-$RUN_SUFFIX"
@@ -206,6 +222,16 @@ for file in "$SOURCE/image.jpg" "$SOURCE/clip.mp4" "$SOURCE/live.jpg" "$SOURCE/l
 done | sort >"$SOURCE_HASHES"
 find "$DESTINATION/assets" -type f -print0 | sort -z | xargs -0 sha256sum | cut -d' ' -f1 | sort >"$ARCHIVE_HASHES"
 cmp --silent "$SOURCE_HASHES" "$ARCHIVE_HASHES" || { echo 'archived bytes differ from sources' >&2; exit 1; }
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  echo 'disposable archive stage: paired benchmark' >&2
+  mkdir -- "$WORKSPACE/benchmark"
+  IMMICH_RS_BENCHMARK_API_KEY="$API_KEY" python3 \
+    "$REPOSITORY_ROOT/scripts/benchmark-phase5.py" \
+    --endpoint "$ENDPOINT" --source-revision "$COMMIT_SHA" \
+    --source "$SOURCE" --fixture-manifest "$CORPUS_MANIFEST" \
+    --workspace "$WORKSPACE/benchmark" --immich-rs "$BINARY" \
+    --oracle "$ORACLE" --samples 6 --warmups 2 --output "$BENCHMARK_OUTPUT"
+fi
 
 SERVER_VERSION=$(curl --fail --silent "$ENDPOINT/api/server/version")
 MANIFEST_SHA256=$(sha256sum "$ARCHIVE_MANIFEST" | cut -d' ' -f1)

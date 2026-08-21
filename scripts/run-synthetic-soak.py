@@ -107,16 +107,19 @@ def run_sample(
     metrics: ModuleType,
     index: int,
 ) -> tuple[dict[str, Any], dict[str, int], str]:
-    completed, measured = metrics.run_command(
-        [
-            str(binary), "plan", "google-takeout", "--label", "synthetic-phase6-soak",
-            "--buffer-bytes", str(BUFFER_BYTES), "--max-entries", "6000",
-            "--max-directory-entries", "256", str(source),
-        ],
-        workspace,
-        child_environment(),
-        1_800,
-    )
+    try:
+        completed, measured = metrics.run_command(
+            [
+                str(binary), "plan", "google-takeout", "--label", "synthetic-phase6-soak",
+                "--buffer-bytes", str(BUFFER_BYTES), "--max-entries", "6000",
+                "--max-directory-entries", "256", str(source),
+            ],
+            workspace,
+            child_environment(),
+            1_800,
+        )
+    except RuntimeError as error:
+        raise SoakError("read-only synthetic soak could not be measured") from error
     if completed.returncode != 0 or completed.stderr:
         raise SoakError("read-only synthetic soak process failed")
     try:
@@ -140,9 +143,11 @@ def run_sample(
 def run(arguments: argparse.Namespace) -> dict[str, Any]:
     if re.fullmatch(r"[0-9a-f]{40}", arguments.source_revision) is None:
         raise SoakError("source revision must be an exact commit")
-    if not arguments.binary.is_file() or not arguments.metrics.is_file():
+    binary = arguments.binary.resolve()
+    metrics_path = arguments.metrics.resolve()
+    if not binary.is_file() or not metrics_path.is_file():
         raise SoakError("soak tooling is unavailable")
-    sampler = load_metrics(arguments.metrics)
+    sampler = load_metrics(metrics_path)
     temporary_path: Path | None = None
     with tempfile.TemporaryDirectory(prefix=".immich-rs-soak-", dir=arguments.workspace) as temporary:
         temporary_path = Path(temporary)
@@ -157,7 +162,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         plan_digests = []
         for index in range(4):
             measured, summary, plan_digest = run_sample(
-                arguments.binary, source, temporary_path, sampler, index
+                binary, source, temporary_path, sampler, index
             )
             if index > 0:
                 measurements.append(measured)
@@ -201,7 +206,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                 "architecture": platform.machine(),
                 "logical_cpus": os.cpu_count(),
                 "hostname": "<REDACTED_HOST>",
-                "binary_sha256": sha256(arguments.binary),
+                "binary_sha256": sha256(binary),
             },
         }
     report["cleanup_verified"] = temporary_path is not None and not temporary_path.exists()

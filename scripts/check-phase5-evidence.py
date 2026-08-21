@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Phase 5 archive and authorized private shadow evidence."""
+"""Validate Phase 5 disposable and paired archive evidence."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 BENCHMARK = ROOT / "benchmarks/evidence/phase5-2026-08-22.json"
 DISPOSABLE = ROOT / "docs/evidence/phase5-disposable-archive-2026-08-22.json"
-PRIVATE_SHADOW = ROOT / "docs/evidence/phase6-private-takeout-shadow-2026-08-22.json"
 BASELINE = ROOT / "tests/oracle/baseline.toml"
 SHA256 = re.compile(r"[0-9a-f]{64}")
 COMMIT = re.compile(r"[0-9a-f]{40}")
@@ -193,61 +192,16 @@ def validate_benchmark(report: dict[str, Any], revision: str, binary: str) -> No
         raise EvidenceError("performance claim is unsupported by retained samples")
 
 
-def validate_private_shadow(report: dict[str, Any], binary: str) -> None:
-    if report.get("schema") != "authorized-takeout-shadow-v1":
-        raise EvidenceError("unsupported private shadow schema")
-    if report.get("authorization") != "explicit user-provided private read-only corpus":
-        raise EvidenceError("private shadow authorization is missing")
-    if report.get("privacy") != "aggregate counters only; no paths, names, metadata or content digests":
-        raise EvidenceError("private shadow privacy contract drift")
-    if report.get("cleanup_verified") is not True or report.get("deterministic_retained_runs") != 3:
-        raise EvidenceError("private shadow determinism or cleanup was not proven")
-    environment = object_value(report.get("environment"), "private environment")
-    if environment.get("hostname") != "<REDACTED_HOST>" or environment.get("binary_sha256") != binary:
-        raise EvidenceError("private shadow identity is not redacted or reproducible")
-    revision = environment.get("source_revision")
-    if not isinstance(revision, str) or COMMIT.fullmatch(revision) is None:
-        raise EvidenceError("private shadow source revision is invalid")
-    fixture = object_value(report.get("fixture"), "private fixture counters")
-    expected = {"archive_bytes": 455403635, "archive_entries": 1778, "media_candidates": 889}
-    if fixture != expected or report.get("plan_summary") != {
-        "assets": 889, "bytes_read": 455403635, "sidecars": 889,
-    }:
-        raise EvidenceError("private shadow aggregate counters drift")
-    metrics = object_value(report.get("metrics"), "private metrics")
-    wall = metrics.get("wall_time_seconds")
-    if not isinstance(wall, list) or len(wall) != 3 or any(not numeric(value, positive=True) for value in wall):
-        raise EvidenceError("private shadow samples are invalid")
-    if metrics.get("median_wall_time_seconds") != statistics.median(wall):
-        raise EvidenceError("private shadow median drift")
-    if not numeric(metrics.get("peak_rss_bytes"), positive=True) or metrics["peak_rss_bytes"] > 256 * 1024 * 1024:
-        raise EvidenceError("private shadow RSS bound failed")
-    if not numeric(metrics.get("peak_open_file_descriptors"), positive=True):
-        raise EvidenceError("private shadow file-descriptor evidence is invalid")
-    forbidden = {"path", "name", "metadata", "coordinates", "latitude", "longitude", "content_sha256"}
-    stack: list[object] = [report]
-    while stack:
-        value = stack.pop()
-        if isinstance(value, dict):
-            if forbidden.intersection(value):
-                raise EvidenceError("private evidence contains a forbidden field")
-            stack.extend(value.values())
-        elif isinstance(value, list):
-            stack.extend(value)
-
-
 def main() -> int:
     try:
         disposable = load(DISPOSABLE)
         benchmark = load(BENCHMARK)
-        private_shadow = load(PRIVATE_SHADOW)
         revision, binary = validate_disposable(disposable)
         validate_benchmark(benchmark, revision, binary)
-        validate_private_shadow(private_shadow, binary)
     except (EvidenceError, OSError, UnicodeError, tomllib.TOMLDecodeError) as error:
         print(f"Phase 5 evidence check failed: {error}", file=sys.stderr)
         return 1
-    print("Phase 5 evidence passed: disposable, paired benchmark, private shadow")
+    print("Phase 5 evidence passed: disposable and paired benchmark")
     return 0
 
 

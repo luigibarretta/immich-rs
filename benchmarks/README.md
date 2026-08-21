@@ -192,3 +192,23 @@ has no immich-go comparison, so it supports boundedness and determinism only.
 No path, filename, metadata, media digest or content was committed. The
 extracted subset and remote runner were removed, as recorded by the redacted
 [aggregate evidence](../docs/evidence/phase6-private-takeout-shadow-2026-08-22.json).
+
+## Phase 6 large synthetic soak
+
+`scripts/run-synthetic-soak.py` creates an actually allocated, deterministic
+Google Takeout tree, runs one warmup plus three retained immich-rs plans and
+removes the exact temporary tree on every exit. The corpus contains 2,500
+media files, 2,500 matching JSON sidecars and 1,311,002,500 logical source
+bytes. Media generation and hashing use a 64 KiB buffer; the planner uses the
+same bound.
+
+All retained runs emitted the same normalized-plan digest and exact counters.
+Wall times were 1.236492, 1.276256 and 1.274296 seconds; the median was
+1.274296 seconds. Peak client RSS was 13,975,552 bytes and peak open file
+descriptors were 7. These are warm page-cache boundedness and determinism
+measurements, not cold-storage throughput or an immich-go comparison.
+
+The [aggregate and raw process evidence](../docs/evidence/phase6-synthetic-soak-2026-08-22.json)
+binds the deterministic generator, fully allocated byte count, corpus and plan
+digests, exact implementation/binary, methodology and cleanup proof. Push CI
+recalculates all aggregates and enforces the 256 MiB client RSS budget.

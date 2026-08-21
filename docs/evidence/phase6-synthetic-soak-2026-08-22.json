@@ -1,0 +1,78 @@
+{
+  "aggregate": {
+    "median_wall_time_seconds": 1.274295895,
+    "peak_open_file_descriptors": 7,
+    "peak_rss_bytes": 13975552
+  },
+  "cleanup_verified": true,
+  "environment": {
+    "architecture": "x86_64",
+    "binary_sha256": "c4b2f6f48ceb4bd3adb413dc2d5a94cdae798b5cf9b2237b16228f2f74c7817c",
+    "hostname": "<REDACTED_HOST>",
+    "logical_cpus": 10,
+    "source_revision": "9d2490b301b8bfcd8f9d57ab97bde816e3a37201",
+    "system": "Linux"
+  },
+  "fixture": {
+    "allocated_bytes": 1320960000,
+    "assets": 2500,
+    "corpus_sha256": "616662c74237c9bf7b9e9a27ebdba7e2242476f69de72564173fa0f5d555ed4f",
+    "generator": "phase6-deterministic-block-v1",
+    "logical_media_bytes": 1310720000,
+    "logical_sidecar_bytes": 282500,
+    "logical_source_bytes": 1311002500,
+    "sidecars": 2500
+  },
+  "methodology": {
+    "buffer_bytes": 65536,
+    "cache_state": "one warmup before retained page-cached samples",
+    "retained_samples": 3,
+    "scope": "read-only Google Takeout scan and normalized plan",
+    "warmups": 1
+  },
+  "normalized_plan_sha256": "fd9e52d371808fb4898a83e6fc827b534c2a194d4cbe0d4e666eff2e7dc71191",
+  "plan_summary": {
+    "assets": 2500,
+    "bytes_read": 1311002500,
+    "sidecars": 2500
+  },
+  "raw_samples": [
+    {
+      "characters_read": 1311294367,
+      "characters_written": 2528413,
+      "peak_open_file_descriptors": 7,
+      "peak_rss_bytes": 13946880,
+      "sample": 1,
+      "storage_bytes_read": 0,
+      "storage_bytes_written": 0,
+      "system_cpu_seconds": 0.164833,
+      "user_cpu_seconds": 1.0693940000000002,
+      "wall_time_seconds": 1.236492411
+    },
+    {
+      "characters_read": 1311294367,
+      "characters_written": 2585413,
+      "peak_open_file_descriptors": 7,
+      "peak_rss_bytes": 13975552,
+      "sample": 2,
+      "storage_bytes_read": 0,
+      "storage_bytes_written": 0,
+      "system_cpu_seconds": 0.16038999999999998,
+      "user_cpu_seconds": 1.1128589999999998,
+      "wall_time_seconds": 1.276256273
+    },
+    {
+      "characters_read": 1311294367,
+      "characters_written": 2572470,
+      "peak_open_file_descriptors": 7,
+      "peak_rss_bytes": 13910016,
+      "sample": 3,
+      "storage_bytes_read": 0,
+      "storage_bytes_written": 0,
+      "system_cpu_seconds": 0.23034699999999997,
+      "user_cpu_seconds": 1.0428439999999997,
+      "wall_time_seconds": 1.274295895
+    }
+  ],
+  "schema": "phase6-synthetic-soak-v1"
+}

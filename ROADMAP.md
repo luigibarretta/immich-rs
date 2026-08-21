@@ -171,10 +171,13 @@ read-only Phase 5 vertical.
 - soak against a large synthetic library and an explicitly authorized,
   read-only production shadow run.
 
-An explicitly authorized private Google Photos Takeout shadow has already
-proven deterministic read-only planning for 889 media plus 889 sidecars and
-455,403,635 bytes with an 8,466,432-byte client RSS peak. Only aggregate
-counters are committed and every temporary NAS resource was removed. This is
-scale/boundedness evidence, not a public performance comparison.
+The scale gates are complete. A reproducible, fully allocated synthetic soak
+planned 2,500 media plus 2,500 sidecars and 1,311,002,500 bytes identically in
+three retained runs, with a 13,975,552-byte client RSS peak and seven file
+descriptors. An explicitly authorized private Google Photos Takeout shadow
+planned 889 media plus 889 sidecars and 455,403,635 bytes deterministically,
+with an 8,466,432-byte client RSS peak. Only aggregate private counters are
+committed and every temporary local/NAS resource was removed. These are
+scale/boundedness results, not public performance comparisons.
 
 No replacement of immich-go is considered before Phase 6 evidence.

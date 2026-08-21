@@ -1,0 +1,15 @@
+{
+  "schema": "apple-differential-expectation-v1",
+  "case_id": "apple-photos-v3",
+  "expected_plan": "../../fixtures/v3/synthetic-apple-photos/expected-plan.json",
+  "matrix": [
+    { "id": "split_zip_layout", "outcome": "parity" },
+    { "id": "asset_discovery", "outcome": "parity" },
+    { "id": "xmp_sidecar", "outcome": "parity" },
+    { "id": "live_photo_pair", "outcome": "parity" },
+    { "id": "preserve_all_variants", "outcome": "parity" },
+    { "id": "known_export_noise", "outcome": "parity_after_diagnostic_normalization" },
+    { "id": "unicode_nfc", "outcome": "parity_after_normalization" },
+    { "id": "dry_run_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

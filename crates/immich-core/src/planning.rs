@@ -5,7 +5,8 @@ use std::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2, NormalizedMetadata,
+    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V3, NormalizedMetadata,
 };
 
 /// Kind of input adapter that produced a plan.
@@ -16,6 +17,8 @@ pub enum SourceKind {
     Folder,
     /// A decompressed or split-archive Google Takeout export.
     GoogleTakeout,
+    /// An Apple Photos or iCloud Photos export.
+    ApplePhotos,
 }
 
 /// Explicit Unicode normalization policy applied to portable relative paths.
@@ -176,12 +179,24 @@ impl NormalizedPlan {
     pub fn validate(&self) -> Result<(), PlanValidationError> {
         if !matches!(
             self.schema_version,
-            NORMALIZED_PLAN_SCHEMA_VERSION | NORMALIZED_PLAN_SCHEMA_VERSION_V2
+            NORMALIZED_PLAN_SCHEMA_VERSION
+                | NORMALIZED_PLAN_SCHEMA_VERSION_V2
+                | NORMALIZED_PLAN_SCHEMA_VERSION_V3
         ) {
             return Err(PlanValidationError::UnsupportedSchema(self.schema_version));
         }
         if self.schema_version == NORMALIZED_PLAN_SCHEMA_VERSION_V2
             && self.source.kind != SourceKind::GoogleTakeout
+        {
+            return Err(PlanValidationError::InvalidSchemaSource);
+        }
+        if self.schema_version == NORMALIZED_PLAN_SCHEMA_VERSION_V3
+            && self.source.kind != SourceKind::ApplePhotos
+        {
+            return Err(PlanValidationError::InvalidSchemaSource);
+        }
+        if self.source.kind == SourceKind::ApplePhotos
+            && self.schema_version != NORMALIZED_PLAN_SCHEMA_VERSION_V3
         {
             return Err(PlanValidationError::InvalidSchemaSource);
         }

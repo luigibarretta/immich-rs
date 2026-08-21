@@ -1,9 +1,10 @@
 use super::{
     Cancellation, CancellationToken, CandidateAsset, GeoCoordinates, MediaKind,
-    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2, NeverCancel,
-    NormalizedMetadata, NormalizedPlan, PlanSummary, ServerCompatibility, ServerVersion,
-    SourceDescriptor, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization,
-    UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
+    NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V3, NeverCancel, NormalizedMetadata, NormalizedPlan,
+    PlanSummary, ServerCompatibility, ServerVersion, SourceDescriptor, SourceKind,
+    UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization, UploadOperation, UploadPlan,
+    UploadPlanSummary, UploadRole,
 };
 
 fn valid_plan() -> NormalizedPlan {
@@ -77,6 +78,21 @@ fn normalized_plan_v2_is_takeout_only_and_v1_rejects_resolved_metadata() {
     assert!(plan.validate().is_err());
     plan.source.kind = SourceKind::GoogleTakeout;
     assert!(plan.validate().is_ok());
+}
+
+#[test]
+fn normalized_plan_v3_is_apple_photos_only() {
+    let mut plan = valid_plan();
+    plan.schema_version = NORMALIZED_PLAN_SCHEMA_VERSION_V3;
+    assert!(plan.validate().is_err());
+    plan.source.kind = SourceKind::ApplePhotos;
+    plan.assets[0].normalized_metadata = Some(NormalizedMetadata {
+        albums: vec!["Synthetic album".to_owned()],
+        ..NormalizedMetadata::default()
+    });
+    assert!(plan.validate().is_ok());
+    plan.schema_version = NORMALIZED_PLAN_SCHEMA_VERSION_V2;
+    assert!(plan.validate().is_err());
 }
 
 #[test]

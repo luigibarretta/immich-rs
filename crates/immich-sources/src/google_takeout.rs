@@ -33,6 +33,7 @@ pub fn scan_google_takeout(
             source_kind: SourceKind::GoogleTakeout,
             schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION,
             reconcile_state: reconcile,
+            skip_path: |_| None,
         },
     )
     .map(|resolved| resolved.plan)
@@ -63,6 +64,7 @@ pub fn scan_google_takeout_inputs(
                     source_kind: SourceKind::GoogleTakeout,
                     schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION_V2,
                     reconcile_state: crate::takeout_reconcile::reconcile,
+                    skip_path: |_| None,
                 },
             )
             .map(|resolved| resolved.plan);

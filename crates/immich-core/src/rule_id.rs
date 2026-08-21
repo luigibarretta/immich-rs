@@ -30,6 +30,14 @@ pub const GOOGLE_TAKEOUT_CONTENT_ALIAS: &str = "META_GOOGLE_TAKEOUT_CONTENT_ALIA
 pub const TAKEOUT_ARCHIVE_DUPLICATE: &str = "ARCHIVE_TAKEOUT_DUPLICATE_IDENTICAL_V1";
 /// Independent Takeout archives contain conflicting bytes at one logical path.
 pub const TAKEOUT_ARCHIVE_CONFLICT: &str = "ARCHIVE_TAKEOUT_PATH_CONFLICT_V1";
+/// Known non-media Apple export noise was skipped before reading its payload.
+pub const APPLE_EXPORT_NOISE: &str = "APPLE_EXPORT_NOISE_SKIPPED_V1";
+/// A folder path explicitly contributed Apple export album membership.
+pub const APPLE_FOLDER_ALBUM: &str = "META_APPLE_FOLDER_ALBUM_V1";
+/// Identical Apple ZIP entries at one logical path were coalesced.
+pub const APPLE_ARCHIVE_DUPLICATE: &str = "ARCHIVE_APPLE_DUPLICATE_IDENTICAL_V1";
+/// Apple ZIP parts contain conflicting bytes at one logical path.
+pub const APPLE_ARCHIVE_CONFLICT: &str = "ARCHIVE_APPLE_PATH_CONFLICT_V1";
 /// A still image and video were associated as a live-photo pair.
 pub const LIVE_PHOTO_BASENAME: &str = "PAIR_LIVE_PHOTO_BASENAME_V1";
 /// A symbolic link was deliberately not followed.

@@ -39,6 +39,7 @@ pub fn discover(
     observer: &mut impl ProgressObserver,
     before_read: &mut impl FnMut(&Path),
     state: &mut ScanState,
+    skip_path: fn(&str) -> Option<String>,
 ) -> Result<(), ScanError> {
     let mut directories = vec![root.to_path_buf()];
     while let Some(directory) = directories.pop() {
@@ -57,6 +58,7 @@ pub fn discover(
                 observer,
                 before_read,
                 state,
+                skip_path,
             )? {
                 directories.push(child_directory);
             }
@@ -100,6 +102,7 @@ fn directory_entries(
     Ok(entries)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process_entry(
     root: &Path,
     path: &Path,
@@ -108,6 +111,7 @@ fn process_entry(
     observer: &mut impl ProgressObserver,
     before_read: &mut impl FnMut(&Path),
     state: &mut ScanState,
+    skip_path: fn(&str) -> Option<String>,
 ) -> Result<Option<PathBuf>, ScanError> {
     let Ok(metadata) = fs::symlink_metadata(path) else {
         state.errors.push(diagnostic(
@@ -120,9 +124,6 @@ fn process_entry(
         return Ok(None);
     };
     let file_type = metadata.file_type();
-    if file_type.is_dir() {
-        return Ok(Some(path.to_path_buf()));
-    }
     let relative_path = match portable_path(root, path, config.max_path_bytes) {
         Ok(relative_path) => relative_path,
         Err(PortablePathError::TooLong) => {
@@ -142,6 +143,17 @@ fn process_entry(
             return Ok(None);
         }
     };
+    if let Some(diagnostic_path) = skip_path(&relative_path) {
+        state.warnings.push(diagnostic(
+            rule_id::APPLE_EXPORT_NOISE,
+            "known_apple_export_noise",
+            vec![diagnostic_path],
+        ));
+        return Ok(None);
+    }
+    if file_type.is_dir() {
+        return Ok(Some(path.to_path_buf()));
+    }
     if file_type.is_symlink() {
         state.warnings.push(diagnostic(
             rule_id::SYMLINK_SKIPPED,

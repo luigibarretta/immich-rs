@@ -1,0 +1,59 @@
+{
+  "schema": "oracle-case-v2",
+  "case_id": "apple-photos-v3",
+  "fixture": "../../fixtures/v3/synthetic-apple-photos/manifest.json",
+  "archive_view": "icloud-split",
+  "arguments": [
+    "upload",
+    "from-icloud",
+    "--server",
+    "{server_url}",
+    "--api-key",
+    "{synthetic_api_key}",
+    "--device-uuid",
+    "synthetic-apple-device",
+    "--dry-run",
+    "--no-ui",
+    "--log-level",
+    "DEBUG",
+    "--pause-immich-jobs=false",
+    "--concurrent-tasks",
+    "1",
+    "--folder-as-album",
+    "NONE",
+    "{fixture_inputs}"
+  ],
+  "timeout_seconds": 60,
+  "expected_oracle_mutations": [
+    {
+      "method": "PUT",
+      "path": "/api/jobs/faceDetection",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/metadataExtraction",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/smartSearch",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/thumbnailGeneration",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/videoConversion",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    }
+  ]
+}

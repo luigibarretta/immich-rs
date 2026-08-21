@@ -27,6 +27,8 @@ pub const FIXTURE_SCHEMA_VERSION: u32 = 1;
 pub const NORMALIZED_PLAN_SCHEMA_VERSION: u32 = 1;
 /// Schema version for complete Google Takeout read-only plans.
 pub const NORMALIZED_PLAN_SCHEMA_VERSION_V2: u32 = 2;
+/// Schema version for Apple Photos export read-only plans.
+pub const NORMALIZED_PLAN_SCHEMA_VERSION_V3: u32 = 3;
 /// Schema version for progress events.
 pub const PROGRESS_EVENT_SCHEMA_VERSION: u32 = 1;
 /// Schema version for immutable upload plans.

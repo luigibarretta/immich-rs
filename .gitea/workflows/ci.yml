@@ -121,6 +121,14 @@ jobs:
             tests/oracle/compatibility/google-takeout-complete-v2.json \
             .artifacts/oracle/google-takeout-complete-observation.json \
             --output .artifacts/oracle/google-takeout-complete-report.json
+          python3 scripts/run-oracle.py \
+            tests/oracle/cases/apple-photos-v3.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --output .artifacts/oracle/apple-photos-observation.json
+          python3 scripts/compare-apple-oracle.py \
+            tests/oracle/compatibility/apple-photos-v3.json \
+            .artifacts/oracle/apple-photos-observation.json \
+            --output .artifacts/oracle/apple-photos-report.json
       - name: Preserve normalized evidence without redistributing the oracle
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

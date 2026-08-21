@@ -98,6 +98,24 @@ class FixtureToolTests(unittest.TestCase):
             )
             self.assertFalse((first / ".fixture-staging").exists())
 
+    def test_v3_apple_archive_fixture_is_supported(self) -> None:
+        manifest = self.manifest()
+        manifest["schema"] = "fixture-manifest-v3"
+        manifest["provenance"]["generator_version"] = "3"
+        manifest["expected_plan"]["schema"] = "normalized-plan-v3"
+        manifest["archive_views"] = [
+            {
+                "name": "icloud-split",
+                "parts": [{"path": "icloud-001.zip", "files": ["image.png"]}],
+            }
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "manifest.json"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            output = Path(temporary) / "output"
+            materializer.materialize(path, output, "icloud-split")
+            self.assertTrue((output / "icloud-001.zip").is_file())
+
     def test_personal_metadata_keys_are_rejected(self) -> None:
         findings = checker._walk_json({"metadata": {"latitude": 1}})
         self.assertTrue(findings)

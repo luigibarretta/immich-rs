@@ -11,6 +11,8 @@ use immich_rs_core::{
     RuleEvidence,
 };
 
+mod apple_archive;
+mod apple_photos;
 mod discovery;
 mod google_takeout;
 mod identity;
@@ -20,6 +22,7 @@ mod takeout_archive;
 mod takeout_metadata;
 mod takeout_reconcile;
 
+pub use apple_photos::{AlbumMode, ApplePhotosScanConfig, scan_apple_photos_inputs};
 pub use google_takeout::{scan_google_takeout, scan_google_takeout_inputs};
 pub use scan::{FolderScanConfig, NoProgress, ProgressObserver, ScanError, TakeoutScanConfig};
 
@@ -123,12 +126,18 @@ pub(crate) struct ScanStrategy {
     pub source_kind: immich_rs_core::SourceKind,
     pub schema_version: u32,
     pub reconcile_state: fn(&mut ScanState),
+    pub skip_path: fn(&str) -> Option<String>,
+}
+
+const fn keep_all_paths(_path: &str) -> Option<String> {
+    None
 }
 
 const FOLDER_SCAN: ScanStrategy = ScanStrategy {
     source_kind: immich_rs_core::SourceKind::Folder,
     schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION,
     reconcile_state: reconcile::reconcile,
+    skip_path: keep_all_paths,
 };
 
 impl ScanState {
@@ -236,6 +245,7 @@ pub(crate) fn scan_resolved_internal(
         observer,
         before_read,
         &mut state,
+        strategy.skip_path,
     )?;
     discovery::check_cancelled(cancellation)?;
     (strategy.reconcile_state)(&mut state);
@@ -283,6 +293,10 @@ pub(crate) fn scan_resolved_internal(
     Ok(ResolvedFolderPlan { plan, files })
 }
 
+#[cfg(test)]
+mod apple_archive_tests;
+#[cfg(test)]
+mod apple_tests;
 #[cfg(test)]
 mod resolved_tests;
 #[cfg(test)]

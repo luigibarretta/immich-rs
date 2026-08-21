@@ -1,0 +1,133 @@
+{
+  "schema_version": 3,
+  "source": {
+    "kind": "apple_photos",
+    "label": "synthetic-apple",
+    "fingerprint_sha256": "15b45ab9382549e08c3c8233bbd1636afdee28b6d5ea049b55761106666d36b7",
+    "case_sensitive": true,
+    "unicode_normalization": "nfc"
+  },
+  "assets": [
+    {
+      "operation_id": "c5effe3c5174b4576c73f90f51e615cb8ada16acdde5fd86dcf92848ded4cbc5",
+      "relative_path": "Albums/Synthetic Journey/café.png",
+      "media_kind": "image",
+      "byte_len": 69,
+      "content_sha256": "3b7d62738b363c3bf0f01cfc016702418208db2a0c709a07e926c7ea6b20089b",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "9472742e601e251817987bb12c5295c5297a628ec6460f3ce4c4738f2a2b39c7",
+      "relative_path": "Albums/Synthetic Journey/pair.mov",
+      "media_kind": "video",
+      "byte_len": 58,
+      "content_sha256": "bb203c857e3fdafdf15f81b9774af23b2ee0df2879717d313202a572c6adaa72",
+      "metadata": [],
+      "live_photo": {
+        "pair_id": "7d49a895d6b3a498ce38e5beb3b9d62b3e4cea08406cc41486ebb1c909f9805e",
+        "role": "video"
+      },
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "PAIR_LIVE_PHOTO_BASENAME_V1",
+          "outcome": "live_photo_member"
+        }
+      ]
+    },
+    {
+      "operation_id": "6a8fbac7d3837fd83dcd3cf9df0d1ca2fa66cd65b0bba5e0c5c6a8b3c797d9ae",
+      "relative_path": "Albums/Synthetic Journey/pair.png",
+      "media_kind": "image",
+      "byte_len": 73,
+      "content_sha256": "00637d047201d9f974683c20a29f4ddf4e95ac282dd918618aeb3b929f30b573",
+      "metadata": [
+        {
+          "relative_path": "Albums/Synthetic Journey/pair.xmp",
+          "kind": "xmp",
+          "rule_id": "META_SIDECAR_BASENAME_V1"
+        }
+      ],
+      "live_photo": {
+        "pair_id": "7d49a895d6b3a498ce38e5beb3b9d62b3e4cea08406cc41486ebb1c909f9805e",
+        "role": "image"
+      },
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_SIDECAR_BASENAME_V1",
+          "outcome": "metadata_candidate_associated"
+        },
+        {
+          "rule_id": "PAIR_LIVE_PHOTO_BASENAME_V1",
+          "outcome": "live_photo_member"
+        }
+      ]
+    },
+    {
+      "operation_id": "084747d2d90d35a00ec657917666f9d3a781735515b9e7df268e460d24cf1993",
+      "relative_path": "Albums/Synthetic Journey/rendered-edited.png",
+      "media_kind": "image",
+      "byte_len": 71,
+      "content_sha256": "ed4821e2d24c60de485980ead96092bc452262fe5f14c2dc0200f19970a00a12",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    },
+    {
+      "operation_id": "ae2fef12cf85d370549a5075e587748b4631ff6a99330ad7abc8c139ef56a1a3",
+      "relative_path": "Albums/Synthetic Journey/rendered.png",
+      "media_kind": "image",
+      "byte_len": 71,
+      "content_sha256": "54e16240f6a8a447f033d6ef39932a7f1a41db249440aa81b9a5c883a48ea8c1",
+      "metadata": [],
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "rule_id": "APPLE_EXPORT_NOISE_SKIPPED_V1",
+      "code": "known_apple_export_noise",
+      "paths": [
+        ".DS_Store"
+      ]
+    },
+    {
+      "rule_id": "APPLE_EXPORT_NOISE_SKIPPED_V1",
+      "code": "known_apple_export_noise",
+      "paths": [
+        "Recently Deleted"
+      ]
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "assets": 5,
+    "sidecars": 1,
+    "bytes_read": 426
+  }
+}

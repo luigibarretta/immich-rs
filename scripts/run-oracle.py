@@ -116,7 +116,11 @@ def load_case(path: Path) -> dict[str, Any]:
     arguments = case.get("arguments")
     if not isinstance(arguments, list) or not arguments or not all(isinstance(value, str) for value in arguments):
         raise OracleError("oracle case arguments must be a non-empty string array")
-    supported_sources = (["upload", "from-folder"], ["upload", "from-google-photos"])
+    supported_sources = (
+        ["upload", "from-folder"],
+        ["upload", "from-google-photos"],
+        ["upload", "from-icloud"],
+    )
     if arguments[:2] not in supported_sources or "--dry-run" not in arguments:
         raise OracleError("oracle case must use a supported dry-run upload source")
     archive_view = case.get("archive_view")

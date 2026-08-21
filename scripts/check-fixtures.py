@@ -15,6 +15,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_ROOTS = [
     REPOSITORY_ROOT / "tests" / "fixtures" / "v1",
     REPOSITORY_ROOT / "tests" / "fixtures" / "v2",
+    REPOSITORY_ROOT / "tests" / "fixtures" / "v3",
 ]
 SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
 SKIPPED_PARTS = {".git", "target", ".cargo"}
@@ -121,7 +122,12 @@ def check_manifests() -> None:
         if findings:
             raise CheckFailure("\n".join(f"{manifest_path}: {finding}" for finding in findings))
         expected = manifest.get("expected_plan")
-        schema_version = 1 if manifest.get("schema") == "fixture-manifest-v1" else 2
+        schema_versions = {
+            "fixture-manifest-v1": 1,
+            "fixture-manifest-v2": 2,
+            "fixture-manifest-v3": 3,
+        }
+        schema_version = schema_versions.get(manifest.get("schema"))
         if (
             not isinstance(expected, dict)
             or expected.get("schema") != f"normalized-plan-v{schema_version}"

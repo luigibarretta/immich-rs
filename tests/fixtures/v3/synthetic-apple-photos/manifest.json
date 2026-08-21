@@ -1,0 +1,92 @@
+{
+  "schema": "fixture-manifest-v3",
+  "fixture_id": "synthetic-apple-photos",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "3",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": ".DS_Store",
+      "recipe": "text",
+      "content": "synthetic Apple export noise\n"
+    },
+    {
+      "path": "Albums/Synthetic Journey/café.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [32, 64, 96]
+    },
+    {
+      "path": "Albums/Synthetic Journey/pair.mov",
+      "recipe": "synthetic_isobmff",
+      "marker": "synthetic-apple-live-motion-v1"
+    },
+    {
+      "path": "Albums/Synthetic Journey/pair.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [64, 96, 128]
+    },
+    {
+      "path": "Albums/Synthetic Journey/pair.xmp",
+      "recipe": "text",
+      "content": "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><synthetic>apple export</synthetic></x:xmpmeta>\n"
+    },
+    {
+      "path": "Albums/Synthetic Journey/rendered-edited.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 2,
+      "rgb": [96, 128, 160]
+    },
+    {
+      "path": "Albums/Synthetic Journey/rendered.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 2,
+      "rgb": [128, 160, 192]
+    },
+    {
+      "path": "Recently Deleted/ignored.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [160, 192, 224]
+    }
+  ],
+  "archive_views": [
+    {
+      "name": "icloud-split",
+      "parts": [
+        {
+          "path": "icloud-001.zip",
+          "files": [
+            ".DS_Store",
+            "Albums/Synthetic Journey/café.png",
+            "Albums/Synthetic Journey/pair.mov",
+            "Albums/Synthetic Journey/pair.png"
+          ]
+        },
+        {
+          "path": "icloud-002.zip",
+          "files": [
+            "Albums/Synthetic Journey/pair.xmp",
+            "Albums/Synthetic Journey/rendered-edited.png",
+            "Albums/Synthetic Journey/rendered.png",
+            "Recently Deleted/ignored.png"
+          ]
+        }
+      ]
+    }
+  ],
+  "expected_plan": {
+    "schema": "normalized-plan-v3",
+    "path": "expected-plan.json",
+    "sha256": "6822734307e7a0fdea7c83b676d1b88203e84711579dcc05809a487d6c1df46a"
+  }
+}

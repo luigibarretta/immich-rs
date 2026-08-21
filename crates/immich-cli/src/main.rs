@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+mod apple_photos;
 mod args;
 mod failure;
 mod folder;
@@ -54,13 +55,14 @@ async fn run_plan(arguments: &[OsString]) -> Result<(), CliFailure> {
         Some("google-takeout") => {
             google_takeout::run(&args::parse_google_takeout(&arguments[1..])?)
         }
+        Some("apple-photos") => apple_photos::run(&args::parse_apple_photos(&arguments[1..])?),
         Some("upload")
             if arguments.get(1).and_then(|argument| argument.to_str()) == Some("folder") =>
         {
             upload_plan::run(args::parse_upload_folder(&arguments[2..])?).await
         }
         _ => Err(CliFailure::usage(
-            "plan supports 'folder', 'google-takeout' and 'upload folder'",
+            "plan supports 'folder', 'google-takeout', 'apple-photos' and 'upload folder'",
         )),
     }
 }
@@ -79,6 +81,6 @@ async fn run_apply(arguments: &[OsString]) -> Result<(), CliFailure> {
 
 fn print_help() {
     println!(
-        "immich-rs {VERSION}\n\nBounded read-only planning and disposable Phase-2 folder upload\n\nUsage:\n  immich-rs plan folder [OPTIONS] <PATH>\n  immich-rs plan google-takeout [OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan upload folder --server <LOOPBACK_URL> [OPTIONS] <PATH>\n  immich-rs apply upload --dry-run --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n  immich-rs apply upload --server <LOOPBACK_URL> --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n\nGoogle Takeout planning accepts one decompressed root or up to 64 independent ZIP parts and never applies them.\nRepeat non-default scan limits when applying a folder upload plan. The API key is read only from IMMICH_RS_API_KEY. Phase 2 rejects non-loopback servers.\nNo delete, replace or metadata mutation command exists."
+        "immich-rs {VERSION}\n\nBounded read-only planning and disposable Phase-2 folder upload\n\nUsage:\n  immich-rs plan folder [OPTIONS] <PATH>\n  immich-rs plan google-takeout [OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan apple-photos [APPLE_OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan upload folder --server <LOOPBACK_URL> [OPTIONS] <PATH>\n  immich-rs apply upload --dry-run --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n  immich-rs apply upload --server <LOOPBACK_URL> --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n\nApple options:\n  --album-mode <none|folder|path>\n  --album-path-joiner <TEXT>\n\nGoogle Takeout and Apple planning accept one directory or up to 64 independent ZIP parts and never apply them.\nRepeat non-default scan limits when applying a folder upload plan. The API key is read only from IMMICH_RS_API_KEY. Phase 2 rejects non-loopback servers.\nNo delete, replace or metadata mutation command exists."
     );
 }

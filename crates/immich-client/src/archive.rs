@@ -94,7 +94,6 @@ impl ImmichReadClient {
         let mut assets = Vec::new();
         let mut related_ids = Vec::new();
         let mut page = 1_u64;
-        let mut expected_total = None;
         loop {
             check_cancelled(cancellation)?;
             let request = ArchiveSearchRequest {
@@ -108,12 +107,9 @@ impl ImmichReadClient {
             let response: ArchiveSearchResponse = self
                 .post_json("api/search/metadata", &request, cancellation)
                 .await?;
-            if response.assets.total > config.max_assets as u64
-                || expected_total.is_some_and(|total| total != response.assets.total)
-            {
+            if response.assets.total > config.max_assets as u64 {
                 return Err(ClientError::new(ClientErrorClass::Protocol));
             }
-            expected_total = Some(response.assets.total);
             if response.assets.count != response.assets.items.len() as u64 {
                 return Err(ClientError::new(ClientErrorClass::Protocol));
             }
@@ -127,17 +123,10 @@ impl ImmichReadClient {
                     related_ids.push(identifier);
                 }
             }
-            if assets.len() as u64 > response.assets.total {
-                return Err(ClientError::new(ClientErrorClass::Protocol));
-            }
-            let complete = assets.len() as u64 == response.assets.total;
-            if complete && response.assets.next_page.is_some() {
-                return Err(ClientError::new(ClientErrorClass::Protocol));
-            }
-            if complete {
-                break;
-            }
             if let Some(next_page) = response.assets.next_page {
+                if response.assets.count == 0 {
+                    return Err(ClientError::new(ClientErrorClass::Protocol));
+                }
                 let parsed = next_page
                     .parse::<u64>()
                     .map_err(|_| ClientError::new(ClientErrorClass::Protocol))?;
@@ -146,7 +135,7 @@ impl ImmichReadClient {
                 }
                 page = parsed;
             } else {
-                return Err(ClientError::new(ClientErrorClass::Protocol));
+                break;
             }
         }
         related_ids.sort();

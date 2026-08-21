@@ -26,6 +26,7 @@ MockState = SUPPORT["MockState"]
 is_mutating_request = SUPPORT["is_mutating_request"]
 archive_search_response = ARCHIVE["archive_search_response"]
 archive_original = ARCHIVE["archive_original"]
+archive_asset_response = ARCHIVE["archive_asset_response"]
 
 
 class MockConfigurationError(ValueError):
@@ -309,6 +310,12 @@ class _Handler(BaseHTTPRequestHandler):
                 self._json_response(404, {"message": "synthetic asset missing"})
             else:
                 self._bytes_response(original)
+        elif path.startswith("/api/assets/") and self.command == "GET" and scenario.get("archive_assets") is not None:
+            asset = archive_asset_response(scenario, path)
+            if asset is None:
+                self._json_response(404, {"message": "synthetic asset missing"})
+            else:
+                self._json_response(200, asset)
         elif mutating:
             self.state.record_commit(request)
             self._json_response(200, {"status": "synthetic-commit"})

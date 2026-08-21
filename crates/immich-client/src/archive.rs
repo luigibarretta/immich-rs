@@ -94,6 +94,7 @@ impl ImmichReadClient {
         self.validate_binding(negotiated)?;
         let config = config.validate()?;
         let mut assets = Vec::new();
+        let mut related_ids = Vec::new();
         let mut page = 1_u64;
         let mut expected_total = None;
         loop {
@@ -122,7 +123,11 @@ impl ImmichReadClient {
                 if assets.len() >= config.max_assets {
                     return Err(ClientError::new(ClientErrorClass::Protocol));
                 }
-                assets.push(convert_asset(item)?);
+                let (asset, related_id) = convert_asset(item)?;
+                assets.push(asset);
+                if let Some(identifier) = related_id {
+                    related_ids.push(identifier);
+                }
             }
             if assets.len() as u64 > response.assets.total {
                 return Err(ClientError::new(ClientErrorClass::Protocol));
@@ -145,6 +150,24 @@ impl ImmichReadClient {
             } else {
                 return Err(ClientError::new(ClientErrorClass::Protocol));
             }
+        }
+        related_ids.sort();
+        related_ids.dedup();
+        for identifier in related_ids {
+            if assets.iter().any(|asset| asset.asset_id == identifier) {
+                continue;
+            }
+            if assets.len() >= config.max_assets {
+                return Err(ClientError::new(ClientErrorClass::Protocol));
+            }
+            check_cancelled(cancellation)?;
+            let item: ArchiveAssetResponse =
+                self.get_json(&format!("api/assets/{identifier}")).await?;
+            let (asset, _) = convert_asset(item)?;
+            if asset.asset_id != identifier {
+                return Err(ClientError::new(ClientErrorClass::Protocol));
+            }
+            assets.push(asset);
         }
         Ok(assets)
     }
@@ -249,7 +272,9 @@ impl Debug for ArchiveDownload {
     }
 }
 
-fn convert_asset(item: ArchiveAssetResponse) -> Result<RemoteArchiveAsset, ClientError> {
+fn convert_asset(
+    item: ArchiveAssetResponse,
+) -> Result<(RemoteArchiveAsset, Option<String>), ClientError> {
     let media_kind = match item.r#type {
         AssetTypeResponse::Image => MediaKind::Image,
         AssetTypeResponse::Video => MediaKind::Video,
@@ -268,13 +293,16 @@ fn convert_asset(item: ArchiveAssetResponse) -> Result<RemoteArchiveAsset, Clien
         .and_then(|exif| exif.file_size_in_byte)
         .ok_or_else(|| ClientError::new(ClientErrorClass::Protocol))?;
     let checksum_sha1 = lowercase_hex(&decoded);
-    Ok(RemoteArchiveAsset {
-        asset_id: item.id,
-        original_file_name: item.original_file_name,
-        media_kind,
-        byte_len,
-        checksum_sha1,
-    })
+    Ok((
+        RemoteArchiveAsset {
+            asset_id: item.id,
+            original_file_name: item.original_file_name,
+            media_kind,
+            byte_len,
+            checksum_sha1,
+        },
+        item.live_photo_video_id,
+    ))
 }
 
 fn lowercase_hex(bytes: &[u8]) -> String {

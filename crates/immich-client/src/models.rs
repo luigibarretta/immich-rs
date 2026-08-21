@@ -87,6 +87,8 @@ pub struct ArchiveAssetResponse {
     pub checksum: String,
     pub r#type: AssetTypeResponse,
     pub exif_info: Option<ArchiveExifResponse>,
+    #[serde(default)]
+    pub live_photo_video_id: Option<String>,
 }
 
 #[derive(Deserialize)]

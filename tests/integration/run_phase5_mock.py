@@ -25,6 +25,7 @@ ASSETS = [
         "body": b"synthetic archive timeline image\n",
         "type": "IMAGE",
         "visibility": "timeline",
+        "live_photo_video_id": "00000000-0000-4000-8000-000000000105",
     },
     {
         "id": "00000000-0000-4000-8000-000000000102",
@@ -39,6 +40,13 @@ ASSETS = [
         "body": b"synthetic hidden image\n",
         "type": "IMAGE",
         "visibility": "hidden",
+    },
+    {
+        "id": "00000000-0000-4000-8000-000000000105",
+        "filename": "synthetic-live-motion.mov",
+        "body": b"synthetic linked live motion\n",
+        "type": "VIDEO",
+        "visibility": "linked",
     },
     {
         "id": "00000000-0000-4000-8000-000000000104",
@@ -123,7 +131,7 @@ def exercise_convergence(binary: Path, workspace: Path) -> None:
     with MOCK["running_mock"](scenario()) as server:
         manifest_result = invoke(binary, archive_arguments(server.url))
         manifest = json_output(manifest_result)
-        if manifest.get("summary") != {"assets": 3, "media_bytes": 80}:
+        if manifest.get("summary") != {"assets": 4, "media_bytes": 109}:
             raise RuntimeError("archive selection or pagination is incorrect")
         if server.url.encode() in manifest_result.stdout:
             raise RuntimeError("archive manifest exposed its endpoint")
@@ -142,9 +150,9 @@ def exercise_convergence(binary: Path, workspace: Path) -> None:
         second = json_output(invoke(binary, apply_arguments))
         snapshot = server.state.snapshot()
     verify_files(destination)
-    if first.get("downloaded") != 3 or first.get("bytes_written") != 80:
+    if first.get("downloaded") != 4 or first.get("bytes_written") != 109:
         raise RuntimeError("first archive apply did not download every original")
-    if second.get("already_complete") != 3 or second.get("bytes_written") != 0:
+    if second.get("already_complete") != 4 or second.get("bytes_written") != 0:
         raise RuntimeError("archive rerun did not converge without downloads")
     if snapshot["committed_mutations"] or any(
         request["mutating"] for request in snapshot["requests"]
@@ -227,7 +235,7 @@ def exercise_stream_recovery(binary: Path, workspace: Path) -> None:
         ]
         failed = invoke(binary, arguments, success=False)
         recovered = json_output(invoke(binary, arguments))
-    if failed.returncode != 7 or recovered.get("downloaded") != 3:
+    if failed.returncode != 7 or recovered.get("downloaded") != 4:
         raise RuntimeError("stream disconnect did not recover on an idempotent rerun")
     if list(destination.rglob("*.immich-rs.part")):
         raise RuntimeError("stream failure left a partial archive file")
@@ -306,7 +314,7 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             f"archive cancellation did not exit cleanly: exit={process.returncode}, "
             f"stdout_bytes={len(stdout)}, stderr_bytes={len(stderr)}"
         )
-    if recovered.get("downloaded") != 3 or list(destination.rglob("*.immich-rs.part")):
+    if recovered.get("downloaded") != 4 or list(destination.rglob("*.immich-rs.part")):
         raise RuntimeError("archive did not converge after cancellation")
 
 

@@ -59,6 +59,19 @@ def archive_original(scenario: dict[str, Any], path: str) -> bytes | None:
     return None
 
 
+def archive_asset_response(
+    scenario: dict[str, Any], path: str
+) -> dict[str, object] | None:
+    """Resolve one related synthetic asset for read-only inventory expansion."""
+    parts = path.split("/")
+    if len(parts) != 4 or parts[:3] != ["", "api", "assets"]:
+        return None
+    for asset in _assets(scenario):
+        if asset["id"] == parts[3]:
+            return _response_asset(asset)
+    return None
+
+
 def _assets(scenario: dict[str, Any]) -> list[dict[str, Any]]:
     assets = scenario.get("archive_assets", [])
     if not isinstance(assets, list):
@@ -71,7 +84,7 @@ def _assets(scenario: dict[str, Any]) -> list[dict[str, Any]]:
             and isinstance(asset.get("filename"), str)
             and isinstance(asset.get("body"), bytes)
             and asset.get("type") in {"IMAGE", "VIDEO"}
-            and asset.get("visibility") in {"timeline", "archive", "hidden"}
+            and asset.get("visibility") in {"timeline", "archive", "hidden", "linked"}
             and isinstance(asset.get("trashed", False), bool)
         ):
             validated.append(asset)
@@ -80,10 +93,14 @@ def _assets(scenario: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _response_asset(asset: dict[str, Any]) -> dict[str, object]:
     body = asset["body"]
-    return {
+    response = {
         "id": asset["id"],
         "originalFileName": asset["filename"],
         "checksum": base64.b64encode(hashlib.sha1(body).digest()).decode("ascii"),
         "type": asset["type"],
         "exifInfo": {"fileSizeInByte": len(body)},
     }
+    related = asset.get("live_photo_video_id")
+    if isinstance(related, str):
+        response["livePhotoVideoId"] = related
+    return response

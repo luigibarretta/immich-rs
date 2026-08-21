@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use immich_rs_client::{ArchiveListConfig, ArchiveVisibility};
 use immich_rs_core::CancellationToken;
 use immich_rs_executor::{ArchiveSelection, create_archive_manifest};
@@ -45,8 +47,20 @@ pub async fn run(request: ArchivePlanRequest) -> Result<(), CliFailure> {
             .map_err(CliFailure::from_client)?;
         assets.append(&mut selected);
     }
-    let manifest =
-        create_archive_manifest(assets, negotiated.compatibility().clone(), &request.config)
-            .map_err(CliFailure::from_executor)?;
+    let mut unique = BTreeMap::new();
+    for asset in assets {
+        if unique
+            .insert(asset.asset_id.clone(), asset.clone())
+            .is_some_and(|previous| previous != asset)
+        {
+            return Err(CliFailure::invariant("archive inventory facts changed"));
+        }
+    }
+    let manifest = create_archive_manifest(
+        unique.into_values().collect(),
+        negotiated.compatibility().clone(),
+        &request.config,
+    )
+    .map_err(CliFailure::from_executor)?;
     output::write_json(&manifest, "archive manifest")
 }

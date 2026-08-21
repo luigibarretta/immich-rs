@@ -253,6 +253,7 @@ def main() -> int:
     paths = sorted(EVIDENCE_ROOT.glob("phase1-*.json")) if EVIDENCE_ROOT.exists() else []
     phase2_paths = sorted(EVIDENCE_ROOT.glob("phase2-*.json")) if EVIDENCE_ROOT.exists() else []
     phase3_paths = sorted(EVIDENCE_ROOT.glob("phase3-*.json")) if EVIDENCE_ROOT.exists() else []
+    phase4_paths = sorted(EVIDENCE_ROOT.glob("phase4-*.json")) if EVIDENCE_ROOT.exists() else []
     try:
         if not paths:
             raise EvidenceError("Phase 1 benchmark evidence is missing")
@@ -260,6 +261,8 @@ def main() -> int:
             raise EvidenceError("Phase 2 benchmark evidence is missing")
         if not phase3_paths:
             raise EvidenceError("Phase 3 benchmark evidence is missing")
+        if not phase4_paths:
+            raise EvidenceError("Phase 4 benchmark evidence is missing")
         for path in paths:
             validate(path)
         for path in phase2_paths:
@@ -273,9 +276,15 @@ def main() -> int:
     )
     if phase3.returncode != 0:
         return phase3.returncode
+    phase4 = subprocess.run(
+        [sys.executable, str(REPOSITORY_ROOT / "scripts/check-phase4-benchmark.py")],
+        check=False,
+    )
+    if phase4.returncode != 0:
+        return phase4.returncode
     print(
         "benchmark evidence passed: "
-        f"{len(paths) + len(phase2_paths) + len(phase3_paths)} report(s)"
+        f"{len(paths) + len(phase2_paths) + len(phase3_paths) + len(phase4_paths)} report(s)"
     )
     return 0
 

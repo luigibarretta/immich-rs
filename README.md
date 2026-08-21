@@ -3,6 +3,28 @@
 `immich-rs` is an independent Rust implementation of a high-integrity import,
 archive and migration client for [Immich](https://immich.app/).
 
+## Performance at a glance
+
+On the reproducible Phase 1 **folder scan and plan** benchmark, immich-rs has
+14.3% lower median wall time than the pinned immich-go v0.32.0 oracle. This is
+a scoped CPU-stage result, not an upload, Google Takeout or end-to-end import
+claim.
+
+| Lower is better | immich-rs | immich-go | Difference |
+|---|---:|---:|---:|
+| Median wall time | 49.371 ms | 57.624 ms | immich-rs 14.3% lower |
+| p95 wall time | 51.393 ms | 58.321 ms | immich-rs 11.9% lower |
+| Median peak RSS | 4.43 MiB | 15.33 MiB | immich-rs 71.1% lower |
+
+The comparison uses the same deterministic 64 MiB, eight-asset synthetic
+corpus and environment, concurrency one, alternating execution order, two
+warmups and six retained pairs. Every measured immich-rs wall-time sample was
+below every immich-go sample. The fixture was page-cached, so these values do
+not measure cold-storage throughput. See the
+[raw samples and reproducibility manifest](benchmarks/evidence/phase1-2026-08-21.json)
+and the full [benchmark methodology](benchmarks/README.md). ADR-0012 forbids
+extrapolating this result to Takeout planning or upload performance.
+
 Phase 0 and Phase 1 are complete for implementation SHA
 `36d0f7f55308e1b578474ae0bec9346e27ea0365`: push CI
 [run 5165](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5165)

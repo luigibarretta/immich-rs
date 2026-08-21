@@ -42,9 +42,13 @@ Complete and CI-enforced on implementation SHA
 
 Exit evidence: all declared compatibility rows pass, including documented
 intentional divergence and oracle-defect containment. The committed benchmark
-records raw results and methodology without claiming a generalized speedup.
-Gitea push CI run 5165 and manual paired-benchmark run 5170 are green for the
-exact implementation SHA; run 5170 uploaded the raw JSON report.
+records raw results and methodology. The current implementation was revalidated
+with six paired samples after two warmups on SHA
+`61383378f1db0999d463fe4180c156668ea0e2b6`: median folder scan/plan wall time
+was 14.3% lower and p95 was 11.9% lower than immich-go v0.32.0 on the exact
+64 MiB synthetic corpus. This is a scoped CPU-stage claim, not an upload,
+Takeout or generalized speedup. Evidence commit
+`8471ee49c4204bb5e2749f42381ef7f0fecc0448` is green in Gitea run 5356.
 
 ## Phase 2 — folder upload MVP
 

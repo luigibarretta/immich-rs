@@ -30,11 +30,24 @@ publishes only JSON evidence, never the oracle executable. Raw results do not
 constitute a performance claim. ADR-0012 budgets apply before any improvement
 is advertised.
 
-Verification record: Gitea run 5170 completed six paired samples after two
-warmups on implementation SHA
-`36d0f7f55308e1b578474ae0bec9346e27ea0365` and uploaded
-`phase1-benchmark-36d0f7f55308e1b578474ae0bec9346e27ea0365`. The report records
-the 64 MiB, eight-asset fixture and the pinned immich-go v0.32.0 digest.
+Current verification record: the release binary for implementation SHA
+`61383378f1db0999d463fe4180c156668ea0e2b6` completed six paired samples
+after two warmups. The committed
+[raw report](evidence/phase1-2026-08-21.json) records the 64 MiB, eight-asset
+fixture, both binary digests and the pinned immich-go v0.32.0 identity. Push CI
+run 5356 validated that report and the full repository on evidence commit
+`8471ee49c4204bb5e2749f42381ef7f0fecc0448`.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 0.049371 | 0.051393 | 0.057624 | 0.058321 |
+| Peak RSS (bytes) | 4,642,816 | 4,964,352 | 16,072,704 | 18,317,312 |
+
+The median wall-time reduction is 14.3%, the p95 reduction is 11.9% and the
+measured median RSS reduction is 71.1%. The wall-time ranges do not overlap.
+These results satisfy the ADR-0012 threshold for a scoped folder scan/plan
+claim. They do not support an upload, Takeout, cold-storage or generalized
+end-to-end speed claim.
 
 ## Phase 2 folder upload
 

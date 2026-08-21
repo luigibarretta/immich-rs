@@ -296,10 +296,18 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             stderr=subprocess.PIPE,
             env=environment(),
         )
-        for _attempt in range(100):
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
             paths = [request["path"] for request in server.state.snapshot()["requests"]]
             if any(path.endswith("/original") for path in paths):
                 break
+            if process.poll() is not None:
+                stdout, stderr = process.communicate()
+                raise RuntimeError(
+                    "archive cancellation target exited before original stream: "
+                    f"exit={process.returncode}, stdout_bytes={len(stdout)}, "
+                    f"stderr_bytes={len(stderr)}"
+                )
             time.sleep(0.01)
         else:
             process.kill()

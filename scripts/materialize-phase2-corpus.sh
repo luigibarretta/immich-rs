@@ -27,11 +27,12 @@ done
 
 [[ "$IMAGE" == *@sha256:* && -n "$SOURCE" && -n "$MANIFEST" ]] || usage
 [[ "$CONTAINER" =~ ^immich-rs-[a-zA-Z0-9_.-]+-generator$ ]] || usage
-[[ "$RUN_LABEL" =~ ^io\.immich-rs\.disposable\.run=phase2-[a-zA-Z0-9_.-]+$ ]] || usage
+[[ "$RUN_LABEL" =~ ^io\.immich-rs\.disposable\.(run=phase2|archive=phase5)-[a-zA-Z0-9_.-]+$ ]] || usage
 SOURCE=$(realpath -m -- "$SOURCE")
 MANIFEST=$(realpath -m -- "$MANIFEST")
 case "$SOURCE:$MANIFEST" in
-  /tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/*) ;;
+  /tmp/immich-rs-disposable.*/*:/tmp/immich-rs-disposable.*/* | \
+    /tmp/immich-rs-archive.*/*:/tmp/immich-rs-archive.*/*) ;;
   *) echo 'corpus paths must remain inside a disposable workspace' >&2; exit 2 ;;
 esac
 [[ "$MANIFEST" != "$SOURCE"/* ]] || { echo 'manifest must be outside the media source' >&2; exit 2; }

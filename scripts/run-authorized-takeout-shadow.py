@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import platform
+import re
 import statistics
 import subprocess
 import sys
@@ -155,6 +156,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         raise ShadowError("authorized Takeout root must contain exactly one ZIP")
     if not arguments.binary.is_file() or not arguments.metrics.is_file():
         raise ShadowError("shadow tooling is unavailable")
+    if re.fullmatch(r"[0-9a-f]{40}", arguments.source_revision) is None:
+        raise ShadowError("source revision must be an exact commit")
     sampler = load_metrics(arguments.metrics)
     temporary_path: Path | None = None
     with tempfile.TemporaryDirectory(
@@ -199,6 +202,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
                 ),
             },
             "environment": {
+                "source_revision": arguments.source_revision,
                 "system": platform.system(),
                 "architecture": platform.machine(),
                 "logical_cpus": os.cpu_count(),
@@ -217,6 +221,7 @@ def main() -> int:
     parser.add_argument("--takeout-root", type=Path, required=True)
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--metrics", type=Path, required=True)
+    parser.add_argument("--source-revision", required=True)
     arguments = parser.parse_args()
     try:
         print(json.dumps(run(arguments), sort_keys=True))

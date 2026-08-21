@@ -192,9 +192,12 @@ FIRST_REPORT=$(IMMICH_RS_API_KEY="$API_KEY" "$BINARY" apply archive \
 SECOND_REPORT=$(IMMICH_RS_API_KEY="$API_KEY" "$BINARY" apply archive \
   --server "$ENDPOINT" --manifest "$ARCHIVE_MANIFEST" --destination "$DESTINATION")
 ARCHIVE_ASSETS=$(jq -er '.summary.assets' "$ARCHIVE_MANIFEST")
-[[ "$ARCHIVE_ASSETS" == 4 ]]
-[[ $(jq -r '.downloaded' <<<"$FIRST_REPORT") == 4 ]]
-[[ $(jq -r '.already_complete' <<<"$SECOND_REPORT") == 4 ]]
+FIRST_DOWNLOADED=$(jq -er '.downloaded' <<<"$FIRST_REPORT")
+SECOND_COMPLETE=$(jq -er '.already_complete' <<<"$SECOND_REPORT")
+if [[ "$ARCHIVE_ASSETS:$FIRST_DOWNLOADED:$SECOND_COMPLETE" != '4:4:4' ]]; then
+  echo "unexpected archive counters: assets=$ARCHIVE_ASSETS first=$FIRST_DOWNLOADED second=$SECOND_COMPLETE" >&2
+  exit 1
+fi
 [[ -z $(find "$DESTINATION" -type f -name '*.immich-rs.part' -print -quit) ]]
 SOURCE_HASHES="$WORKSPACE/source-hashes"
 ARCHIVE_HASHES="$WORKSPACE/archive-hashes"

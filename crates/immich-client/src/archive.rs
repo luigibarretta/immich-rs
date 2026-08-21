@@ -13,8 +13,6 @@ use crate::read::check_cancelled;
 use crate::response::{bounded_json, classify_transport, status_error};
 use crate::{ClientError, ClientErrorClass, ImmichReadClient, NegotiatedServer};
 
-const NOT_TRASHED_AFTER: &str = "0001-01-01T00:00:00.000Z";
-
 /// One explicit Immich asset visibility selected for archive planning.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum ArchiveVisibility {
@@ -105,7 +103,7 @@ impl ImmichReadClient {
                 order: "asc",
                 with_exif: true,
                 visibility: config.visibility.api_value(),
-                trashed_after: (!config.include_trashed).then_some(NOT_TRASHED_AFTER),
+                with_deleted: config.include_trashed.then_some(true),
             };
             let response: ArchiveSearchResponse = self
                 .post_json("api/search/metadata", &request, cancellation)

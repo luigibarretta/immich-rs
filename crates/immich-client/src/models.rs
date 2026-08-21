@@ -60,7 +60,7 @@ pub struct ArchiveSearchRequest<'a> {
     pub with_exif: bool,
     pub visibility: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trashed_after: Option<&'static str>,
+    pub with_deleted: Option<bool>,
 }
 
 #[derive(Deserialize)]

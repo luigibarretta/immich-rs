@@ -16,7 +16,7 @@ def archive_search_response(
     page = request.get("page")
     size = request.get("size")
     visibility = request.get("visibility")
-    include_trashed = "trashedAfter" not in request
+    include_trashed = request.get("withDeleted") is True
     if (
         not isinstance(page, int)
         or page < 1

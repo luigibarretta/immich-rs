@@ -245,7 +245,7 @@ if [[ -n "$BENCHMARK_OUTPUT" ]]; then
     jq -er '.accessToken | select(type == "string" and length > 0)')
   BENCH_KEY=$(curl --fail --silent --header 'Content-Type: application/json' \
     --header "Authorization: Bearer $BENCH_TOKEN" --request POST \
-    --data '{"name":"immich-rs paired archive","permissions":["asset.upload","asset.read","asset.download","server.about","user.read"]}' \
+    --data '{"name":"immich-rs paired archive","permissions":["album.read","asset.upload","asset.read","asset.download","server.about","user.read"]}' \
     "$ENDPOINT/api/api-keys" | jq -er '.secret | select(type == "string" and length > 0)')
   IMMICH_RS_API_KEY="$BENCH_KEY" "$BINARY" plan upload folder --server "$ENDPOINT" \
     --label synthetic-archive-benchmark "$BENCH_SOURCE" >"$BENCH_PLAN"

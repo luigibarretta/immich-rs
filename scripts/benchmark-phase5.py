@@ -105,7 +105,8 @@ def fixture_identity(path: Path, source: Path) -> tuple[dict[str, Any], Counter[
 def verify_archive(destination: Path, expected: Counter[str], expected_bytes: int) -> dict[str, int]:
     observed: Counter[str] = Counter()
     total_bytes = 0
-    for path in sorted(candidate for candidate in destination.rglob("*") if candidate.is_file()):
+    files = sorted(candidate for candidate in destination.rglob("*") if candidate.is_file())
+    for path in files:
         digest = sha256(path)
         if digest in expected:
             observed[digest] += 1
@@ -114,7 +115,7 @@ def verify_archive(destination: Path, expected: Counter[str], expected_bytes: in
         raise BenchmarkError(
             "archived original-byte multiset differs from the fixture: "
             f"expected_assets={sum(expected.values())}, observed_assets={sum(observed.values())}, "
-            f"expected_bytes={expected_bytes}, observed_bytes={total_bytes}"
+            f"expected_bytes={expected_bytes}, observed_bytes={total_bytes}, total_files={len(files)}"
         )
     return {"original_assets": sum(observed.values()), "media_bytes": total_bytes, "retries": 0}
 
@@ -182,11 +183,13 @@ def run_go(
     media_bytes: int,
 ) -> dict[str, Any]:
     destination = workspace / "archive"
+    destination.mkdir()
+    log_path = workspace / "oracle.log"
     completed, measured = metrics.run_command(
         [
             str(binary), "archive", "from-immich", "--from-server", endpoint,
             "--from-api-key", api_key, "--from-pause-immich-jobs=false",
-            "--concurrent-tasks", "1", "--log-level", "ERROR",
+            "--concurrent-tasks", "1", "--log-level", "ERROR", "--log-file", str(log_path),
             "--write-to-folder", str(destination),
         ],
         workspace,
@@ -200,7 +203,14 @@ def run_go(
         raise BenchmarkError(f"immich-go archive failed: {details[-2_000:]}")
     measured["logical_media_bytes_read"] = media_bytes
     measured["logical_media_bytes_written"] = media_bytes
-    measured["operations"] = verify_archive(destination, expected, media_bytes)
+    try:
+        measured["operations"] = verify_archive(destination, expected, media_bytes)
+    except BenchmarkError as error:
+        log = log_path.read_text(encoding="utf-8", errors="replace") if log_path.is_file() else ""
+        details = (completed.stdout + "\n" + completed.stderr + "\n" + log).strip()
+        for sensitive in (api_key, endpoint, str(workspace)):
+            details = details.replace(sensitive, "<REDACTED>")
+        raise BenchmarkError(f"{error}; oracle_log={details[-2_000:]}") from error
     return measured
 
 
@@ -253,6 +263,21 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
             pair["sample"] = index - arguments.warmups
             raw.append(pair)
     baseline = tomllib.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    aggregates = {
+        "immich_rs": aggregate(raw, "immich_rs"),
+        "immich_go": aggregate(raw, "immich_go"),
+    }
+    rust_wall = aggregates["immich_rs"]["wall_time_seconds"]
+    go_wall = aggregates["immich_go"]["wall_time_seconds"]
+    improvement = 100 * (go_wall["median"] - rust_wall["median"]) / go_wall["median"]
+    if improvement >= 10 and rust_wall["max"] < go_wall["min"]:
+        claims = [
+            f"On this exact {media_bytes:,}-byte four-asset synthetic disposable archive, "
+            f"immich-rs median wall time was {improvement:.1f}% lower than immich-go v0.32.0; "
+            "this is not a large-library or production claim."
+        ]
+    else:
+        claims = ["Raw measurements only; no performance improvement is claimed."]
     return {
         "schema": "phase5-benchmark-report-v1",
         "manifest": {
@@ -280,8 +305,8 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
             },
         },
         "raw_samples": raw,
-        "aggregate": {"immich_rs": aggregate(raw, "immich_rs"), "immich_go": aggregate(raw, "immich_go")},
-        "claims": ["Raw measurements only; no performance improvement is claimed."],
+        "aggregate": aggregates,
+        "claims": claims,
     }
 
 

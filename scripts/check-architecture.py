@@ -96,6 +96,7 @@ def check() -> list[str]:
             REPOSITORY_ROOT / "scripts" / "benchmark-phase2.py",
             REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh",
             REPOSITORY_ROOT / "scripts" / "prepare-phase2-benchmark-corpus.sh",
+            REPOSITORY_ROOT / "scripts" / "run-disposable-archive.sh",
         )
     ).casefold()
     forbidden_transport = ("--network host", "host.docker.internal", "host-gateway")
@@ -106,6 +107,16 @@ def check() -> list[str]:
     )
     if '--target-container "$SERVER"' not in harness or "--target-port" in harness:
         failures.append("containerized loopback forwarder is not bound to disposable Immich")
+    archive_harness = (
+        REPOSITORY_ROOT / "scripts" / "run-disposable-archive.sh"
+    ).read_text(encoding="utf-8")
+    if (
+        '--target-container "$SERVER"' not in archive_harness
+        or "--network host" in archive_harness
+        or "asset.update" in archive_harness
+        or "asset.delete" in archive_harness
+    ):
+        failures.append("archive disposable gate violates its isolation boundary")
     materializer = (REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh").read_text(
         encoding="utf-8"
     )

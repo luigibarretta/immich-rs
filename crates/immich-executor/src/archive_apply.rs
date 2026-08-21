@@ -1,6 +1,8 @@
 use std::path::{Component, Path, PathBuf};
 
-use immich_rs_client::{ArchiveDownload, ImmichReadClient, NegotiatedServer};
+use immich_rs_client::{
+    ArchiveDownload, ClientError, ClientErrorClass, ImmichReadClient, NegotiatedServer,
+};
 use immich_rs_core::{
     ARCHIVE_APPLY_REPORT_SCHEMA_VERSION, ArchiveApplyReport, ArchiveAsset, ArchiveManifest,
     Cancellation, CancellationToken,
@@ -81,7 +83,7 @@ async fn download_asset(
     let mut download = client
         .download_original(negotiated, &asset.asset_id, cancellation)
         .await
-        .map_err(|_| ExecutorError::new(ExecutorErrorClass::Client))?;
+        .map_err(map_client_error)?;
     validate_content_length(&download, asset.byte_len)?;
     let mut file = OpenOptions::new()
         .create_new(true)
@@ -94,7 +96,7 @@ async fn download_asset(
     while let Some(chunk) = download
         .next_chunk(cancellation)
         .await
-        .map_err(|_| ExecutorError::new(ExecutorErrorClass::Client))?
+        .map_err(map_client_error)?
     {
         byte_len = byte_len
             .checked_add(chunk.len() as u64)
@@ -114,6 +116,14 @@ async fn download_asset(
         return Err(ExecutorError::new(ExecutorErrorClass::Client));
     }
     Ok(())
+}
+
+fn map_client_error(error: ClientError) -> ExecutorError {
+    if error.class() == ClientErrorClass::Cancelled {
+        ExecutorError::new(ExecutorErrorClass::Cancelled)
+    } else {
+        ExecutorError::new(ExecutorErrorClass::Client)
+    }
 }
 
 fn validate_content_length(download: &ArchiveDownload, expected: u64) -> Result<(), ExecutorError> {

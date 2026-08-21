@@ -62,6 +62,20 @@ def check() -> list[str]:
     )
     if any(token in takeout_source.casefold() for token in forbidden_takeout_tokens):
         failures.append("Google Takeout plan source can reach a mutation capability")
+    archive_sources = "\n".join(
+        (REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / name).read_text(
+            encoding="utf-8"
+        )
+        for name in ("archive_plan.rs", "archive_apply.rs")
+    ).casefold()
+    forbidden_archive_tokens = (
+        "authorize_upload",
+        "immichuploadclient",
+        "apply_upload",
+        "create_upload_plan",
+    )
+    if any(token in archive_sources for token in forbidden_archive_tokens):
+        failures.append("archive command can construct a server mutation capability")
     client_root = REPOSITORY_ROOT / "crates" / "immich-client" / "src"
     client_source = (client_root / "lib.rs").read_text(encoding="utf-8")
     upload_source = (client_root / "upload.rs").read_text(encoding="utf-8")

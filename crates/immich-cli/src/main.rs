@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 
 mod apple_photos;
+mod archive_apply;
+mod archive_plan;
 mod args;
 mod failure;
 mod folder;
@@ -61,26 +63,34 @@ async fn run_plan(arguments: &[OsString]) -> Result<(), CliFailure> {
         {
             upload_plan::run(args::parse_upload_folder(&arguments[2..])?).await
         }
+        Some("archive")
+            if arguments.get(1).and_then(|argument| argument.to_str()) == Some("immich") =>
+        {
+            archive_plan::run(args::parse_archive_plan(&arguments[2..])?).await
+        }
         _ => Err(CliFailure::usage(
-            "plan supports 'folder', 'google-takeout', 'apple-photos' and 'upload folder'",
+            "plan supports folder, google-takeout, apple-photos, upload folder and archive immich",
         )),
     }
 }
 
 async fn run_apply(arguments: &[OsString]) -> Result<(), CliFailure> {
-    if arguments.first().and_then(|argument| argument.to_str()) != Some("upload") {
-        return Err(CliFailure::usage("apply supports only 'upload'"));
-    }
-    let request = args::parse_apply(&arguments[1..])?;
-    if request.dry_run {
-        upload_dry_run::run(&request)
-    } else {
-        upload_apply::run(request).await
+    match arguments.first().and_then(|argument| argument.to_str()) {
+        Some("upload") => {
+            let request = args::parse_apply(&arguments[1..])?;
+            if request.dry_run {
+                upload_dry_run::run(&request)
+            } else {
+                upload_apply::run(request).await
+            }
+        }
+        Some("archive") => archive_apply::run(args::parse_archive_apply(&arguments[1..])?).await,
+        _ => Err(CliFailure::usage("apply supports upload and archive")),
     }
 }
 
 fn print_help() {
     println!(
-        "immich-rs {VERSION}\n\nBounded read-only planning and disposable Phase-2 folder upload\n\nUsage:\n  immich-rs plan folder [OPTIONS] <PATH>\n  immich-rs plan google-takeout [OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan apple-photos [APPLE_OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan upload folder --server <LOOPBACK_URL> [OPTIONS] <PATH>\n  immich-rs apply upload --dry-run --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n  immich-rs apply upload --server <LOOPBACK_URL> --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n\nApple options:\n  --album-mode <none|folder|path>\n  --album-path-joiner <TEXT>\n\nGoogle Takeout and Apple planning accept one directory or up to 64 independent ZIP parts and never apply them.\nRepeat non-default scan limits when applying a folder upload plan. The API key is read only from IMMICH_RS_API_KEY. Phase 2 rejects non-loopback servers.\nNo delete, replace or metadata mutation command exists."
+        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs plan folder [OPTIONS] <PATH>\n  immich-rs plan google-takeout [OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan apple-photos [APPLE_OPTIONS] <DIRECTORY|ZIP...>\n  immich-rs plan upload folder --server <LOOPBACK_URL> [OPTIONS] <PATH>\n  immich-rs plan archive immich --server <LOOPBACK_URL> [ARCHIVE_OPTIONS]\n  immich-rs apply upload --dry-run --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n  immich-rs apply upload --server <LOOPBACK_URL> --plan <FILE> --source <PATH> --checkpoint <FILE> [SCAN_OPTIONS]\n  immich-rs apply archive --server <LOOPBACK_URL> --manifest <FILE> --destination <PATH>\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n\nApple options:\n  --album-mode <none|folder|path>\n  --album-path-joiner <TEXT>\n\nArchive options:\n  --selection <timeline|archive|hidden|all>\n  --include-trashed\n  --page-size <1..1000>\n  --max-assets <COUNT>\n\nGoogle Takeout and Apple planning accept one directory or up to 64 independent ZIP parts and never apply them.\nThe API key is read only from IMMICH_RS_API_KEY. Server commands reject non-loopback origins.\nNo delete, replace or metadata mutation command exists."
     );
 }

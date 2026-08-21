@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use immich_rs_executor::UploadExecutionConfig;
+use immich_rs_executor::{ArchivePlanningConfig, ArchiveSelection, UploadExecutionConfig};
 use immich_rs_sources::{AlbumMode, ApplePhotosScanConfig, FolderScanConfig, TakeoutScanConfig};
 
 use crate::failure::CliFailure;
@@ -36,6 +36,17 @@ pub struct ApplyRequest {
     pub server: Option<String>,
     pub dry_run: bool,
     pub config: UploadExecutionConfig,
+}
+
+pub struct ArchivePlanRequest {
+    pub server: String,
+    pub config: ArchivePlanningConfig,
+}
+
+pub struct ArchiveApplyRequest {
+    pub manifest: PathBuf,
+    pub destination: PathBuf,
+    pub server: String,
 }
 
 pub fn parse_folder(arguments: &[OsString]) -> Result<FolderRequest, CliFailure> {
@@ -241,6 +252,71 @@ pub fn parse_apply(arguments: &[OsString]) -> Result<ApplyRequest, CliFailure> {
         server,
         dry_run,
         config,
+    })
+}
+
+pub fn parse_archive_plan(arguments: &[OsString]) -> Result<ArchivePlanRequest, CliFailure> {
+    let mut server = None;
+    let mut config = ArchivePlanningConfig::default();
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].to_str() {
+            Some("--server") => server = Some(string_value(arguments, index, "--server")?),
+            Some("--selection") => {
+                config.selection = match string_value(arguments, index, "--selection")?.as_str() {
+                    "timeline" => ArchiveSelection::Timeline,
+                    "archive" => ArchiveSelection::Archive,
+                    "hidden" => ArchiveSelection::Hidden,
+                    "all" => ArchiveSelection::All,
+                    _ => return Err(CliFailure::usage("invalid archive selection")),
+                };
+            }
+            Some("--include-trashed") if !config.include_trashed => {
+                config.include_trashed = true;
+                index += 1;
+                continue;
+            }
+            Some("--page-size") => {
+                config.page_size = usize_value(arguments, index, "--page-size")?;
+            }
+            Some("--max-assets") => {
+                config.max_assets = usize_value(arguments, index, "--max-assets")?;
+            }
+            _ => return Err(CliFailure::usage("unsupported archive plan option")),
+        }
+        index += 2;
+    }
+    config
+        .validate()
+        .map_err(|_| CliFailure::usage("invalid archive resource limits"))?;
+    Ok(ArchivePlanRequest {
+        server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
+        config,
+    })
+}
+
+pub fn parse_archive_apply(arguments: &[OsString]) -> Result<ArchiveApplyRequest, CliFailure> {
+    let mut manifest = None;
+    let mut destination = None;
+    let mut server = None;
+    let mut index = 0;
+    while index < arguments.len() {
+        match arguments[index].to_str() {
+            Some("--manifest") => {
+                manifest = Some(path_value(arguments, index, "--manifest")?);
+            }
+            Some("--destination") => {
+                destination = Some(path_value(arguments, index, "--destination")?);
+            }
+            Some("--server") => server = Some(string_value(arguments, index, "--server")?),
+            _ => return Err(CliFailure::usage("unsupported archive apply option")),
+        }
+        index += 2;
+    }
+    Ok(ArchiveApplyRequest {
+        manifest: manifest.ok_or_else(|| CliFailure::usage("--manifest is required"))?,
+        destination: destination.ok_or_else(|| CliFailure::usage("--destination is required"))?,
+        server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
     })
 }
 

@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::{self, BufReader, Write};
 use std::path::Path;
 
-use immich_rs_core::UploadPlan;
+use immich_rs_core::{ArchiveManifest, UploadPlan};
 
 use crate::failure::CliFailure;
 
@@ -34,4 +34,25 @@ pub fn load_upload_plan(path: &Path) -> Result<UploadPlan, CliFailure> {
     plan.validate()
         .map_err(|_| CliFailure::usage("invalid upload plan"))?;
     Ok(plan)
+}
+
+pub fn load_archive_manifest(path: &Path) -> Result<ArchiveManifest, CliFailure> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|_| CliFailure::usage("cannot read archive manifest"))?;
+    if !metadata.file_type().is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.len() == 0
+        || metadata.len() > MAX_PLAN_BYTES
+    {
+        return Err(CliFailure::usage(
+            "archive manifest must be a bounded regular file",
+        ));
+    }
+    let file = File::open(path).map_err(|_| CliFailure::usage("cannot read archive manifest"))?;
+    let manifest: ArchiveManifest = serde_json::from_reader(BufReader::new(file))
+        .map_err(|_| CliFailure::usage("invalid archive manifest JSON"))?;
+    manifest
+        .validate()
+        .map_err(|_| CliFailure::usage("invalid archive manifest"))?;
+    Ok(manifest)
 }

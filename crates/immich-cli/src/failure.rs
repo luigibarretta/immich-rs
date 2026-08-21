@@ -8,6 +8,7 @@ const AUTH_EXIT: u8 = 5;
 const COMPATIBILITY_EXIT: u8 = 6;
 const NETWORK_EXIT: u8 = 7;
 const CHECKPOINT_EXIT: u8 = 8;
+const DESTINATION_EXIT: u8 = 9;
 const INVARIANT_EXIT: u8 = 70;
 const CANCELLED_EXIT: u8 = 130;
 
@@ -79,6 +80,7 @@ impl CliFailure {
         let exit_code = match error.class() {
             ExecutorErrorClass::Cancelled => CANCELLED_EXIT,
             ExecutorErrorClass::Checkpoint => CHECKPOINT_EXIT,
+            ExecutorErrorClass::Destination => DESTINATION_EXIT,
             ExecutorErrorClass::SourceChanged
             | ExecutorErrorClass::SourceDiagnostics
             | ExecutorErrorClass::UnsupportedMetadata => SOURCE_EXIT,

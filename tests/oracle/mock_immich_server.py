@@ -21,8 +21,11 @@ SYNTHETIC_API_KEY = "synthetic-oracle-key"
 MAX_REQUEST_BODY_BYTES = 1_048_576
 RESPONSE_FIXTURE_PATH = Path(__file__).resolve().parent / "server-fixtures" / "immich-v3.1.json"
 SUPPORT = runpy.run_path(str(Path(__file__).resolve().with_name("mock_support.py")))
+ARCHIVE = runpy.run_path(str(Path(__file__).resolve().with_name("mock_archive.py")))
 MockState = SUPPORT["MockState"]
 is_mutating_request = SUPPORT["is_mutating_request"]
+archive_search_response = ARCHIVE["archive_search_response"]
+archive_original = ARCHIVE["archive_original"]
 
 
 class MockConfigurationError(ValueError):
@@ -166,6 +169,17 @@ class _Handler(BaseHTTPRequestHandler):
             pass
         self.connection.close()
 
+    def _bytes_response(self, payload: bytes) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(len(payload)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        try:
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     def _dispatch(self) -> None:
         path, query = _normalized_target(self.path)
         body = self._read_body()
@@ -267,6 +281,8 @@ class _Handler(BaseHTTPRequestHandler):
             )
         elif path == "/api/assets/statistics" and self.command == "GET":
             self._json_response(200, responses["asset_statistics"])
+        elif path == "/api/search/metadata" and self.command == "POST" and scenario.get("archive_assets") is not None:
+            self._json_response(200, archive_search_response(scenario, json_body))
         elif path.startswith("/api/search/") and self.command == "POST":
             self._json_response(200, responses["search_result"])
         elif path == "/api/assets/bulk-upload-check" and self.command == "POST":
@@ -287,6 +303,12 @@ class _Handler(BaseHTTPRequestHandler):
             if status == "created":
                 self.state.record_commit(request)
             self._json_response(201, {"id": asset_id, "status": status})
+        elif path.startswith("/api/assets/") and path.endswith("/original") and self.command == "GET":
+            original = archive_original(scenario, path)
+            if original is None:
+                self._json_response(404, {"message": "synthetic asset missing"})
+            else:
+                self._bytes_response(original)
         elif mutating:
             self.state.record_commit(request)
             self._json_response(200, {"status": "synthetic-commit"})

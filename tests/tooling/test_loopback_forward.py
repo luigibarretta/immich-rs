@@ -23,20 +23,35 @@ class LoopbackForwardTests(unittest.TestCase):
     def test_copy_stream_transfers_more_than_one_buffer(self) -> None:
         source_reader, source_writer = socket.socketpair()
         destination_reader, destination_writer = socket.socketpair()
+        for endpoint in (source_reader, source_writer, destination_reader, destination_writer):
+            self.addCleanup(endpoint.close)
+        source_writer.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8_192)
+        destination_writer.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8_192)
+        destination_reader.settimeout(5)
         payload = bytes(range(251)) * 700
+        send_errors: list[OSError] = []
+
+        def send_payload() -> None:
+            try:
+                source_writer.sendall(payload)
+                source_writer.shutdown(socket.SHUT_WR)
+            except OSError as error:
+                send_errors.append(error)
+
         worker = threading.Thread(
             target=FORWARDER["copy_stream"], args=(source_reader, destination_writer)
         )
+        sender = threading.Thread(target=send_payload)
         worker.start()
-        source_writer.sendall(payload)
-        source_writer.shutdown(socket.SHUT_WR)
+        sender.start()
         received = bytearray()
         while chunk := destination_reader.recv(65_536):
             received.extend(chunk)
+        sender.join(timeout=2)
         worker.join(timeout=2)
-        for endpoint in (source_reader, source_writer, destination_reader, destination_writer):
-            endpoint.close()
+        self.assertFalse(sender.is_alive())
         self.assertFalse(worker.is_alive())
+        self.assertEqual(send_errors, [])
         self.assertEqual(bytes(received), payload)
 
 

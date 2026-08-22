@@ -114,40 +114,6 @@ fn unicode_paths_are_normalized_to_nfc() -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
-#[cfg(unix)]
-#[test]
-fn unicode_normalization_collisions_fail_closed_with_a_rule_id()
--> Result<(), Box<dyn std::error::Error>> {
-    let directory = TestDirectory::new("unicode-collision")?;
-    directory.write("café.png", b"nfc")?;
-    directory.write("cafe\u{301}.png", b"nfd")?;
-    let plan = scan(&directory.path)?;
-    assert!(plan.assets.is_empty());
-    assert!(
-        plan.errors
-            .iter()
-            .any(|error| error.rule_id == rule_id::UNICODE_COLLISION)
-    );
-    Ok(())
-}
-
-#[cfg(unix)]
-#[test]
-fn unicode_sidecar_collisions_fail_closed() -> Result<(), Box<dyn std::error::Error>> {
-    let directory = TestDirectory::new("unicode-sidecar-collision")?;
-    directory.write("caf\u{e9}.png", b"image")?;
-    directory.write("caf\u{e9}.png.json", b"composed")?;
-    directory.write("cafe\u{301}.png.json", b"decomposed")?;
-    let plan = scan(&directory.path)?;
-    assert!(plan.assets[0].metadata.is_empty());
-    assert!(
-        plan.errors
-            .iter()
-            .any(|error| error.rule_id == rule_id::UNICODE_COLLISION)
-    );
-    Ok(())
-}
-
 #[test]
 fn overlong_paths_are_rejected_with_the_specific_limit_rule()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -171,28 +137,6 @@ fn overlong_paths_are_rejected_with_the_specific_limit_rule()
         plan.errors
             .iter()
             .any(|error| error.rule_id == rule_id::PATH_LIMIT_EXCEEDED)
-    );
-    Ok(())
-}
-
-#[test]
-fn collisions_and_duplicate_basenames_are_deterministic() -> Result<(), Box<dyn std::error::Error>>
-{
-    let directory = TestDirectory::new("collisions")?;
-    directory.write("Case.JPG", b"upper")?;
-    directory.write("case.jpg", b"lower")?;
-    directory.write("one/repeat.png", b"one")?;
-    directory.write("two/repeat.png", b"two")?;
-    let plan = scan(&directory.path)?;
-    assert!(
-        plan.errors
-            .iter()
-            .any(|error| error.rule_id == rule_id::CASE_COLLISION)
-    );
-    assert!(
-        plan.warnings
-            .iter()
-            .any(|warning| warning.rule_id == rule_id::DUPLICATE_BASENAME)
     );
     Ok(())
 }

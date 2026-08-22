@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 
 use std::fs;
+use std::fs::OpenOptions;
+use std::path::Path;
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -28,6 +30,23 @@ impl Drop for TestDirectory {
     fn drop(&mut self) {
         let _ignored = fs::remove_dir_all(&self.0);
     }
+}
+
+fn supports_distinct_case_paths(root: &Path) -> Result<bool, Box<dyn std::error::Error>> {
+    let lower = root.join(".immich-rs-case-probe");
+    let upper = root.join(".IMMICH-RS-CASE-PROBE");
+    fs::write(&lower, b"probe")?;
+    let result = OpenOptions::new().write(true).create_new(true).open(&upper);
+    let supported = match result {
+        Ok(_) => true,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => false,
+        Err(error) => return Err(error.into()),
+    };
+    fs::remove_file(&lower)?;
+    if supported {
+        fs::remove_file(&upper)?;
+    }
+    Ok(supported)
 }
 
 #[test]
@@ -60,9 +79,10 @@ fn mutation_commands_fail_closed() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn synthetic_folder_fixture_matches_the_versioned_golden() -> Result<(), Box<dyn std::error::Error>>
-{
+fn synthetic_folder_fixture_is_exact_or_fails_closed_on_host_limit()
+-> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new()?;
+    let distinct_case_paths = supports_distinct_case_paths(&directory.0)?;
     let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(std::path::Path::parent)
@@ -74,6 +94,12 @@ fn synthetic_folder_fixture_matches_the_versioned_golden() -> Result<(), Box<dyn
         .arg(fixture.join("manifest.json"))
         .arg(&materialized)
         .output()?;
+    if !distinct_case_paths {
+        assert_eq!(materialization_output.status.code(), Some(USAGE_EXIT_CODE));
+        assert!(materialization_output.stdout.is_empty());
+        assert!(!materialization_output.stderr.is_empty());
+        return Ok(());
+    }
     assert!(materialization_output.status.success());
     assert!(materialization_output.stdout.is_empty());
     assert!(materialization_output.stderr.is_empty());

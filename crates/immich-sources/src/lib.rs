@@ -298,6 +298,8 @@ mod apple_archive_tests;
 #[cfg(test)]
 mod apple_tests;
 #[cfg(test)]
+mod filesystem_tests;
+#[cfg(test)]
 mod resolved_tests;
 #[cfg(test)]
 mod takeout_archive_tests;

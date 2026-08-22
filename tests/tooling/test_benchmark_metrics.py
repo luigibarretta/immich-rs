@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,19 @@ class BenchmarkMetricTests(unittest.TestCase):
         ):
             self.assertIn(field, measured)
             self.assertGreaterEqual(measured[field], 0)
+
+    def test_falls_back_when_waitid_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="immich-rs-metrics-") as temporary:
+            with mock.patch.object(metrics.os, "waitid", None, create=True):
+                result, measured = metrics.run_command(
+                    [sys.executable, "-c", "print('portable wait')"],
+                    Path(temporary),
+                    dict(os.environ),
+                    10,
+                )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.strip(), "portable wait")
+        self.assertGreaterEqual(measured["wall_time_seconds"], 0)
 
 
 if __name__ == "__main__":

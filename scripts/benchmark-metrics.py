@@ -66,6 +66,20 @@ def _captured_text(handle: Any, label: str) -> str:
     return data.decode("utf-8", errors="replace")
 
 
+def _process_exited(process: subprocess.Popen[Any]) -> bool:
+    waitid = getattr(os, "waitid", None)
+    constants = tuple(
+        getattr(os, name, None) for name in ("P_PID", "WEXITED", "WNOHANG", "WNOWAIT")
+    )
+    if callable(waitid) and all(value is not None for value in constants):
+        pid_type, exited, no_hang, no_reap = constants
+        try:
+            return waitid(pid_type, process.pid, exited | no_hang | no_reap) is not None
+        except (ChildProcessError, OSError):
+            pass
+    return process.poll() is not None
+
+
 def run_command(
     command: list[str],
     cwd: Path,
@@ -98,12 +112,7 @@ def run_command(
         deadline = time.monotonic() + timeout_seconds
         while True:
             _sample_process(process.pid, peaks)
-            completed = os.waitid(
-                os.P_PID,
-                process.pid,
-                os.WEXITED | os.WNOHANG | os.WNOWAIT,
-            )
-            if completed is not None:
+            if _process_exited(process):
                 break
             if time.monotonic() >= deadline:
                 process.terminate()

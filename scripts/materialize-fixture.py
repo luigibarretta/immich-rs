@@ -161,13 +161,16 @@ def _materialize_item(root: Path, item: dict[str, object]) -> None:
         content = item.get("content")
         if not isinstance(content, str) or len(content.encode("utf-8")) > 65_536:
             raise FixtureError("text fixture content must be bounded UTF-8")
-        destination.write_text(content, encoding="utf-8", newline="\n")
+        with destination.open("xb") as handle:
+            handle.write(content.encode("utf-8"))
     elif recipe == "synthetic_png":
-        destination.write_bytes(_synthetic_png(item))
+        with destination.open("xb") as handle:
+            handle.write(_synthetic_png(item))
     elif recipe == "synthetic_padded_png":
         _write_padded_png(destination, item)
     elif recipe == "synthetic_isobmff":
-        destination.write_bytes(_synthetic_isobmff(item))
+        with destination.open("xb") as handle:
+            handle.write(_synthetic_isobmff(item))
     elif recipe == "symlink":
         target = item.get("target")
         target_path = _portable_relative_path(target)

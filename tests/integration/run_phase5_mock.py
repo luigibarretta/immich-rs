@@ -368,7 +368,7 @@ def main() -> int:
         print("immich-rs test binary is missing", file=sys.stderr)
         return 2
     with tempfile.TemporaryDirectory(prefix="immich-rs-phase5-mock-") as temporary:
-        workspace = Path(temporary)
+        workspace = Path(temporary).resolve(strict=True)
         exercise_convergence(binary, workspace)
         exercise_secret_file(binary, workspace)
         exercise_conflict(binary, workspace)

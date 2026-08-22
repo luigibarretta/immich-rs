@@ -80,6 +80,13 @@ jobs:
           chmod 0755 deploy deploy/example-source
           chmod 0644 deploy/immich-rs.example.toml deploy/example-source/synthetic-container.jpg
           mkdir -p .artifacts/container
+          case "$PWD" in
+            /workspace/*) ;;
+            *) echo "runner checkout is outside the bounded workspace" >&2; exit 1 ;;
+          esac
+          WORKSPACE_VOLUME=$(docker inspect "$HOSTNAME" --format \
+            '{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Name}}{{end}}{{end}}')
+          test -n "$WORKSPACE_VOLUME"
           docker buildx build --load --platform linux/amd64 \
             --build-arg "VCS_REF=${{ github.sha }}" \
             --tag "$IMAGE" --file Containerfile .
@@ -88,13 +95,16 @@ jobs:
             docker run --rm --network none --read-only --user 65532:65532 \
               --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 \
               --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
-              -e IMMICH_RS_CONFIG=/config/immich-rs.toml \
-              -v "$PWD/deploy/immich-rs.example.toml:/config/immich-rs.toml:ro" \
-              -v "$PWD/deploy/example-source:/source:ro" \
+              -e "IMMICH_RS_CONFIG=$PWD/deploy/immich-rs.example.toml" \
+              -e "IMMICH_RS_SOURCE=$PWD/deploy/example-source" \
+              -v "$WORKSPACE_VOLUME:/workspace:ro" \
               "$IMAGE" plan folder > ".artifacts/container/$output.json"
           done
           cmp .artifacts/container/first.json .artifacts/container/second.json
-          IMMICH_RS_IMAGE="$IMAGE" docker compose run --rm immich-rs \
+          IMMICH_RS_IMAGE="$IMAGE" docker compose run --rm \
+            -e "IMMICH_RS_CONFIG=$PWD/deploy/immich-rs.example.toml" \
+            -e "IMMICH_RS_SOURCE=$PWD/deploy/example-source" \
+            -v "$WORKSPACE_VOLUME:/workspace:ro" immich-rs \
             > .artifacts/container/compose.json
           cmp .artifacts/container/first.json .artifacts/container/compose.json
       - name: Remove exact test-only container resources

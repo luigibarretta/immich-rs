@@ -1,0 +1,38 @@
+schema_version = 1
+
+[scan]
+label = "synthetic-container-source"
+source = "/source"
+buffer_bytes = 65536
+max_entries = 100000
+max_directory_entries = 10000
+max_path_bytes = 4096
+case_sensitive = true
+max_archives = 64
+max_archive_entry_bytes = 1099511627776
+max_compression_ratio = 200
+compression_ratio_grace_bytes = 1048576
+
+[apple_photos]
+album_mode = "none"
+album_path_joiner = " - "
+
+[upload]
+source = "/source"
+plan = "/state/upload-plan.json"
+checkpoint = "/state/checkpoint.sqlite"
+dry_run = true
+verification_buffer_bytes = 65536
+concurrency = 1
+max_attempts_per_operation = 3
+max_retries_per_run = 100
+retry_base_delay_ms = 100
+retry_delay_cap_ms = 10000
+
+[archive]
+selection = "timeline"
+include_trashed = false
+page_size = 100
+max_assets = 100000
+manifest = "/state/archive-manifest.json"
+destination = "/output"

@@ -1,0 +1,42 @@
+---
+name: container-multiarch
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-container-multiarch
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: docker
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate the exact source container contract
+        run: |
+          python3 scripts/check-container.py
+          bash -n scripts/build-multiarch-container.sh
+          docker compose config --quiet
+      - name: Build the attested amd64 and arm64 OCI archive
+        run: |
+          mkdir -p .artifacts/container
+          scripts/build-multiarch-container.sh \
+            --output .artifacts/container/immich-rs-${{ github.sha }}.oci.tar \
+            --report .artifacts/container/report-${{ github.sha }}.json \
+            --revision "${{ github.sha }}"
+      - name: Preserve only bounded multiarch evidence
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: container-multiarch-${{ github.sha }}
+          path: .artifacts/container/report-${{ github.sha }}.json
+          retention-days: 30
+      - name: Remove the unsigned OCI archive
+        if: always()
+        run: find .artifacts/container -type f -name '*.oci.tar' -delete 2>/dev/null || true

@@ -1,0 +1,8 @@
+**
+!Cargo.lock
+!Cargo.toml
+!Containerfile
+!LICENSE
+!NOTICE.md
+!crates/
+!crates/**

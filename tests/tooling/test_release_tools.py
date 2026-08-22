@@ -63,10 +63,32 @@ class ReleaseToolTests(unittest.TestCase):
                     ),
                     encoding="utf-8",
                 )
+            container_archive = root / f"immich-rs-{version}-linux-multiarch.oci.tar"
+            container_archive.write_bytes(b"synthetic multiarch OCI archive")
+            (root / f"immich-rs-{version}-linux-multiarch.container.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "immich-rs-container-build-v1",
+                        "version": version,
+                        "commit_sha": revision,
+                        "archive_sha256": FINALIZE.sha256(container_archive),
+                        "archive_bytes": container_archive.stat().st_size,
+                        "platforms": [
+                            {
+                                "os": "linux",
+                                "architecture": architecture,
+                                "manifest_digest": "sha256:" + digest * 64,
+                            }
+                            for architecture, digest in (("amd64", "1"), ("arm64", "2"))
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
             output = root / "SHA256SUMS"
             FINALIZE.finalize(root, version, revision, output)
             lines = output.read_text(encoding="utf-8").splitlines()
-            self.assertEqual(len(lines), 15)
+            self.assertEqual(len(lines), 17)
             self.assertEqual(lines, sorted(lines, key=lambda line: line.split("  ", 1)[1]))
 
     def test_native_package_is_byte_reproducible(self) -> None:

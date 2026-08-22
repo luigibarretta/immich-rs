@@ -71,8 +71,9 @@ No supported release or production cutover exists. Phase 0–5 read-only gates,
 the disposable upload vertical and both Phase 6 scale gates are implemented,
 but ADR-0014/ADR-0025 require five native target builds and an explicitly
 provisioned OpenPGP release identity before an RC can exist. The repository now
-contains a fail-closed signed-tag pipeline, deterministic packaging, CycloneDX
-SBOM/provenance checks and a [migration/rollback guide](docs/migration-from-immich-go.md).
+contains a fail-closed signed-tag pipeline, deterministic native packaging, a
+hardened multiarch OCI candidate with SPDX SBOM/SLSA provenance checks and a
+[migration/rollback guide](docs/migration-from-immich-go.md).
 It cannot publish until the missing native runners and protected signing
 material are supplied by the maintainer.
 
@@ -100,9 +101,11 @@ material are supplied by the maintainer.
 - Apple Photos directory or split-ZIP planning with preserve-all variants,
   XMP, Live Photos, known-noise diagnostics and explicit album modes;
 - read-only Immich inventory and original-byte archive with immutable
-  `archive-manifest-v1`, atomic writes and verified idempotent resume.
+  `archive-manifest-v1`, atomic writes and verified idempotent resume;
 - strict schema-v1 TOML and `IMMICH_RS_*` configuration with deterministic
-  `CLI > environment > file > default` precedence and redacted inspection.
+  `CLI > environment > file > default` precedence and redacted inspection;
+- non-root, shell-free `linux/amd64` and `linux/arm64` OCI packaging plus a
+  network-disabled Compose profile for offline planning.
 
 Render the effective non-secret configuration:
 
@@ -111,6 +114,20 @@ immich-rs --config /path/to/immich-rs.toml config show
 ```
 
 See the complete [CLI/environment/TOML matrix](docs/configuration.md).
+
+Build and run the hardened offline Compose planner:
+
+```bash
+IMMICH_RS_SOURCE_PATH=/absolute/path/to/authorized-source \
+  docker compose build --pull
+IMMICH_RS_SOURCE_PATH=/absolute/path/to/authorized-source \
+  docker compose run --rm immich-rs > normalized-plan.json
+docker compose down --volumes --remove-orphans
+```
+
+No supported image is published yet. The default service has no network,
+runs as UID/GID 65532 and mounts the source read-only. Read the full
+[container and Compose guide](docs/container.md) before overriding it.
 
 Run a plan:
 
@@ -258,6 +275,7 @@ python3 scripts/check-disposable-evidence.py
 python3 scripts/check-phase5-evidence.py
 python3 scripts/check-phase6-evidence.py
 python3 scripts/check-release.py
+python3 scripts/check-container.py
 python3 scripts/check-fixtures.py
 python3 scripts/check-loc.py
 python3 -m unittest discover -s tests/tooling -p 'test_*.py'

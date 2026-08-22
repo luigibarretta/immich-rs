@@ -27,13 +27,16 @@ must be built and tested on native Apple hosts.
 4. Create an annotated signed tag such as `v0.1.0-rc.1`; verify it locally with
    `git verify-tag` against the committed public key.
 5. Push only the signed tag. The release workflow must build/test all five
-   native targets, generate CycloneDX SBOMs and provenance, create deterministic
-   archives, sign `SHA256SUMS` and verify the detached signature.
+   native targets, generate CycloneDX SBOMs, build the attested amd64/arm64 OCI
+   archive, create deterministic native archives and provenance, sign
+   `SHA256SUMS` and verify the detached signature.
 6. Download the workflow artifact into a new directory. Verify the signature,
    every checksum, SBOM schema, provenance source SHA and `immich-rs --version`
    before publishing the immutable candidate.
 7. Record the exact tag, workflow run and artifact digests in `ROADMAP.md` and
    project memory. Never replace an artifact under an existing tag.
 
-Any missing target, signature, SBOM, provenance statement or compatibility
-gate aborts publication. `latest` aliases are not release evidence.
+Any missing native or OCI target, signature, SBOM, provenance statement or
+compatibility gate aborts publication. The multiarch archive and its verified
+container report are covered by the signed checksum manifest. `latest`
+aliases are not release evidence.

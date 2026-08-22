@@ -40,6 +40,9 @@ def validate() -> None:
         "RELEASE_SIGNING_FINGERPRINT",
         "gpg --batch --verify",
         "merge-multiple: true",
+        "needs: [native, container]",
+        "build-multiarch-container.sh",
+        "linux-multiarch.oci.tar",
         "cancel-in-progress: false",
     )
     if any(value not in workflow for value in required):
@@ -58,7 +61,11 @@ def validate() -> None:
     if '"git", "verify-tag"' not in preflight or "release-signing-key.asc" not in preflight:
         raise ReleaseCheckError("signed-tag preflight drifted")
     finalizer = read("scripts/finalize-release.py")
-    if "SHA256SUMS" not in finalizer or "immich-rs-build-provenance-v1" not in finalizer:
+    if (
+        "SHA256SUMS" not in finalizer
+        or "immich-rs-build-provenance-v1" not in finalizer
+        or "immich-rs-container-build-v1" not in finalizer
+    ):
         raise ReleaseCheckError("release checksum or provenance finalizer drifted")
 
 

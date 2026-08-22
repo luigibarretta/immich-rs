@@ -15,3 +15,9 @@ __pycache__/
 # redistributable. Never commit real Immich exports or user media.
 /fixtures/private/
 /benchmarks/results/
+
+# Local container configuration and plans may contain authorized private paths
+# or credentials. Only the synthetic `.example` files are commit-safe.
+/deploy/immich-rs.env
+/deploy/immich-rs.toml
+/normalized-plan.json

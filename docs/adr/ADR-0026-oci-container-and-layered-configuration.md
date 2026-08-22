@@ -37,8 +37,10 @@ for the default read-only planner and read-only source/config mounts.
 
 Container images are secondary packaging. They use immutable version or
 digest references and are not published from ordinary push CI. A manual
-multiarch build proves both Linux variants without publishing them. A signed
-release workflow may publish the exact multiarch image only after all
+multiarch build requires a clean checkout at the declared revision and proves
+both Linux variants without publishing them. Its per-platform SLSA provenance
+binds the revision through Git metadata, the build argument and OCI label. A
+signed release workflow may publish the exact multiarch image only after all
 ADR-0025 native artifacts, signing and provenance gates pass. No `latest` tag
 is a supported deployment input.
 
@@ -61,6 +63,6 @@ precedence, strict unknown-key rejection, redacted effective output and secret
 file behavior. Push CI builds and runs the amd64 image under the documented
 hardening controls and validates Compose. The manual container workflow builds
 both OCI platforms from the exact SHA, records metadata and leaves no image or
-builder resource behind. Architecture checks enforce pinned bases, non-root
-execution, read-only Compose settings, no `latest` tag and no production host
-network access.
+builder resource behind. Architecture checks enforce pinned bases, a pinned
+SBOM generator, exact provenance identity, non-root execution, read-only
+Compose settings, no `latest` tag and no production host network access.

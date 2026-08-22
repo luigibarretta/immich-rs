@@ -186,6 +186,13 @@ native tests/builds for all five ADR-0014 targets, CycloneDX 1.5 SBOMs,
 deterministic archives, redacted provenance, a complete SHA-256 manifest and a
 verified OpenPGP signature. Push CI enforces this contract.
 
+Secondary container packaging is implemented under ADR-0026: a digest-pinned,
+non-root, shell-free OCI image, hardened offline Compose service, strict
+environment/TOML configuration and a separate attested `linux/amd64` plus
+`linux/arm64` build. The RC workflow includes the verified OCI archive, SPDX
+SBOM and SLSA provenance in the signed checksum bundle. This does not replace
+any native target or signing prerequisite.
+
 The Phase 6 release gate is **not passed**. The current Gitea installation has
 only the Linux x86-64 `docker` runner; `linux-arm64`, `macos-x64`,
 `macos-arm64` and `windows-x64` are not provisioned. No maintainer-controlled

@@ -41,6 +41,7 @@ jobs:
           python3 scripts/check-phase5-evidence.py
           python3 scripts/check-phase6-evidence.py
           python3 scripts/check-release.py
+          python3 scripts/check-container.py
           python3 scripts/check-loc.py
       - name: Validate synthetic fixtures and repository safety
         run: |
@@ -57,6 +58,48 @@ jobs:
             echo "CLI unexpectedly accepted a missing command" >&2
             exit 1
           fi
+
+  container-amd64:
+    runs-on: docker
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose and the static container contract
+        run: |
+          python3 scripts/check-container.py
+          docker compose config --quiet
+      - name: Build and run the hardened amd64 image twice
+        run: |
+          set -eu
+          IMAGE="immich-rs-ci:${{ github.sha }}"
+          chmod 0755 deploy deploy/example-source
+          chmod 0644 deploy/immich-rs.example.toml deploy/example-source/synthetic-container.jpg
+          mkdir -p .artifacts/container
+          docker buildx build --load --platform linux/amd64 \
+            --build-arg "VCS_REF=${{ github.sha }}" \
+            --tag "$IMAGE" --file Containerfile .
+          test "$(docker image inspect "$IMAGE" --format '{{.Config.User}}')" = "65532:65532"
+          for output in first second; do
+            docker run --rm --network none --read-only --user 65532:65532 \
+              --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 \
+              --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
+              -e IMMICH_RS_CONFIG=/config/immich-rs.toml \
+              -v "$PWD/deploy/immich-rs.example.toml:/config/immich-rs.toml:ro" \
+              -v "$PWD/deploy/example-source:/source:ro" \
+              "$IMAGE" plan folder > ".artifacts/container/$output.json"
+          done
+          cmp .artifacts/container/first.json .artifacts/container/second.json
+          IMMICH_RS_IMAGE="$IMAGE" docker compose run --rm immich-rs \
+            > .artifacts/container/compose.json
+          cmp .artifacts/container/first.json .artifacts/container/compose.json
+      - name: Remove exact test-only container resources
+        if: always()
+        run: |
+          IMMICH_RS_IMAGE="immich-rs-ci:${{ github.sha }}" \
+            docker compose down --volumes --remove-orphans || true
+          docker image rm "immich-rs-ci:${{ github.sha }}" || true
 
   dependency-policy:
     runs-on: docker

@@ -36,6 +36,7 @@ jobs:
           python3 scripts/check-disposable-evidence.py
           python3 scripts/check-phase5-evidence.py
           python3 scripts/check-phase6-evidence.py
+          python3 scripts/check-container.py
           python3 scripts/check-fixtures.py
           python3 scripts/check-loc.py
           python3 -m unittest discover -s tests/tooling -p 'test_*.py'
@@ -92,8 +93,35 @@ jobs:
           path: dist/*
           retention-days: 30
 
+  container:
+    needs: preflight
+    runs-on: docker
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the attested multiarch OCI candidate
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          scripts/build-multiarch-container.sh \
+            --output "dist/immich-rs-${VERSION}-linux-multiarch.oci.tar" \
+            --report "dist/immich-rs-${VERSION}-linux-multiarch.container.json" \
+            --revision "${{ github.sha }}" \
+            --version "$VERSION"
+      - name: Preserve the multiarch candidate
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: container-linux-multiarch-${{ github.sha }}
+          path: dist/*
+          retention-days: 30
+
   signed-bundle:
-    needs: native
+    needs: [native, container]
     runs-on: docker
     timeout-minutes: 30
     permissions:

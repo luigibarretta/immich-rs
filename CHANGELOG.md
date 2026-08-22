@@ -16,5 +16,7 @@ Semantic Versioning.
 - Loopback-only verified original-byte Immich archive with idempotent resume.
 - Differential, disposable, paired benchmark, large synthetic soak and
   authorized private read-only shadow evidence.
+- Strict layered CLI/environment/TOML configuration and a hardened,
+  attested amd64/arm64 OCI and Compose packaging contract.
 
 No supported release has been published.

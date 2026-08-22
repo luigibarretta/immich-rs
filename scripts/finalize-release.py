@@ -32,6 +32,24 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def valid_container_platforms(report: dict[str, object]) -> bool:
+    platforms = report.get("platforms")
+    if not isinstance(platforms, list) or len(platforms) != 2:
+        return False
+    expected = {("linux", "amd64"), ("linux", "arm64")}
+    observed = set()
+    for platform in platforms:
+        if not isinstance(platform, dict):
+            return False
+        digest = platform.get("manifest_digest")
+        if not isinstance(digest, str):
+            return False
+        if re.fullmatch(r"sha256:[0-9a-f]{64}", digest) is None:
+            return False
+        observed.add((platform.get("os"), platform.get("architecture")))
+    return observed == expected
+
+
 def finalize(root: Path, version: str, revision: str, output: Path) -> None:
     if VERSION.fullmatch(version) is None or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
         raise FinalizeError("release version or revision is invalid")
@@ -45,6 +63,9 @@ def finalize(root: Path, version: str, revision: str, output: Path) -> None:
                 root / f"{stem}.provenance.json",
             )
         )
+    container_archive = root / f"immich-rs-{version}-linux-multiarch.oci.tar"
+    container_report = root / f"immich-rs-{version}-linux-multiarch.container.json"
+    expected.extend((container_archive, container_report))
     if output.exists() or any(not path.is_file() or path.is_symlink() for path in expected):
         raise FinalizeError("release artifacts are missing, linked or output already exists")
     extras = sorted(path.name for path in root.iterdir() if path.is_file() and path not in expected)
@@ -66,6 +87,17 @@ def finalize(root: Path, version: str, revision: str, output: Path) -> None:
                 or value.get("source_revision") != revision
             ):
                 raise FinalizeError("release provenance identity drift")
+    container = json.loads(container_report.read_text(encoding="utf-8"))
+    if (
+        not isinstance(container, dict)
+        or container.get("schema") != "immich-rs-container-build-v1"
+        or container.get("version") != version
+        or container.get("commit_sha") != revision
+        or container.get("archive_sha256") != sha256(container_archive)
+        or container.get("archive_bytes") != container_archive.stat().st_size
+        or not valid_container_platforms(container)
+    ):
+        raise FinalizeError("multiarch container identity drift")
     lines = [f"{sha256(path)}  {path.name}" for path in sorted(expected, key=lambda item: item.name)]
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

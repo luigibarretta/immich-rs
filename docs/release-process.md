@@ -5,18 +5,24 @@ ADR-0025 prerequisites are provisioned.
 
 ## One-time prerequisites
 
-1. Register protected native Gitea runners named `linux-arm64`, `macos-x64`,
-   `macos-arm64` and `windows-x64`; retain the existing `docker` Linux x86-64
-   runner.
+1. Retain the existing `docker` Linux x86-64 runner and the manually operated
+   `macos-arm64` host runner validated by Gitea run 5440. Register the remaining
+   protected native runners named `linux-arm64`, `macos-x64` and `windows-x64`.
+   Keep host runners offline outside an intentional validation or release
+   window.
 2. Create the project release OpenPGP identity offline under maintainer
    control. Commit only its armored public key as `docs/release-signing-key.asc`.
-3. Store the armored private key and its fingerprint as protected Gitea release
-   secrets. Do not expose them to pull requests or ordinary push jobs.
+3. Store the armored private key, its fingerprint and its passphrase as the
+   protected Gitea release secrets `RELEASE_SIGNING_PRIVATE_KEY`,
+   `RELEASE_SIGNING_FINGERPRINT` and `RELEASE_SIGNING_PASSPHRASE`. Do not expose
+   them to pull requests or ordinary push jobs.
 4. Validate all five host targets, repository secrets and runner isolation with
    a non-publishing workflow dispatch.
 
 The project does not download or redistribute Apple SDKs. Both macOS artifacts
-must be built and tested on native Apple hosts.
+must be built and tested on native Apple hosts. macOS host runners must provide
+Python 3.12 as `python3.12`; the workflows deliberately avoid privileged
+`actions/setup-python` installation on those runners.
 
 ## Candidate checklist
 

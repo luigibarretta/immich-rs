@@ -193,12 +193,20 @@ environment/TOML configuration and a separate attested `linux/amd64` plus
 SBOM and SLSA provenance in the signed checksum bundle. This does not replace
 any native target or signing prerequisite.
 
-The Phase 6 release gate is **not passed**. The current Gitea installation has
-only the Linux x86-64 `docker` runner; `linux-arm64`, `macos-x64`,
-`macos-arm64` and `windows-x64` are not provisioned. No maintainer-controlled
-release private/public key pair or protected signing secrets exist. ADR-0025
-forbids generating that identity automatically, skipping a target or using an
-unprovisioned Apple SDK. Version remains `0.0.0` and no RC tag/artifact is
-published until those explicit security/operations prerequisites are met.
+The macOS ARM64 native prerequisite is complete. Repository runner ID 2,
+`immich-rs-macos-arm64`, executed manual Gitea run 5440 on exact SHA
+`1168b17aa8349f76064e80471c0b72bf55009978`: 64 Python tooling tests and 76
+Rust tests passed, Clippy denied warnings, the release build succeeded and the
+binary was verified as Mach-O ARM64. The non-root host runner was stopped after
+the run and is intentionally offline when not in use.
+
+The Phase 6 release gate is **not passed**. The Linux x86-64 `docker` runner is
+available, but `linux-arm64`, `macos-x64` and `windows-x64` remain unprovisioned.
+The maintainer has created an offline OpenPGP signing identity, but its armored
+public key is not committed and the private key, fingerprint and passphrase are
+not configured as protected Gitea secrets. A non-publishing rehearsal of all
+five targets is also still required. ADR-0025 forbids skipping a target or
+using an unprovisioned Apple SDK. Version remains `0.0.0`; no RC tag or artifact
+is published until these explicit security and operations prerequisites pass.
 
 No replacement of immich-go is considered before Phase 6 evidence.

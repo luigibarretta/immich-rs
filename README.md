@@ -74,8 +74,15 @@ provisioned OpenPGP release identity before an RC can exist. The repository now
 contains a fail-closed signed-tag pipeline, deterministic native packaging, a
 hardened multiarch OCI candidate with SPDX SBOM/SLSA provenance checks and a
 [migration/rollback guide](docs/migration-from-immich-go.md).
-It cannot publish until the missing native runners and protected signing
-material are supplied by the maintainer.
+
+The macOS ARM64 native gate is complete on implementation SHA
+`1168b17aa8349f76064e80471c0b72bf55009978`: manual Gitea
+[run 5440](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5440)
+ran 64 Python tooling tests, 76 Rust tests, Clippy with warnings denied and a
+native release build, then identified the output as a Mach-O ARM64 executable.
+The remaining RC prerequisites are native Linux ARM64, macOS x86-64 and Windows
+x86-64 runners, the armored maintainer public key, three protected signing
+secrets and one non-publishing five-target rehearsal. No RC is published yet.
 
 ## Current capabilities
 

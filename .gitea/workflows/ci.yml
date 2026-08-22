@@ -80,12 +80,14 @@ jobs:
           chmod 0755 deploy deploy/example-source
           chmod 0644 deploy/immich-rs.example.toml deploy/example-source/synthetic-container.jpg
           mkdir -p .artifacts/container
-          case "$PWD" in
-            /workspace/*) ;;
-            *) echo "runner checkout is outside the bounded workspace" >&2; exit 1 ;;
-          esac
-          WORKSPACE_VOLUME=$(docker inspect "$HOSTNAME" --format \
-            '{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Name}}{{end}}{{end}}')
+          WORKSPACE_VOLUME=$(docker inspect "$HOSTNAME" | python3 -c '
+          import json, os, sys
+          checkout = os.environ["PWD"]
+          matches = [mount.get("Name", "") for mount in json.load(sys.stdin)[0]["Mounts"]
+                     if mount["Destination"] == checkout and mount["Type"] == "volume"]
+          if len(matches) != 1 or not matches[0]:
+              raise SystemExit("checkout must be backed by exactly one named volume")
+          print(matches[0])')
           test -n "$WORKSPACE_VOLUME"
           docker buildx build --load --platform linux/amd64 \
             --build-arg "VCS_REF=${{ github.sha }}" \
@@ -97,14 +99,14 @@ jobs:
               --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m \
               -e "IMMICH_RS_CONFIG=$PWD/deploy/immich-rs.example.toml" \
               -e "IMMICH_RS_SOURCE=$PWD/deploy/example-source" \
-              -v "$WORKSPACE_VOLUME:/workspace:ro" \
+              -v "$WORKSPACE_VOLUME:$PWD:ro" \
               "$IMAGE" plan folder > ".artifacts/container/$output.json"
           done
           cmp .artifacts/container/first.json .artifacts/container/second.json
           IMMICH_RS_IMAGE="$IMAGE" docker compose run --rm \
             -e "IMMICH_RS_CONFIG=$PWD/deploy/immich-rs.example.toml" \
             -e "IMMICH_RS_SOURCE=$PWD/deploy/example-source" \
-            -v "$WORKSPACE_VOLUME:/workspace:ro" immich-rs \
+            -v "$WORKSPACE_VOLUME:$PWD:ro" immich-rs \
             > .artifacts/container/compose.json
           cmp .artifacts/container/first.json .artifacts/container/compose.json
       - name: Remove exact test-only container resources

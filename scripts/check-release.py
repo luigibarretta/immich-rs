@@ -32,6 +32,16 @@ def validate() -> None:
     for target, runner in TARGETS.items():
         if workflow.count(f"target: {target}") != 1 or workflow.count(f"runner: {runner}") != 1:
             raise ReleaseCheckError(f"native target mapping drifted: {target}")
+    macos_host_python = (
+        "runner: macos-x64\n            target: x86_64-apple-darwin\n"
+        "            binary: target/release/immich-rs\n            python: python3.12\n"
+        "            setup_python: false",
+        "runner: macos-arm64\n            target: aarch64-apple-darwin\n"
+        "            binary: target/release/immich-rs\n            python: python3.12\n"
+        "            setup_python: false",
+    )
+    if any(value not in workflow for value in macos_host_python):
+        raise ReleaseCheckError("macOS native jobs must use the validated host Python")
     required = (
         'tags: ["v*-rc.*"]',
         "cargo-cyclonedx@0.5.9",
@@ -44,6 +54,8 @@ def validate() -> None:
         "build-multiarch-container.sh",
         "linux-multiarch.oci.tar",
         "cancel-in-progress: false",
+        "if: ${{ matrix.setup_python }}",
+        "${{ matrix.python }} scripts/package-release.py",
     )
     if any(value not in workflow for value in required):
         raise ReleaseCheckError("release identity, SBOM or signing gate drifted")

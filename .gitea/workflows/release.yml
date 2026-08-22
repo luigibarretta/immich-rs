@@ -50,18 +50,28 @@ jobs:
           - runner: docker
             target: x86_64-unknown-linux-gnu
             binary: target/release/immich-rs
+            python: python
+            setup_python: true
           - runner: linux-arm64
             target: aarch64-unknown-linux-gnu
             binary: target/release/immich-rs
+            python: python
+            setup_python: true
           - runner: macos-x64
             target: x86_64-apple-darwin
             binary: target/release/immich-rs
+            python: python3.12
+            setup_python: false
           - runner: macos-arm64
             target: aarch64-apple-darwin
             binary: target/release/immich-rs
+            python: python3.12
+            setup_python: false
           - runner: windows-x64
             target: x86_64-pc-windows-msvc
             binary: target/release/immich-rs.exe
+            python: python
+            setup_python: true
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
@@ -71,6 +81,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
+        if: ${{ matrix.setup_python }}
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@1.88.0
@@ -82,10 +93,11 @@ jobs:
           tool: cargo-cyclonedx@0.5.9
       - name: Test and build on the exact native target
         run: |
+          ${{ matrix.python }} -c 'import sys; assert sys.version_info[:2] == (3, 12)'
           cargo test --locked --workspace --all-targets
           cargo build --locked --release -p immich-rs-cli
           cargo cyclonedx --manifest-path crates/immich-cli/Cargo.toml --format json --describe binaries --target "${{ matrix.target }}" --spec-version 1.5
-          python scripts/package-release.py --binary "${{ matrix.binary }}" --sbom crates/immich-cli/immich-rs_bin.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
+          ${{ matrix.python }} scripts/package-release.py --binary "${{ matrix.binary }}" --sbom crates/immich-cli/immich-rs_bin.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
       - name: Preserve the native candidate
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

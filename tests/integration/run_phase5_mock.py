@@ -59,22 +59,29 @@ ASSETS = [
 ]
 
 
-def environment(with_key: bool = True) -> dict[str, str]:
+def environment(with_key: bool = True, key_file: Path | None = None) -> dict[str, str]:
     """Return an allowlisted child environment without inherited credentials."""
     result = {"LANG": "C.UTF-8", "PATH": os.environ.get("PATH", "/usr/bin:/bin")}
-    if with_key:
+    if key_file is not None:
+        result["IMMICH_RS_API_KEY_FILE"] = str(key_file)
+    elif with_key:
         result["IMMICH_RS_API_KEY"] = SYNTHETIC_API_KEY
     return result
 
 
 def invoke(
-    binary: Path, arguments: list[str], *, success: bool = True, with_key: bool = True
+    binary: Path,
+    arguments: list[str],
+    *,
+    success: bool = True,
+    with_key: bool = True,
+    key_file: Path | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     completed = subprocess.run(
         [str(binary), *arguments],
         check=False,
         capture_output=True,
-        env=environment(with_key),
+        env=environment(with_key, key_file),
         timeout=20,
     )
     if success and (completed.returncode != 0 or completed.stderr):
@@ -158,6 +165,32 @@ def exercise_convergence(binary: Path, workspace: Path) -> None:
         request["mutating"] for request in snapshot["requests"]
     ):
         raise RuntimeError("read-only archive reached a mutating mock path")
+
+
+def exercise_secret_file(binary: Path, workspace: Path) -> None:
+    key_file = workspace / "synthetic-api-key"
+    key_file.write_text(f"{SYNTHETIC_API_KEY}\n", encoding="utf-8")
+    key_file.chmod(0o400)
+    with MOCK["running_mock"](scenario()) as server:
+        completed = invoke(
+            binary,
+            archive_arguments(server.url),
+            with_key=False,
+            key_file=key_file,
+        )
+        conflicting_environment = environment(False, key_file)
+        conflicting_environment["IMMICH_RS_API_KEY"] = SYNTHETIC_API_KEY
+        conflict = subprocess.run(
+            [str(binary), *archive_arguments(server.url)],
+            check=False,
+            capture_output=True,
+            env=conflicting_environment,
+            timeout=20,
+        )
+    if json_output(completed).get("summary", {}).get("assets") != 4:
+        raise RuntimeError("API-key file did not authenticate the read-only client")
+    if conflict.returncode != 5 or conflict.stdout or SYNTHETIC_API_KEY.encode() in conflict.stderr:
+        raise RuntimeError("conflicting API-key sources did not fail closed")
 
 
 def exercise_conflict(binary: Path, workspace: Path) -> None:
@@ -337,6 +370,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="immich-rs-phase5-mock-") as temporary:
         workspace = Path(temporary)
         exercise_convergence(binary, workspace)
+        exercise_secret_file(binary, workspace)
         exercise_conflict(binary, workspace)
         exercise_faults(binary)
         exercise_stream_recovery(binary, workspace)

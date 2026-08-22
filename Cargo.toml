@@ -30,6 +30,7 @@ sha2 = "0.10.9"
 time = { version = "0.3.41", features = ["formatting", "parsing"] }
 tokio = { version = "1.48.0", default-features = false, features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
 tokio-util = { version = "0.7.16", features = ["io"] }
+toml = { version = "0.8.23", default-features = false, features = ["parse"] }
 unicode-normalization = "0.1.24"
 url = "2.5.4"
 zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }

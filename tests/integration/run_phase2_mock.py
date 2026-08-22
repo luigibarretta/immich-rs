@@ -30,8 +30,19 @@ def child_environment(with_key: bool) -> dict[str, str]:
     return environment
 
 
-def invoke(binary: Path, arguments: list[str], *, with_key: bool) -> dict[str, Any]:
-    completed = invoke_process(binary, arguments, with_key=with_key)
+def invoke(
+    binary: Path,
+    arguments: list[str],
+    *,
+    with_key: bool,
+    environment_overrides: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    completed = invoke_process(
+        binary,
+        arguments,
+        with_key=with_key,
+        environment_overrides=environment_overrides,
+    )
     if completed.returncode != 0 or completed.stderr:
         raise RuntimeError(
             f"Phase-2 CLI failed closed unexpectedly: exit={completed.returncode}, "
@@ -44,13 +55,19 @@ def invoke(binary: Path, arguments: list[str], *, with_key: bool) -> dict[str, A
 
 
 def invoke_process(
-    binary: Path, arguments: list[str], *, with_key: bool
+    binary: Path,
+    arguments: list[str],
+    *,
+    with_key: bool,
+    environment_overrides: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
+    environment = child_environment(with_key)
+    environment.update(environment_overrides or {})
     return subprocess.run(
         [str(binary), *arguments],
         check=False,
         capture_output=True,
-        env=child_environment(with_key),
+        env=environment,
         timeout=20,
     )
 
@@ -112,6 +129,7 @@ def exercise_matrix(binary: Path, workspace: Path) -> None:
                 "4096",
             ],
             with_key=False,
+            environment_overrides={"IMMICH_RS_SERVER": server.url},
         )
         if dry_run.get("would_upload") != 4 or checkpoint.exists():
             raise RuntimeError("dry-run mutated its checkpoint or returned incorrect counts")

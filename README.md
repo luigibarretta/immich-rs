@@ -101,6 +101,16 @@ material are supplied by the maintainer.
   XMP, Live Photos, known-noise diagnostics and explicit album modes;
 - read-only Immich inventory and original-byte archive with immutable
   `archive-manifest-v1`, atomic writes and verified idempotent resume.
+- strict schema-v1 TOML and `IMMICH_RS_*` configuration with deterministic
+  `CLI > environment > file > default` precedence and redacted inspection.
+
+Render the effective non-secret configuration:
+
+```bash
+immich-rs --config /path/to/immich-rs.toml config show
+```
+
+See the complete [CLI/environment/TOML matrix](docs/configuration.md).
 
 Run a plan:
 
@@ -168,9 +178,10 @@ cargo run --locked --release -p immich-rs-cli -- \
   --source /path/to/source --checkpoint checkpoint.sqlite
 ```
 
-The two server-aware commands read `IMMICH_RS_API_KEY`; dry-run neither reads
-the key nor constructs a network client. Use only credentials generated for a
-disposable instance.
+The two server-aware commands read `IMMICH_RS_API_KEY` or the regular secret
+file selected by `IMMICH_RS_API_KEY_FILE`; dry-run reads neither and cannot
+construct a network client. Use only credentials generated for a disposable
+instance.
 
 ## Safety boundary
 
@@ -182,7 +193,8 @@ disposable instance.
   construct an HTTP client or upload capability.
 - Phase 2 upload and Phase 5 archive accept only `127.0.0.1`, `[::1]` or
   `localhost` server origins.
-- API keys exist only in `IMMICH_RS_API_KEY` and are redacted from outputs.
+- API keys exist only in `IMMICH_RS_API_KEY` or the bounded regular file named
+  by `IMMICH_RS_API_KEY_FILE` and are redacted from outputs.
 - Committed fixture media, API responses, credentials and identities are
   synthetic. Authorized private shadow evidence contains aggregate counters
   only and no paths, names, metadata or content digests.

@@ -119,12 +119,14 @@ def verify_provenance(
     run_details = object_member(predicate, "runDetails")
     metadata = object_member(run_details, "metadata")
     buildkit_metadata = object_member(metadata, "buildkit_metadata")
-    revisions = (
-        request_args.get("build-arg:VCS_REF"),
-        root_args.get("vcs:revision"),
-        buildkit_metadata.get("vcs.revision"),
-    )
-    if revisions != (commit_sha, commit_sha, commit_sha):
+    declared_revision = request_args.get("build-arg:VCS_REF")
+    source_revision = root_args.get("vcs:revision")
+    metadata_revision = buildkit_metadata.get("vcs.revision")
+    if (
+        declared_revision != commit_sha
+        or source_revision != commit_sha
+        or metadata_revision not in (None, commit_sha)
+    ):
         raise VerificationError("OCI provenance revision does not match the exact commit")
 
 

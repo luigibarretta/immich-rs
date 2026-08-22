@@ -120,7 +120,7 @@ def oci_archive(
                             "runDetails": {
                                 "metadata": {
                                     "buildkit_metadata": {
-                                        "vcs.revision": provenance_revision
+                                        "vcs.revision": None
                                     }
                                 }
                             },

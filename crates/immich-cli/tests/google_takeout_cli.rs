@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+mod support;
+
 use std::fs;
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -46,7 +48,7 @@ fn legacy_takeout_scanner_preserves_the_v1_golden() -> Result<(), Box<dyn std::e
     let repository = repository_root()?;
     let fixture = repository.join("tests/fixtures/v1/synthetic-google-takeout-basic");
     let source = directory.0.join("source");
-    let materialized = Command::new("python3")
+    let materialized = support::python()
         .arg(repository.join("scripts/materialize-fixture.py"))
         .arg(fixture.join("manifest.json"))
         .arg(&source)
@@ -76,7 +78,7 @@ fn synthetic_takeout_directory_matches_the_v2_golden() -> Result<(), Box<dyn std
     let repository = repository_root()?;
     let fixture = repository.join("tests/fixtures/v2/synthetic-google-takeout-complete");
     let source = directory.0.join("source");
-    let materialized = Command::new("python3")
+    let materialized = support::python()
         .arg(repository.join("scripts/materialize-fixture.py"))
         .arg(fixture.join("manifest.json"))
         .arg(&source)
@@ -122,7 +124,7 @@ fn synthetic_takeout_zip_is_planned_without_extraction() -> Result<(), Box<dyn s
     let repository = repository_root()?;
     let fixture = repository.join("tests/fixtures/v2/synthetic-google-takeout-complete");
     let archives = directory.0.join("archives");
-    let materialized = Command::new("python3")
+    let materialized = support::python()
         .arg(repository.join("scripts/materialize-fixture.py"))
         .arg(fixture.join("manifest.json"))
         .arg(&archives)

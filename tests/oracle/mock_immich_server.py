@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import runpy
 import socket
+import sys
 from threading import Thread
 import time
 from typing import Any
@@ -27,6 +28,7 @@ is_mutating_request = SUPPORT["is_mutating_request"]
 archive_search_response = ARCHIVE["archive_search_response"]
 archive_original = ARCHIVE["archive_original"]
 archive_asset_response = ARCHIVE["archive_asset_response"]
+CLIENT_DISCONNECT_ERRORS = (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)
 
 
 class MockConfigurationError(ValueError):
@@ -160,7 +162,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         try:
             self.wfile.write(body)
-        except (BrokenPipeError, ConnectionResetError):
+        except CLIENT_DISCONNECT_ERRORS:
             pass
 
     def _disconnect(self) -> None:
@@ -178,7 +180,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         try:
             self.wfile.write(payload)
-        except (BrokenPipeError, ConnectionResetError):
+        except CLIENT_DISCONNECT_ERRORS:
             pass
 
     def _dispatch(self) -> None:
@@ -331,6 +333,13 @@ class _Handler(BaseHTTPRequestHandler):
     do_DELETE = _dispatch
 
 
+class _MockHttpServer(HTTPServer):
+    def handle_error(self, request: object, client_address: object) -> None:
+        if isinstance(sys.exception(), CLIENT_DISCONNECT_ERRORS):
+            return
+        super().handle_error(request, client_address)
+
+
 class MockImmichServer:
     """One bounded HTTP server thread with explicit shutdown and observations."""
 
@@ -338,7 +347,7 @@ class MockImmichServer:
         selected = default_scenario() if scenario is None else scenario
         _validate_scenario(selected)
         self.state = MockState(selected)
-        self._server = HTTPServer(("127.0.0.1", 0), _Handler)
+        self._server = _MockHttpServer(("127.0.0.1", 0), _Handler)
         self._server.mock_state = self.state
         self._thread = Thread(target=self._server.serve_forever, name="mock-immich-v1")
 

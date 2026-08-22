@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 #[test]
 fn phase_two_converges_against_only_the_synthetic_mock() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,7 +10,7 @@ fn phase_two_converges_against_only_the_synthetic_mock() -> Result<(), Box<dyn s
         .parent()
         .and_then(Path::parent)
         .ok_or("cannot resolve repository root")?;
-    let output = Command::new("python3")
+    let output = support::python()
         .arg(repository.join("tests/integration/run_phase2_mock.py"))
         .arg(env!("CARGO_BIN_EXE_immich-rs"))
         .output()?;

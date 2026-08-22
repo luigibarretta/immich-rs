@@ -17,6 +17,8 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 MOCK = runpy.run_path(str(REPOSITORY_ROOT / "tests/oracle/mock_immich_server.py"))
 SYNTHETIC_API_KEY = MOCK["SYNTHETIC_API_KEY"]
+CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+INTERRUPT_SIGNAL = getattr(signal, "CTRL_BREAK_EVENT", signal.SIGINT)
 
 ASSETS = [
     {
@@ -62,6 +64,11 @@ ASSETS = [
 def environment(with_key: bool = True, key_file: Path | None = None) -> dict[str, str]:
     """Return an allowlisted child environment without inherited credentials."""
     result = {"LANG": "C.UTF-8", "PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+    if os.name == "nt":
+        for name in ("COMSPEC", "SYSTEMROOT", "WINDIR"):
+            value = os.environ.get(name)
+            if value:
+                result[name] = value
     if key_file is not None:
         result["IMMICH_RS_API_KEY_FILE"] = str(key_file)
     elif with_key:
@@ -328,6 +335,7 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=environment(),
+            creationflags=CREATE_NEW_PROCESS_GROUP,
         )
         deadline = time.monotonic() + 5.0
         while time.monotonic() < deadline:
@@ -346,7 +354,7 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             process.kill()
             process.wait(timeout=5)
             raise RuntimeError("archive cancellation did not reach the original stream")
-        process.send_signal(signal.SIGINT)
+        process.send_signal(INTERRUPT_SIGNAL)
         stdout, stderr = process.communicate(timeout=10)
         time.sleep(0.6)
         recovered = json_output(invoke(binary, arguments))

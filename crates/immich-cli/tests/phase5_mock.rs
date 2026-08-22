@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 #[test]
 fn phase_five_archives_only_synthetic_originals() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,7 +10,7 @@ fn phase_five_archives_only_synthetic_originals() -> Result<(), Box<dyn std::err
         .parent()
         .and_then(Path::parent)
         .ok_or("cannot resolve repository root")?;
-    let output = Command::new("python3")
+    let output = support::python()
         .arg(repository.join("tests/integration/run_phase5_mock.py"))
         .arg(env!("CARGO_BIN_EXE_immich-rs"))
         .output()?;

@@ -69,12 +69,19 @@ class MockImmichServerTests(unittest.TestCase):
 
     def test_timeout_is_injected_with_a_bounded_delay(self) -> None:
         scenario = mock.default_scenario()
-        scenario["fault"] = {"kind": "timeout", "times": 1, "path_prefix": "/api/", "delay_ms": 80}
+        scenario["fault"] = {
+            "kind": "timeout",
+            "times": 1,
+            "path_prefix": "/api/",
+            "delay_ms": 120,
+        }
         started = time.monotonic()
         with mock.running_mock(scenario) as server:
             with request(server, "/api/server/version", api_key=mock.SYNTHETIC_API_KEY) as response:
                 self.assertEqual(response.status, 200)
-        self.assertGreaterEqual(time.monotonic() - started, 0.08)
+        elapsed = time.monotonic() - started
+        self.assertGreaterEqual(elapsed, 0.08)
+        self.assertLess(elapsed, 1.0)
 
     def test_disconnect_is_observable(self) -> None:
         scenario = mock.default_scenario()

@@ -17,6 +17,8 @@ from typing import Any
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 MOCK = runpy.run_path(str(REPOSITORY_ROOT / "tests/oracle/mock_immich_server.py"))
 SYNTHETIC_API_KEY = MOCK["SYNTHETIC_API_KEY"]
+CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+INTERRUPT_SIGNAL = getattr(signal, "CTRL_BREAK_EVENT", signal.SIGINT)
 
 
 def child_environment(with_key: bool) -> dict[str, str]:
@@ -25,6 +27,11 @@ def child_environment(with_key: bool) -> dict[str, str]:
         "LANG": "C.UTF-8",
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
     }
+    if os.name == "nt":
+        for name in ("COMSPEC", "SYSTEMROOT", "WINDIR"):
+            value = os.environ.get(name)
+            if value:
+                environment[name] = value
     if with_key:
         environment["IMMICH_RS_API_KEY"] = SYNTHETIC_API_KEY
     return environment
@@ -275,6 +282,7 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=child_environment(True),
+            creationflags=CREATE_NEW_PROCESS_GROUP,
         )
         deadline = time.monotonic() + 5.0
         while time.monotonic() < deadline:
@@ -293,7 +301,7 @@ def exercise_cancellation(binary: Path, workspace: Path) -> None:
             process.kill()
             process.wait(timeout=5)
             raise RuntimeError("cancellation request did not reach the mock")
-        process.send_signal(signal.SIGINT)
+        process.send_signal(INTERRUPT_SIGNAL)
         stdout, stderr = process.communicate(timeout=10)
         time.sleep(0.6)
         resumed = invoke(binary, arguments, with_key=True)

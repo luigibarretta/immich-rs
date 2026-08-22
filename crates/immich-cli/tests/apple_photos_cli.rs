@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+mod support;
+
 use std::fs;
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -44,7 +46,7 @@ fn materialize(
     archive_view: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let repository = repository_root()?;
-    let mut command = Command::new("python3");
+    let mut command = support::python();
     command
         .arg(repository.join("scripts/materialize-fixture.py"))
         .arg(fixture.join("manifest.json"))

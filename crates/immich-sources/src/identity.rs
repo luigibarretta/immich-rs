@@ -39,7 +39,7 @@ fn platform_identity(metadata: &Metadata) -> PlatformIdentity {
 }
 
 #[cfg(not(unix))]
-fn platform_identity(_metadata: &Metadata) -> PlatformIdentity {}
+const fn platform_identity(_metadata: &Metadata) -> PlatformIdentity {}
 
 #[cfg(unix)]
 fn lacks_read_permissions(metadata: &Metadata) -> bool {
@@ -48,7 +48,7 @@ fn lacks_read_permissions(metadata: &Metadata) -> bool {
 }
 
 #[cfg(not(unix))]
-fn lacks_read_permissions(_metadata: &Metadata) -> bool {
+const fn lacks_read_permissions(_metadata: &Metadata) -> bool {
     false
 }
 

@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+mod support;
+
 use std::fs;
 use std::fs::OpenOptions;
 use std::path::Path;
@@ -89,7 +91,7 @@ fn synthetic_folder_fixture_is_exact_or_fails_closed_on_host_limit()
         .ok_or("cannot resolve repository root")?;
     let fixture = repository.join("tests/fixtures/v1/synthetic-folder-matrix");
     let materialized = directory.0.join("source");
-    let materialization_output = Command::new("python3")
+    let materialization_output = support::python()
         .arg(repository.join("scripts/materialize-fixture.py"))
         .arg(fixture.join("manifest.json"))
         .arg(&materialized)

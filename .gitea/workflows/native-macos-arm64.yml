@@ -1,0 +1,44 @@
+---
+name: native-macos-arm64
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-native-macos-arm64
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: macos-arm64
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify the native host target
+        run: |
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "aarch64-apple-darwin"
+      - name: Validate portable tooling
+        run: |
+          python3 scripts/check-release.py
+          python3 scripts/check-container.py
+          python3 scripts/check-fixtures.py
+          python3 scripts/check-loc.py
+          python3 -m unittest discover -s tests/tooling -p 'test_*.py'
+      - name: Test and build the native binary
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+          cargo test --locked --workspace --all-targets
+          cargo build --locked --release -p immich-rs-cli
+          file target/release/immich-rs | grep -F "Mach-O 64-bit executable arm64"

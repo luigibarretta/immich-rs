@@ -151,6 +151,7 @@ jobs:
         env:
           RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
           RELEASE_SIGNING_FINGERPRINT: ${{ secrets.RELEASE_SIGNING_FINGERPRINT }}
+          RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           python3 scripts/finalize-release.py \
@@ -160,12 +161,15 @@ jobs:
             --output dist/SHA256SUMS
           test -n "$RELEASE_SIGNING_PRIVATE_KEY"
           test -n "$RELEASE_SIGNING_FINGERPRINT"
+          test -n "$RELEASE_SIGNING_PASSPHRASE"
           printf '%s' "$RELEASE_SIGNING_PRIVATE_KEY" | gpg --batch --import
           PUBLIC_FINGERPRINT=$(gpg --batch --show-keys --with-colons \
             docs/release-signing-key.asc | awk -F: '$1 == "fpr" {print $10; exit}')
           test "$PUBLIC_FINGERPRINT" = "$RELEASE_SIGNING_FINGERPRINT"
-          gpg --batch --local-user "$RELEASE_SIGNING_FINGERPRINT" \
-            --armor --detach-sign --output dist/SHA256SUMS.asc dist/SHA256SUMS
+          printf '%s' "$RELEASE_SIGNING_PASSPHRASE" | \
+            gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+              --local-user "$RELEASE_SIGNING_FINGERPRINT" --armor \
+              --detach-sign --output dist/SHA256SUMS.asc dist/SHA256SUMS
           gpg --batch --verify dist/SHA256SUMS.asc dist/SHA256SUMS
       - name: Preserve the signed immutable candidate bundle
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3

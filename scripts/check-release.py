@@ -48,6 +48,8 @@ def validate() -> None:
         "--spec-version 1.5",
         "RELEASE_SIGNING_PRIVATE_KEY",
         "RELEASE_SIGNING_FINGERPRINT",
+        "RELEASE_SIGNING_PASSPHRASE",
+        "--pinentry-mode loopback --passphrase-fd 0",
         "gpg --batch --verify",
         "merge-multiple: true",
         "needs: [native, container]",

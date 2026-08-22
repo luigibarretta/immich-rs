@@ -70,8 +70,8 @@ jobs:
           - runner: windows-x64
             target: x86_64-pc-windows-msvc
             binary: target/release/immich-rs.exe
-            python: python
-            setup_python: true
+            python: py -3.12
+            setup_python: false
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
@@ -98,6 +98,10 @@ jobs:
           cargo build --locked --release -p immich-rs-cli
           cargo cyclonedx --manifest-path crates/immich-cli/Cargo.toml --format json --describe binaries --target "${{ matrix.target }}" --spec-version 1.5
           ${{ matrix.python }} scripts/package-release.py --binary "${{ matrix.binary }}" --sbom crates/immich-cli/immich-rs_bin.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
+      - name: Verify the Windows candidate format
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
+        shell: powershell
+        run: py -3.12 scripts/check-pe.py "${{ matrix.binary }}"
       - name: Preserve the native candidate
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

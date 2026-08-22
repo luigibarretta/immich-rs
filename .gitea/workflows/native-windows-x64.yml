@@ -1,0 +1,54 @@
+---
+name: native-windows-x64
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-native-windows-x64
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: windows-x64
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify the native host toolchain
+        shell: powershell
+        run: |
+          $hostTarget = (rustc -vV | Select-String '^host: ').Line.Substring(6)
+          if ($hostTarget -ne 'x86_64-pc-windows-msvc') {
+            throw "unexpected Rust host target: $hostTarget"
+          }
+          py -3.12 -c "import platform, struct, sys; assert sys.version_info[:2] == (3, 12); assert platform.machine() == 'AMD64'; assert struct.calcsize('P') == 8"
+      - name: Validate portable tooling
+        shell: powershell
+        run: |
+          py -3.12 scripts/check-adrs.py
+          py -3.12 scripts/check-architecture.py
+          py -3.12 scripts/check-benchmark-evidence.py
+          py -3.12 scripts/check-disposable-evidence.py
+          py -3.12 scripts/check-phase5-evidence.py
+          py -3.12 scripts/check-phase6-evidence.py
+          py -3.12 scripts/check-release.py
+          py -3.12 scripts/check-container.py
+          py -3.12 scripts/check-fixtures.py
+          py -3.12 scripts/check-loc.py
+          py -3.12 -m unittest discover -s tests/tooling -p 'test_*.py'
+      - name: Test and build the native binary
+        shell: powershell
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+          cargo test --locked --workspace --all-targets
+          cargo build --locked --release -p immich-rs-cli
+          py -3.12 scripts/check-pe.py target/release/immich-rs.exe

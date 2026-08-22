@@ -42,6 +42,13 @@ def validate() -> None:
     )
     if any(value not in workflow for value in macos_host_python):
         raise ReleaseCheckError("macOS native jobs must use the validated host Python")
+    windows_host_python = (
+        "runner: windows-x64\n            target: x86_64-pc-windows-msvc\n"
+        "            binary: target/release/immich-rs.exe\n            python: py -3.12\n"
+        "            setup_python: false"
+    )
+    if windows_host_python not in workflow:
+        raise ReleaseCheckError("Windows native jobs must use the validated host Python")
     required = (
         'tags: ["v*-rc.*"]',
         "cargo-cyclonedx@0.5.9",
@@ -58,6 +65,8 @@ def validate() -> None:
         "cancel-in-progress: false",
         "if: ${{ matrix.setup_python }}",
         "${{ matrix.python }} scripts/package-release.py",
+        "shell: powershell",
+        'py -3.12 scripts/check-pe.py "${{ matrix.binary }}"',
     )
     if any(value not in workflow for value in required):
         raise ReleaseCheckError("release identity, SBOM or signing gate drifted")

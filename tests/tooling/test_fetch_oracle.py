@@ -5,6 +5,7 @@ from __future__ import annotations
 from io import BytesIO
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import stat
 import tarfile
@@ -60,7 +61,8 @@ class OracleFetcherTests(unittest.TestCase):
             )
             binary = fetcher.prepare(root / "cache", baseline, (root / "release").as_uri())
             self.assertEqual(binary.read_bytes(), binary_bytes)
-            self.assertTrue(binary.stat().st_mode & stat.S_IXUSR)
+            if os.name != "nt":
+                self.assertTrue(binary.stat().st_mode & stat.S_IXUSR)
             second = fetcher.prepare(root / "cache", baseline, "https://unreachable.invalid")
             self.assertEqual(second, binary)
 

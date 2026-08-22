@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import importlib.util
 import json
@@ -17,6 +18,14 @@ import tempfile
 from types import ModuleType
 from typing import Any
 
+if os.name == "nt":
+    from ctypes import wintypes
+
+    _KERNEL32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _GET_COMPRESSED_FILE_SIZE = _KERNEL32.GetCompressedFileSizeW
+    _GET_COMPRESSED_FILE_SIZE.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD)]
+    _GET_COMPRESSED_FILE_SIZE.restype = wintypes.DWORD
+
 ASSET_COUNT = 2_500
 MEDIA_BYTES = 512 * 1_024
 ASSETS_PER_ALBUM = 100
@@ -26,6 +35,29 @@ MAX_RSS_BYTES = 256 * 1_024 * 1_024
 
 class SoakError(RuntimeError):
     """The synthetic soak violated a reproducibility or resource invariant."""
+
+
+def allocated_size(path: Path) -> int:
+    """Return allocated bytes using the native filesystem accounting API."""
+    metadata = path.stat()
+    blocks = getattr(metadata, "st_blocks", None)
+    if isinstance(blocks, int):
+        return blocks * 512
+    if os.name != "nt":
+        return metadata.st_size
+    high = wintypes.DWORD()
+    ctypes.set_last_error(0)
+    low = _GET_COMPRESSED_FILE_SIZE(str(path), ctypes.byref(high))
+    error = ctypes.get_last_error()
+    if low == 0xFFFFFFFF and error != 0:
+        raise OSError(error, "cannot read allocated file size", path)
+    return (high.value << 32) | low
+
+
+def sync_filesystem() -> None:
+    sync = getattr(os, "sync", None)
+    if callable(sync):
+        sync()
 
 
 def load_metrics(path: Path) -> ModuleType:
@@ -82,7 +114,7 @@ def materialize(root: Path, asset_count: int, media_bytes: int) -> dict[str, Any
         corpus_digest.update(relative)
         corpus_digest.update(content_digest.digest())
         corpus_digest.update(hashlib.sha256(encoded).digest())
-        allocated_bytes += media.stat().st_blocks * 512 + sidecar.stat().st_blocks * 512
+        allocated_bytes += allocated_size(media) + allocated_size(sidecar)
     return {
         "assets": asset_count,
         "sidecars": asset_count,
@@ -96,12 +128,18 @@ def materialize(root: Path, asset_count: int, media_bytes: int) -> dict[str, Any
 
 
 def child_environment() -> dict[str, str]:
-    return {
+    environment = {
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8",
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "TZ": "UTC",
     }
+    if os.name == "nt":
+        for name in ("COMSPEC", "SYSTEMROOT", "WINDIR"):
+            value = os.environ.get(name)
+            if value:
+                environment[name] = value
+    return environment
 
 
 def run_sample(
@@ -160,7 +198,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
         fixture = materialize(source, ASSET_COUNT, MEDIA_BYTES)
         if fixture["allocated_bytes"] < fixture["logical_source_bytes"]:
             raise SoakError("synthetic corpus was not fully allocated")
-        os.sync()
+        sync_filesystem()
         measurements = []
         summaries = []
         plan_digests = []

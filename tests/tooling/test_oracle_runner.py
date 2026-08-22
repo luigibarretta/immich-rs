@@ -7,7 +7,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import stat
 import sys
 import tempfile
 import textwrap
@@ -50,9 +49,10 @@ class OracleRunnerTests(unittest.TestCase):
 
     def test_version_and_digest_are_both_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            executable = Path(temporary) / "oracle"
-            executable.write_text("#!/bin/sh\nprintf 'immich-go version 0.32.0\\n'\n", encoding="utf-8")
-            executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+            executable = Path(temporary) / "oracle.py"
+            executable.write_text(
+                "print('immich-go version 0.32.0')\n", encoding="utf-8"
+            )
             digest = hashlib.sha256(executable.read_bytes()).hexdigest()
             baseline = {
                 "name": "immich-go",
@@ -109,11 +109,10 @@ class OracleRunnerTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            executable = root / "fake-oracle"
+            executable = root / "fake-oracle.py"
             executable.write_text(
                 textwrap.dedent(
                     """\
-                    #!/usr/bin/env python3
                     import sys
                     import urllib.request
                     if "--version" in sys.argv:
@@ -130,7 +129,6 @@ class OracleRunnerTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
             digest = hashlib.sha256(executable.read_bytes()).hexdigest()
             baseline_path = root / "baseline.toml"
             baseline_path.write_text(
@@ -152,11 +150,14 @@ class OracleRunnerTests(unittest.TestCase):
             runner.FIXTURE_ROOT = fixture_root.resolve()
             os.chdir(root)
             try:
-                observation = runner.run_case(case_path, Path("fake-oracle"), baseline_path)
+                observation = runner.run_case(case_path, Path("fake-oracle.py"), baseline_path)
             finally:
                 os.chdir(original_working_directory)
                 runner.FIXTURE_ROOT = original_fixture_root
             self.assertEqual(observation["schema"], "oracle-observation-v1")
+            self.assertEqual(
+                observation["process"]["exit_code"], 0, observation["process"]
+            )
             self.assertEqual(observation["observable"]["mutation_request_count"], 0)
             self.assertEqual(
                 observation["process"]["stdout"],

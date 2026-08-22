@@ -6,12 +6,13 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPOSITORY_ROOT / "scripts" / "prepare-phase2-benchmark-corpus.sh"
+SCRIPT = REPOSITORY_ROOT / "scripts" / "prepare-phase2-benchmark-corpus.py"
 
 
 class Phase2BenchmarkCorpusTests(unittest.TestCase):
@@ -53,7 +54,8 @@ class Phase2BenchmarkCorpusTests(unittest.TestCase):
             )
             output_manifest = workspace / "output-manifest.json"
             command = [
-                str(SCRIPT), "--source", str(source), "--source-manifest", str(manifest),
+                sys.executable, str(SCRIPT), "--source", str(source),
+                "--source-manifest", str(manifest),
                 "--output", str(output), "--output-manifest", str(output_manifest),
             ]
             subprocess.run(command, check=True)

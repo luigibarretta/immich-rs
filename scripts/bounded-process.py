@@ -20,7 +20,7 @@ def _text(handle, label: str) -> str:
     data = handle.read(MAX_CAPTURE_BYTES + 1)
     if len(data) > MAX_CAPTURE_BYTES:
         raise CaptureError(f"oracle {label} exceeded {MAX_CAPTURE_BYTES} bytes")
-    return data.decode("utf-8", errors="replace")
+    return data.decode("utf-8", errors="replace").replace("\r\n", "\n")
 
 
 def run_command(

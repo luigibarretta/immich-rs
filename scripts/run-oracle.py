@@ -47,6 +47,12 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _oracle_command(executable: Path) -> list[str]:
+    if executable.suffix.casefold() == ".py":
+        return [sys.executable, str(executable)]
+    return [str(executable)]
+
+
 def load_baseline(path: Path = BASELINE_PATH) -> dict[str, Any]:
     """Load the pinned oracle version and current-platform digest."""
     try:
@@ -68,14 +74,15 @@ def load_baseline(path: Path = BASELINE_PATH) -> dict[str, Any]:
 
 def verify_oracle(executable: Path, baseline: dict[str, Any]) -> dict[str, str]:
     """Verify executable digest and reported version before any fixture runs."""
-    if not executable.is_file() or not os.access(executable, os.X_OK):
+    interpreted = executable.suffix.casefold() == ".py"
+    if not executable.is_file() or (not interpreted and not os.access(executable, os.X_OK)):
         raise OracleError(f"oracle is not executable: {executable}")
     actual_digest = _sha256_file(executable)
     if actual_digest != baseline["binary_sha256"]:
         raise OracleError("oracle executable digest mismatch")
     try:
         result = subprocess.run(
-            [str(executable), "--version"],
+            [*_oracle_command(executable), "--version"],
             check=False,
             capture_output=True,
             text=True,
@@ -219,8 +226,13 @@ def run_case(
                 "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
                 "TZ": "UTC",
             }
+            if os.name == "nt":
+                for name in ("COMSPEC", "SYSTEMROOT", "WINDIR"):
+                    value = os.environ.get(name)
+                    if value:
+                        environment[name] = value
             try:
-                command = [str(executable), *arguments]
+                command = [*_oracle_command(executable), *arguments]
                 if process_executor is None:
                     result = capture_module.run_command(
                         command, temporary_root, environment, case["timeout_seconds"]

@@ -1,15 +1,75 @@
 #!/usr/bin/env python3
-"""Collect bounded Linux process metrics without buffering command output in memory."""
+"""Collect bounded process metrics without buffering command output in memory."""
 
 from __future__ import annotations
 
-import resource
 import os
 import subprocess
 import tempfile
 import time
 from pathlib import Path
 from typing import Any
+
+try:
+    import resource
+except ModuleNotFoundError:  # pragma: no cover - exercised on Windows
+    resource = None
+
+if os.name == "nt":
+    import ctypes
+    from ctypes import wintypes
+
+    _PROCESS_QUERY_INFORMATION = 0x0400
+    _PROCESS_VM_READ = 0x0010
+    _KERNEL32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _PSAPI = ctypes.WinDLL("psapi", use_last_error=True)
+
+    class _ProcessMemoryCounters(ctypes.Structure):
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("PageFaultCount", wintypes.DWORD),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
+
+    class _IoCounters(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_ulonglong),
+            ("WriteOperationCount", ctypes.c_ulonglong),
+            ("OtherOperationCount", ctypes.c_ulonglong),
+            ("ReadTransferCount", ctypes.c_ulonglong),
+            ("WriteTransferCount", ctypes.c_ulonglong),
+            ("OtherTransferCount", ctypes.c_ulonglong),
+        ]
+
+    _KERNEL32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    _KERNEL32.OpenProcess.restype = wintypes.HANDLE
+    _KERNEL32.CloseHandle.argtypes = [wintypes.HANDLE]
+    _KERNEL32.CloseHandle.restype = wintypes.BOOL
+    _KERNEL32.GetProcessHandleCount.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    _KERNEL32.GetProcessHandleCount.restype = wintypes.BOOL
+    _KERNEL32.GetProcessIoCounters.argtypes = [wintypes.HANDLE, ctypes.POINTER(_IoCounters)]
+    _KERNEL32.GetProcessIoCounters.restype = wintypes.BOOL
+    _KERNEL32.GetProcessTimes.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+    ]
+    _KERNEL32.GetProcessTimes.restype = wintypes.BOOL
+    _PSAPI.GetProcessMemoryInfo.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(_ProcessMemoryCounters),
+        wintypes.DWORD,
+    ]
+    _PSAPI.GetProcessMemoryInfo.restype = wintypes.BOOL
 
 
 MAX_CAPTURE_BYTES = 4 * 1024 * 1024
@@ -39,7 +99,7 @@ def _read_key_values(path: Path) -> dict[str, int]:
     return values
 
 
-def _sample_process(pid: int, peaks: dict[str, int]) -> None:
+def _sample_procfs_process(pid: int, peaks: dict[str, Any]) -> None:
     process_root = Path("/proc") / str(pid)
     status = _read_key_values(process_root / "status")
     peaks["peak_rss_bytes"] = max(peaks["peak_rss_bytes"], status.get("VmRSS", 0) * 1024)
@@ -56,6 +116,69 @@ def _sample_process(pid: int, peaks: dict[str, int]) -> None:
         ("write_bytes", "storage_bytes_written"),
     ):
         peaks[destination] = max(peaks[destination], process_io.get(source, 0))
+
+
+def _filetime_seconds(value: Any) -> float:
+    ticks = (value.dwHighDateTime << 32) | value.dwLowDateTime
+    return ticks / 10_000_000
+
+
+def _sample_windows_process(pid: int, peaks: dict[str, Any]) -> None:
+    handle = _KERNEL32.OpenProcess(
+        _PROCESS_QUERY_INFORMATION | _PROCESS_VM_READ, False, pid
+    )
+    if not handle:
+        return
+    try:
+        memory = _ProcessMemoryCounters()
+        memory.cb = ctypes.sizeof(memory)
+        if _PSAPI.GetProcessMemoryInfo(handle, ctypes.byref(memory), memory.cb):
+            peaks["peak_rss_bytes"] = max(
+                peaks["peak_rss_bytes"], int(memory.WorkingSetSize)
+            )
+        handle_count = wintypes.DWORD()
+        if _KERNEL32.GetProcessHandleCount(handle, ctypes.byref(handle_count)):
+            peaks["peak_open_file_descriptors"] = max(
+                peaks["peak_open_file_descriptors"], int(handle_count.value)
+            )
+        process_io = _IoCounters()
+        if _KERNEL32.GetProcessIoCounters(handle, ctypes.byref(process_io)):
+            peaks["characters_read"] = max(
+                peaks["characters_read"], int(process_io.ReadTransferCount)
+            )
+            peaks["characters_written"] = max(
+                peaks["characters_written"], int(process_io.WriteTransferCount)
+            )
+        creation, exited, kernel, user = (wintypes.FILETIME() for _ in range(4))
+        if _KERNEL32.GetProcessTimes(
+            handle,
+            ctypes.byref(creation),
+            ctypes.byref(exited),
+            ctypes.byref(kernel),
+            ctypes.byref(user),
+        ):
+            peaks["user_cpu_seconds"] = max(
+                peaks["user_cpu_seconds"], _filetime_seconds(user)
+            )
+            peaks["system_cpu_seconds"] = max(
+                peaks["system_cpu_seconds"], _filetime_seconds(kernel)
+            )
+    finally:
+        _KERNEL32.CloseHandle(handle)
+
+
+def _sample_process(pid: int, peaks: dict[str, Any]) -> None:
+    if os.name == "nt":
+        _sample_windows_process(pid, peaks)
+    else:
+        _sample_procfs_process(pid, peaks)
+
+
+def _child_cpu_usage() -> tuple[float, float]:
+    if resource is None:
+        return 0.0, 0.0
+    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return usage.ru_utime, usage.ru_stime
 
 
 def _captured_text(handle: Any, label: str) -> str:
@@ -87,8 +210,10 @@ def run_command(
     timeout_seconds: int,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     """Run one process, sampling RSS, descriptors and procfs I/O until exit."""
-    usage_before = resource.getrusage(resource.RUSAGE_CHILDREN)
+    usage_before = _child_cpu_usage()
     peaks = {
+        "user_cpu_seconds": 0.0,
+        "system_cpu_seconds": 0.0,
         "peak_rss_bytes": 0,
         "peak_open_file_descriptors": 0,
         "characters_read": 0,
@@ -126,14 +251,15 @@ def run_command(
         _sample_process(process.pid, peaks)
         return_code = process.wait()
         finished = time.monotonic_ns()
-        usage_after = resource.getrusage(resource.RUSAGE_CHILDREN)
+        usage_after = _child_cpu_usage()
         stdout = _captured_text(stdout_handle, "stdout")
         stderr = _captured_text(stderr_handle, "stderr")
     completed = subprocess.CompletedProcess(command, return_code, stdout, stderr)
+    if resource is not None:
+        peaks["user_cpu_seconds"] = max(0.0, usage_after[0] - usage_before[0])
+        peaks["system_cpu_seconds"] = max(0.0, usage_after[1] - usage_before[1])
     metrics = {
         "wall_time_seconds": (finished - started) / 1_000_000_000,
-        "user_cpu_seconds": max(0.0, usage_after.ru_utime - usage_before.ru_utime),
-        "system_cpu_seconds": max(0.0, usage_after.ru_stime - usage_before.ru_stime),
         **peaks,
     }
     return completed, metrics

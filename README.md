@@ -275,7 +275,7 @@ The crate boundaries are dependency rules, not microservices. See
 Run the complete fast gate:
 
 ```bash
-scripts/check-adrs.sh
+python3 scripts/check-adrs.py
 python3 scripts/check-architecture.py
 python3 scripts/check-benchmark-evidence.py
 python3 scripts/check-disposable-evidence.py
@@ -292,6 +292,14 @@ cargo test --locked --workspace --all-targets
 cargo doc --locked --workspace --no-deps
 cargo deny check
 cargo audit --deny warnings
+```
+
+On Windows x64, run the Python entries with `py -3.12` and then validate the
+native release executable explicitly:
+
+```powershell
+cargo build --locked --release -p immich-rs-cli
+py -3.12 scripts/check-pe.py target/release/immich-rs.exe
 ```
 
 The pinned differential additionally runs:

@@ -1,0 +1,120 @@
+{
+  "schema": "phase7-disposable-production-v1",
+  "commit_sha": "db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8",
+  "binary_sha256": "bc359ee48829125a498c03a8c746f8deb77a9448a7e1f49b3e2a2462aa6b0ce7",
+  "images": {
+    "server": "ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa",
+    "valkey": "docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411",
+    "database": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23"
+  },
+  "tls": {
+    "custom_ca_sha256": "859d6d2a105928f463dd5ae7bbd5e0d932265c95b9db525e74c10b31920a1686",
+    "hostname_verification": true,
+    "untrusted_certificate_exit": 7,
+    "fault_matrix": {
+      "cancellation": {
+        "cancelled_exit": 130,
+        "resumed": true
+      },
+      "faults": {
+        "commit_lost_response": {
+          "converged": 1,
+          "retried": 1
+        },
+        "disconnect": {
+          "converged": 1,
+          "retried": 1
+        },
+        "rate_limit": {
+          "converged": 1,
+          "retried": 1
+        },
+        "server_error": {
+          "converged": 1,
+          "retried": 1
+        }
+      },
+      "refusals": {
+        "incompatible_exit": 6,
+        "missing_key_exit": 5
+      },
+      "schema": "phase7-production-faults-v1"
+    }
+  },
+  "authorization": {
+    "plan_digest_matched": true,
+    "operation_budget": 4,
+    "backup_reference_hashed": true,
+    "mismatch_exit": 2
+  },
+  "server_version": {
+    "major": 3,
+    "minor": 1,
+    "patch": 0,
+    "prerelease": null
+  },
+  "reports": {
+    "dry_run": {
+      "schema_version": 1,
+      "dry_run": true,
+      "planned": 4,
+      "would_upload": 4,
+      "created": 0,
+      "duplicate": 0,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "first": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 4,
+      "would_upload": 0,
+      "created": 4,
+      "duplicate": 0,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "resume": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 4,
+      "would_upload": 0,
+      "created": 0,
+      "duplicate": 0,
+      "resumed": 4,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "duplicate": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": 4,
+      "would_upload": 0,
+      "created": 0,
+      "duplicate": 4,
+      "resumed": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    }
+  },
+  "archive_assets": 4,
+  "asset_count": 3,
+  "cleanup": {
+    "verified": true,
+    "labelled_containers": 0,
+    "labelled_volumes": 0,
+    "labelled_networks": 0,
+    "private_keys_removed": true,
+    "credentials_removed": true
+  }
+}

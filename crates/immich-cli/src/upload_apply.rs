@@ -1,6 +1,5 @@
 use immich_rs_client::upload_plan_sha256;
-use immich_rs_core::CancellationToken;
-use immich_rs_core::ProductionWriteConfirmation;
+use immich_rs_core::{CancellationToken, ProductionWriteConfirmation, UPLOAD_PLAN_SCHEMA_VERSION};
 use immich_rs_executor::{apply_production_upload, apply_upload};
 
 use crate::args::ApplyRequest;
@@ -9,6 +8,11 @@ use crate::{network, output, signal};
 
 pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
     let plan = output::load_upload_plan(&request.plan)?;
+    if plan.schema_version != UPLOAD_PLAN_SCHEMA_VERSION {
+        return Err(CliFailure::usage(
+            "apply upload does not yet support source-aware import plans",
+        ));
+    }
     let production = request
         .production
         .map(|production| {

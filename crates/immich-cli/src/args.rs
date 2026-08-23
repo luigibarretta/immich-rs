@@ -2,7 +2,9 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use immich_rs_executor::{ArchivePlanningConfig, ArchiveSelection, UploadExecutionConfig};
+use immich_rs_executor::{
+    ArchivePlanningConfig, ArchiveSelection, TakeoutImportConfig, UploadExecutionConfig,
+};
 use immich_rs_sources::{AlbumMode, ApplePhotosScanConfig, FolderScanConfig, TakeoutScanConfig};
 
 use crate::config::EffectiveConfig;
@@ -28,6 +30,15 @@ pub struct ApplePhotosRequest {
 
 pub struct UploadFolderRequest {
     pub folder: FolderRequest,
+    pub server: String,
+    pub production_read: bool,
+    pub ca_certificate: Option<PathBuf>,
+}
+
+pub struct UploadTakeoutRequest {
+    pub inputs: Vec<PathBuf>,
+    pub label: String,
+    pub config: TakeoutImportConfig,
     pub server: String,
     pub production_read: bool,
     pub ca_certificate: Option<PathBuf>,

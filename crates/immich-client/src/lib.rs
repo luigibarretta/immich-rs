@@ -6,6 +6,7 @@ mod auth;
 mod endpoint;
 mod error;
 mod models;
+mod production;
 mod read;
 mod response;
 mod upload;
@@ -14,6 +15,9 @@ pub use archive::{ArchiveDownload, ArchiveListConfig, ArchiveVisibility, RemoteA
 pub use auth::{ApiKey, ApiKeyError};
 pub use endpoint::{EndpointAccess, EndpointError, ImmichEndpoint};
 pub use error::{ClientError, ClientErrorClass};
+pub use production::{
+    ProductionImmichUploadClient, ProductionUploadAuthorization, upload_plan_sha256,
+};
 pub use read::{ClientConfig, ImmichReadClient, NegotiatedServer};
 pub use upload::{DuplicateCheck, ImmichUploadClient, UploadRequest, UploadResult};
 

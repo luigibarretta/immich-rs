@@ -11,6 +11,9 @@ use crate::{ExecutorError, ExecutorErrorClass};
 
 const CHECKPOINT_SCHEMA: &str = "checkpoint-v1";
 const APPLICATION_ID: i64 = 0x4952_5331;
+const EXECUTION_SCOPE_KEY: &str = "execution_scope";
+const BACKUP_REFERENCE_KEY: &str = "backup_reference_sha256";
+const PRODUCTION_SCOPE: &str = "production";
 
 pub struct Journal {
     connection: Connection,
@@ -48,6 +51,25 @@ pub struct JournalEvent<'a> {
 
 impl Journal {
     pub fn open(path: &Path, plan: &UploadPlan) -> Result<Self, ExecutorError> {
+        Self::open_with_scope(path, plan, None)
+    }
+
+    pub fn open_production(
+        path: &Path,
+        plan: &UploadPlan,
+        backup_reference_sha256: &str,
+    ) -> Result<Self, ExecutorError> {
+        if !is_lower_sha256(backup_reference_sha256) {
+            return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
+        }
+        Self::open_with_scope(path, plan, Some(backup_reference_sha256))
+    }
+
+    fn open_with_scope(
+        path: &Path,
+        plan: &UploadPlan,
+        backup_reference_sha256: Option<&str>,
+    ) -> Result<Self, ExecutorError> {
         reject_symlink(path)?;
         let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
             | OpenFlags::SQLITE_OPEN_CREATE
@@ -56,7 +78,7 @@ impl Journal {
         configure(&connection)?;
         create_schema(&connection)?;
         let mut journal = Self { connection };
-        journal.bind_or_validate(plan)?;
+        journal.bind_or_validate(plan, backup_reference_sha256)?;
         Ok(journal)
     }
 
@@ -74,7 +96,7 @@ impl Journal {
             .busy_timeout(Duration::from_secs(5))
             .map_err(checkpoint_error)?;
         validate_application(&connection)?;
-        validate_binding(&connection, plan)?;
+        validate_binding_any_scope(&connection, plan)?;
         completed_assets(&connection)
     }
 
@@ -112,13 +134,17 @@ impl Journal {
         transaction.commit().map_err(checkpoint_error)
     }
 
-    fn bind_or_validate(&mut self, plan: &UploadPlan) -> Result<(), ExecutorError> {
+    fn bind_or_validate(
+        &mut self,
+        plan: &UploadPlan,
+        backup_reference_sha256: Option<&str>,
+    ) -> Result<(), ExecutorError> {
         let count: i64 = self
             .connection
             .query_row("SELECT COUNT(*) FROM metadata", [], |row| row.get(0))
             .map_err(checkpoint_error)?;
         if count == 0 {
-            let expected = expected_binding(plan)?;
+            let expected = expected_binding(plan, backup_reference_sha256)?;
             let transaction = self
                 .connection
                 .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -133,7 +159,7 @@ impl Journal {
             }
             transaction.commit().map_err(checkpoint_error)
         } else {
-            validate_binding(&self.connection, plan)
+            validate_binding_for_scope(&self.connection, plan, backup_reference_sha256)
         }
     }
 }
@@ -186,7 +212,37 @@ fn validate_application(connection: &Connection) -> Result<(), ExecutorError> {
     Ok(())
 }
 
-fn validate_binding(connection: &Connection, plan: &UploadPlan) -> Result<(), ExecutorError> {
+fn validate_binding_for_scope(
+    connection: &Connection,
+    plan: &UploadPlan,
+    backup_reference_sha256: Option<&str>,
+) -> Result<(), ExecutorError> {
+    let actual = read_binding(connection)?;
+    if actual != expected_binding(plan, backup_reference_sha256)? {
+        return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
+    }
+    Ok(())
+}
+
+fn validate_binding_any_scope(
+    connection: &Connection,
+    plan: &UploadPlan,
+) -> Result<(), ExecutorError> {
+    let mut actual = read_binding(connection)?;
+    let scope = actual.remove(EXECUTION_SCOPE_KEY);
+    let backup = actual.remove(BACKUP_REFERENCE_KEY);
+    let valid_scope = match (scope.as_deref(), backup.as_deref()) {
+        (None, None) => true,
+        (Some(PRODUCTION_SCOPE), Some(digest)) => is_lower_sha256(digest),
+        _ => false,
+    };
+    if !valid_scope || actual != expected_binding(plan, None)? {
+        return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
+    }
+    Ok(())
+}
+
+fn read_binding(connection: &Connection) -> Result<BTreeMap<String, String>, ExecutorError> {
     validate_application(connection)?;
     let mut statement = connection
         .prepare("SELECT key, value FROM metadata ORDER BY key")
@@ -203,13 +259,13 @@ fn validate_binding(connection: &Connection, plan: &UploadPlan) -> Result<(), Ex
             return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
         }
     }
-    if actual != expected_binding(plan)? {
-        return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
-    }
-    Ok(())
+    Ok(actual)
 }
 
-fn expected_binding(plan: &UploadPlan) -> Result<BTreeMap<String, String>, ExecutorError> {
+fn expected_binding(
+    plan: &UploadPlan,
+    backup_reference_sha256: Option<&str>,
+) -> Result<BTreeMap<String, String>, ExecutorError> {
     let plan_bytes =
         serde_json::to_vec(plan).map_err(|_| ExecutorError::new(ExecutorErrorClass::Invariant))?;
     let entries = [
@@ -236,10 +292,22 @@ fn expected_binding(plan: &UploadPlan) -> Result<BTreeMap<String, String>, Execu
             ),
         ),
     ];
-    Ok(entries
+    let mut binding = entries
         .into_iter()
         .map(|(key, value)| (key.to_owned(), value))
-        .collect())
+        .collect::<BTreeMap<_, _>>();
+    if let Some(digest) = backup_reference_sha256 {
+        binding.insert(EXECUTION_SCOPE_KEY.to_owned(), PRODUCTION_SCOPE.to_owned());
+        binding.insert(BACKUP_REFERENCE_KEY.to_owned(), digest.to_owned());
+    }
+    Ok(binding)
+}
+
+fn is_lower_sha256(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn completed_assets(

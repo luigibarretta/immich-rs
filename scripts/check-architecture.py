@@ -84,9 +84,57 @@ def check() -> list[str]:
         failures.append("client does not expose separate read and upload capability types")
     if "pub fn authorize_upload" not in read_source or "NegotiatedServer" not in read_source:
         failures.append("upload capability is not restricted to an opaque probe proof")
+    production_source = (client_root / "production.rs").read_text(encoding="utf-8")
+    production_requirements = (
+        "ProductionImmichUploadClient",
+        "ProductionUploadAuthorization",
+        "backup_reference_sha256",
+        "matches_plan",
+    )
+    if (
+        "pub fn authorize_production_upload" not in read_source
+        or any(token not in production_source for token in production_requirements)
+    ):
+        failures.append("production upload lacks an exact plan and backup capability binding")
     forbidden_mutations = ("delete(", "replace(", "put(", "patch(")
     if any(token in upload_source.casefold() for token in forbidden_mutations):
         failures.append("Phase-2 client contains an unapproved mutation primitive")
+    apply_arguments = (
+        REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "apply_args.rs"
+    ).read_text(encoding="utf-8")
+    production_flags = (
+        "--authorize-production-read",
+        "--authorize-production-write",
+        "--confirm-plan-sha256",
+        "--expected-operations",
+        "--backup-reference",
+    )
+    if any(flag not in apply_arguments for flag in production_flags):
+        failures.append("production apply does not require the complete CLI confirmation")
+    configuration_sources = "\n".join(
+        (REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / name).read_text(
+            encoding="utf-8"
+        )
+        for name in ("config.rs", "environment.rs")
+    )
+    if any(
+        flag.lstrip("-").replace("-", "_") in configuration_sources
+        for flag in production_flags
+    ):
+        failures.append("production authorization can be persisted outside the CLI")
+    executor_apply = (
+        REPOSITORY_ROOT / "crates" / "immich-executor" / "src" / "apply.rs"
+    ).read_text(encoding="utf-8")
+    if (
+        "if client.is_production()" not in executor_apply
+        or "apply_production_upload" not in executor_apply
+    ):
+        failures.append("production transport can bypass the authorized executor path")
+    journal_source = (
+        REPOSITORY_ROOT / "crates" / "immich-executor" / "src" / "journal.rs"
+    ).read_text(encoding="utf-8")
+    if '"backup_reference"' in journal_source or "backup_reference_sha256" not in journal_source:
+        failures.append("checkpoint does not hash the production backup reference")
     disposable_sources = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (

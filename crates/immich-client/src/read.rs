@@ -1,7 +1,9 @@
 use std::fmt::{self, Debug, Formatter};
 use std::time::Duration;
 
-use immich_rs_core::{Cancellation, ServerCompatibility, ServerVersion};
+use immich_rs_core::{
+    Cancellation, ProductionWriteConfirmation, ServerCompatibility, ServerVersion, UploadPlan,
+};
 use reqwest::header::{ACCEPT, HeaderMap, HeaderValue};
 use sha2::{Digest, Sha256};
 
@@ -9,6 +11,7 @@ use crate::models::{UserResponse, VersionResponse};
 use crate::response::{bounded_json, classify_transport};
 use crate::{
     ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichUploadClient,
+    ProductionImmichUploadClient, ProductionUploadAuthorization, upload_plan_sha256,
 };
 
 const SUPPORTED_MAJOR: u32 = 3;
@@ -75,17 +78,13 @@ impl NegotiatedServer {
     }
 
     #[cfg(test)]
-    pub(crate) fn synthetic_for_test() -> Self {
+    pub(crate) const fn synthetic_for_test(
+        compatibility: ServerCompatibility,
+        origin_sha256: String,
+    ) -> Self {
         Self {
-            compatibility: ServerCompatibility {
-                version: ServerVersion {
-                    major: SUPPORTED_MAJOR,
-                    minor: SUPPORTED_MINOR,
-                    patch: 0,
-                },
-                identity_sha256: "a".repeat(64),
-            },
-            origin_sha256: "b".repeat(64),
+            compatibility,
+            origin_sha256,
         }
     }
 }
@@ -192,17 +191,57 @@ impl ImmichReadClient {
         if !self.access.permits_upload() {
             return Err(ClientError::new(ClientErrorClass::Compatibility));
         }
-        let origin_sha256 = format!(
-            "{:x}",
-            Sha256::digest(self.endpoint.canonical_origin().as_bytes())
-        );
-        if origin_sha256 != negotiated.origin_sha256 {
-            return Err(ClientError::new(ClientErrorClass::Compatibility));
-        }
+        self.validate_negotiated_binding(&negotiated)?;
         Ok(ImmichUploadClient::from_negotiated(
             self,
             negotiated.compatibility,
         ))
+    }
+
+    /// Construct an uploader bound to an exact plan and explicit production confirmation.
+    pub fn authorize_production_upload(
+        self,
+        negotiated: NegotiatedServer,
+        plan: &UploadPlan,
+        confirmation: &ProductionWriteConfirmation,
+    ) -> Result<ProductionImmichUploadClient, ClientError> {
+        if !self.access.permits_production_upload() {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        self.validate_negotiated_binding(&negotiated)?;
+        if negotiated.compatibility() != &plan.server {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        let plan_sha256 = upload_plan_sha256(plan)?;
+        if confirmation.plan_sha256() != plan_sha256
+            || confirmation.expected_operations() != plan.summary.operations
+            || confirmation.expected_operations() != plan.operations.len() as u64
+        {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        let proof = ProductionUploadAuthorization::new(
+            plan_sha256,
+            confirmation.expected_operations(),
+            format!(
+                "{:x}",
+                Sha256::digest(confirmation.backup_reference().as_bytes())
+            ),
+        );
+        let upload = ImmichUploadClient::from_production(self, negotiated.compatibility);
+        Ok(ProductionImmichUploadClient::new(upload, proof))
+    }
+
+    fn validate_negotiated_binding(
+        &self,
+        negotiated: &NegotiatedServer,
+    ) -> Result<(), ClientError> {
+        let origin_sha256 = format!(
+            "{:x}",
+            Sha256::digest(self.endpoint.canonical_origin().as_bytes())
+        );
+        (origin_sha256 == negotiated.origin_sha256)
+            .then_some(())
+            .ok_or_else(|| ClientError::new(ClientErrorClass::Compatibility))
     }
 
     pub(crate) async fn get_json<T: serde::de::DeserializeOwned>(

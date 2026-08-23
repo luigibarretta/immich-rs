@@ -118,6 +118,33 @@ fn checkpoint_resume_is_append_only_and_server_bound() -> Result<(), Box<dyn Err
 }
 
 #[test]
+fn production_checkpoint_binds_backup_digest_and_remains_dry_run_readable()
+-> Result<(), Box<dyn Error>> {
+    let directory = SyntheticDirectory::new()?;
+    let config = UploadExecutionConfig::default();
+    let plan = synthetic_plan(&directory, &config)?;
+    let checkpoint = directory.path().join("production-checkpoint.sqlite");
+    let backup_digest = "b".repeat(64);
+    let journal = Journal::open_production(&checkpoint, &plan, &backup_digest)
+        .map_err(|_| "production checkpoint open failed")?;
+    drop(journal);
+
+    let report = dry_run_upload(&plan, directory.path(), &checkpoint, &config, &NeverCancel)?;
+    assert!(report.dry_run);
+
+    let disposable = Journal::open(&checkpoint, &plan)
+        .err()
+        .ok_or("production checkpoint accepted as disposable")?;
+    assert_eq!(disposable.class(), ExecutorErrorClass::Checkpoint);
+
+    let other_backup = Journal::open_production(&checkpoint, &plan, &"c".repeat(64))
+        .err()
+        .ok_or("different backup digest accepted")?;
+    assert_eq!(other_backup.class(), ExecutorErrorClass::Checkpoint);
+    Ok(())
+}
+
+#[test]
 fn source_change_and_cancellation_fail_closed() -> Result<(), Box<dyn Error>> {
     let directory = SyntheticDirectory::new()?;
     let config = UploadExecutionConfig::default();

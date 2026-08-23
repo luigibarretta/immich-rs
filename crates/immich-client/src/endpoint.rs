@@ -52,6 +52,10 @@ impl EndpointAccess {
     pub(crate) const fn permits_upload(self) -> bool {
         matches!(self.mode, AccessMode::Disposable)
     }
+
+    pub(crate) const fn permits_production_upload(self) -> bool {
+        matches!(self.mode, AccessMode::ProductionRead)
+    }
 }
 
 impl ImmichEndpoint {

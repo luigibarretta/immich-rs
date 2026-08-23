@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use futures_util::stream::{self, StreamExt};
-use immich_rs_client::ImmichUploadClient;
+use immich_rs_client::{ImmichUploadClient, ProductionImmichUploadClient};
 use immich_rs_core::{
     ApplyReport, Cancellation, CancellationToken, UploadOperation, UploadPlan, UploadRole,
 };
@@ -40,12 +40,54 @@ pub async fn apply_upload(
     client: &ImmichUploadClient,
     cancellation: &CancellationToken,
 ) -> Result<ApplyReport, ExecutorError> {
+    if client.is_production() {
+        return Err(ExecutorError::new(ExecutorErrorClass::InvalidPlan));
+    }
+    apply_upload_inner(plan, root, checkpoint, config, client, None, cancellation).await
+}
+
+/// Apply an exactly authorized production plan and bind its backup proof to the journal.
+pub async fn apply_production_upload(
+    plan: &UploadPlan,
+    root: &Path,
+    checkpoint: &Path,
+    config: &UploadExecutionConfig,
+    client: &ProductionImmichUploadClient,
+    cancellation: &CancellationToken,
+) -> Result<ApplyReport, ExecutorError> {
+    if !client.authorization().matches_plan(plan) || !client.upload().is_production() {
+        return Err(ExecutorError::new(ExecutorErrorClass::InvalidPlan));
+    }
+    apply_upload_inner(
+        plan,
+        root,
+        checkpoint,
+        config,
+        client.upload(),
+        Some(client.authorization().backup_reference_sha256()),
+        cancellation,
+    )
+    .await
+}
+
+async fn apply_upload_inner(
+    plan: &UploadPlan,
+    root: &Path,
+    checkpoint: &Path,
+    config: &UploadExecutionConfig,
+    client: &ImmichUploadClient,
+    backup_reference_sha256: Option<&str>,
+    cancellation: &CancellationToken,
+) -> Result<ApplyReport, ExecutorError> {
     config.validate()?;
     if client.compatibility() != &plan.server {
         return Err(ExecutorError::new(ExecutorErrorClass::InvalidPlan));
     }
     let verified = verify_source(plan, root, config, cancellation)?;
-    let mut journal = Journal::open(checkpoint, plan)?;
+    let mut journal = match backup_reference_sha256 {
+        Some(digest) => Journal::open_production(checkpoint, plan, digest)?,
+        None => Journal::open(checkpoint, plan)?,
+    };
     let completed = journal.completed()?;
     validate_completed(plan, &completed)?;
     let groups = pending_groups(plan, &completed)?;

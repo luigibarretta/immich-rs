@@ -1,10 +1,19 @@
 use std::ffi::OsString;
 use std::time::Duration;
 
-use crate::args::{self, ApplyRequest, ArchiveApplyRequest};
+use crate::args::{self, ApplyRequest, ArchiveApplyRequest, ProductionWriteRequest};
 use crate::config::EffectiveConfig;
 use crate::failure::CliFailure;
 use crate::plan_args::common_scan_option;
+
+#[derive(Default)]
+struct ProductionOptions {
+    read: bool,
+    write: bool,
+    plan_sha256: Option<String>,
+    expected_operations: Option<u64>,
+    backup_reference: Option<String>,
+}
 
 pub fn parse_upload(
     arguments: &[OsString],
@@ -19,10 +28,15 @@ pub fn parse_upload(
     let mut server = effective.server.clone();
     let mut server_from_cli = false;
     let mut dry_run = effective.upload_dry_run.unwrap_or(false);
+    let mut production = ProductionOptions::default();
     let mut config = args::upload_config(effective);
     let mut index = 0;
     while index < arguments.len() {
         if let Some(consumed) = common_scan_option(arguments, index, &mut config.scan)? {
+            index += consumed;
+            continue;
+        }
+        if let Some(consumed) = production_option(arguments, index, &mut production)? {
             index += consumed;
             continue;
         }
@@ -85,6 +99,7 @@ pub fn parse_upload(
     if !dry_run && server.is_none() {
         return Err(CliFailure::usage("--server is required for apply"));
     }
+    let production = production.into_request(dry_run)?;
     Ok(ApplyRequest {
         plan: plan.ok_or_else(|| CliFailure::usage("--plan is required"))?,
         source: source.ok_or_else(|| CliFailure::usage("--source is required"))?,
@@ -92,7 +107,74 @@ pub fn parse_upload(
         server: if dry_run { None } else { server },
         dry_run,
         config,
+        production,
     })
+}
+
+fn production_option(
+    arguments: &[OsString],
+    index: usize,
+    production: &mut ProductionOptions,
+) -> Result<Option<usize>, CliFailure> {
+    let consumed = match arguments[index].to_str() {
+        Some("--authorize-production-read") => {
+            production.read = true;
+            1
+        }
+        Some("--authorize-production-write") => {
+            production.write = true;
+            1
+        }
+        Some("--confirm-plan-sha256") => {
+            production.plan_sha256 = Some(args::string_value(
+                arguments,
+                index,
+                "--confirm-plan-sha256",
+            )?);
+            2
+        }
+        Some("--expected-operations") => {
+            production.expected_operations =
+                Some(args::u64_value(arguments, index, "--expected-operations")?);
+            2
+        }
+        Some("--backup-reference") => {
+            production.backup_reference =
+                Some(args::string_value(arguments, index, "--backup-reference")?);
+            2
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(consumed))
+}
+
+impl ProductionOptions {
+    fn into_request(self, dry_run: bool) -> Result<Option<ProductionWriteRequest>, CliFailure> {
+        let has_values = self.read
+            || self.write
+            || self.plan_sha256.is_some()
+            || self.expected_operations.is_some()
+            || self.backup_reference.is_some();
+        if dry_run || !has_values {
+            return Ok(None);
+        }
+        if !self.read || !self.write {
+            return Err(CliFailure::usage(
+                "production apply requires read and write acknowledgements",
+            ));
+        }
+        Ok(Some(ProductionWriteRequest {
+            plan_sha256: self.plan_sha256.ok_or_else(|| {
+                CliFailure::usage("production apply requires --confirm-plan-sha256")
+            })?,
+            expected_operations: self.expected_operations.ok_or_else(|| {
+                CliFailure::usage("production apply requires --expected-operations")
+            })?,
+            backup_reference: self
+                .backup_reference
+                .ok_or_else(|| CliFailure::usage("production apply requires --backup-reference"))?,
+        }))
+    }
 }
 
 pub fn parse_archive(
@@ -174,5 +256,47 @@ mod tests {
             &config,
         );
         assert!(upload.is_err());
+    }
+
+    #[test]
+    fn production_upload_requires_the_complete_cli_confirmation() {
+        let config = EffectiveConfig::default();
+        let complete = parse_upload(
+            &arguments(&[
+                "--plan",
+                "plan.json",
+                "--source",
+                "source",
+                "--checkpoint",
+                "checkpoint.sqlite",
+                "--server",
+                "https://example.invalid",
+                "--authorize-production-read",
+                "--authorize-production-write",
+                "--confirm-plan-sha256",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "--expected-operations",
+                "1",
+                "--backup-reference",
+                "synthetic-backup",
+            ]),
+            &config,
+        );
+        assert!(matches!(complete, Ok(request) if request.production.is_some()));
+
+        let dry_run = parse_upload(
+            &arguments(&[
+                "--plan",
+                "plan.json",
+                "--source",
+                "source",
+                "--checkpoint",
+                "checkpoint.sqlite",
+                "--dry-run",
+                "--authorize-production-write",
+            ]),
+            &config,
+        );
+        assert!(matches!(dry_run, Ok(request) if request.production.is_none()));
     }
 }

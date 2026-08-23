@@ -12,7 +12,7 @@ mod planner;
 mod retry;
 mod verify;
 
-pub use apply::{apply_upload, dry_run_upload};
+pub use apply::{apply_production_upload, apply_upload, dry_run_upload};
 pub use archive_apply::apply_archive;
 pub use archive_plan::{ArchivePlanningConfig, ArchiveSelection, create_archive_manifest};
 pub use config::UploadExecutionConfig;

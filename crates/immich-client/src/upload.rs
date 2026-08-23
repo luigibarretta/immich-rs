@@ -96,6 +96,7 @@ impl Debug for UploadRequest<'_> {
 pub struct ImmichUploadClient {
     read: ImmichReadClient,
     compatibility: ServerCompatibility,
+    production: bool,
 }
 
 impl ImmichUploadClient {
@@ -106,6 +107,18 @@ impl ImmichUploadClient {
         Self {
             read,
             compatibility,
+            production: false,
+        }
+    }
+
+    pub(crate) const fn from_production(
+        read: ImmichReadClient,
+        compatibility: ServerCompatibility,
+    ) -> Self {
+        Self {
+            read,
+            compatibility,
+            production: true,
         }
     }
 
@@ -113,6 +126,12 @@ impl ImmichUploadClient {
     #[must_use]
     pub const fn compatibility(&self) -> &ServerCompatibility {
         &self.compatibility
+    }
+
+    /// Return whether this transport was created by the production authorization path.
+    #[must_use]
+    pub const fn is_production(&self) -> bool {
+        self.production
     }
 
     /// Ask Immich whether a checksum should be uploaded.
@@ -253,6 +272,7 @@ impl Debug for ImmichUploadClient {
             .debug_struct("ImmichUploadClient")
             .field("read", &self.read)
             .field("compatibility", &"[REDACTED]")
+            .field("production", &self.production)
             .finish_non_exhaustive()
     }
 }

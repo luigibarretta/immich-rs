@@ -5,6 +5,7 @@ mod archive;
 mod cancellation;
 mod metadata;
 mod planning;
+mod production;
 mod progress;
 pub mod rule_id;
 mod upload;
@@ -20,6 +21,7 @@ pub use planning::{
     NormalizedPlan, PlanDiagnostic, PlanSummary, PlanValidationError, RuleEvidence,
     SourceDescriptor, SourceKind, UnicodeNormalization,
 };
+pub use production::{ProductionConfirmationError, ProductionWriteConfirmation};
 pub use progress::{ProgressEvent, ProgressStage};
 pub use upload::{
     ApplyReport, ServerCompatibility, ServerVersion, UploadOperation, UploadPlan,

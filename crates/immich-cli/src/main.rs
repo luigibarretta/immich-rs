@@ -10,6 +10,7 @@ mod environment;
 mod failure;
 mod folder;
 mod google_takeout;
+mod inspect;
 mod network;
 mod output;
 mod plan_args;
@@ -61,6 +62,11 @@ async fn run(
             output::write_json(configuration, "effective configuration")
         }
         Some("plan") => run_plan(&arguments[1..], configuration).await,
+        Some("inspect")
+            if arguments.get(1).and_then(|argument| argument.to_str()) == Some("upload-plan") =>
+        {
+            inspect::run_upload_plan(&arguments[2..], configuration)
+        }
         Some("apply") => run_apply(&arguments[1..], configuration).await,
         _ => Err(CliFailure::usage(
             "unsupported or missing command; run --help",
@@ -128,6 +134,6 @@ async fn run_apply(
 
 fn print_help() {
     println!(
-        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nProduction authorization flags are CLI-only and are never read from configuration.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace or metadata mutation command exists."
+        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] inspect upload-plan --plan <FILE>\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nRemote upload additionally requires --authorize-production-write, --confirm-plan-sha256,\n--expected-operations and --backup-reference. Production authorization flags are CLI-only.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace or metadata mutation command exists."
     );
 }

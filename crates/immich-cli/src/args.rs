@@ -39,6 +39,13 @@ pub struct ApplyRequest {
     pub server: Option<String>,
     pub dry_run: bool,
     pub config: UploadExecutionConfig,
+    pub production: Option<ProductionWriteRequest>,
+}
+
+pub struct ProductionWriteRequest {
+    pub plan_sha256: String,
+    pub expected_operations: u64,
+    pub backup_reference: String,
 }
 
 pub struct ArchivePlanRequest {

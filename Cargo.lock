@@ -604,6 +604,7 @@ dependencies = [
  "sha2",
  "time",
  "tokio",
+ "unicode-normalization",
  "zip",
 ]
 

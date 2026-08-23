@@ -14,7 +14,7 @@ import tempfile
 import time
 from typing import Any
 
-from phase2_takeout_plan import exercise_takeout_plan
+from phase2_takeout_plan import exercise_takeout_faults, exercise_takeout_plan
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 MOCK = runpy.run_path(str(REPOSITORY_ROOT / "tests/oracle/mock_immich_server.py"))
@@ -325,6 +325,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="immich-rs-phase2-mock-") as temporary:
         workspace = Path(temporary)
         exercise_takeout_plan(binary, workspace, MOCK, invoke, invoke_process)
+        exercise_takeout_faults(binary, workspace, MOCK, invoke)
         exercise_matrix(binary, workspace)
         exercise_fault(binary, workspace, "rate_limit")
         exercise_fault(binary, workspace, "server_error")

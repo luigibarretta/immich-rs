@@ -23,11 +23,13 @@ MAX_REQUEST_BODY_BYTES = 1_048_576
 RESPONSE_FIXTURE_PATH = Path(__file__).resolve().parent / "server-fixtures" / "immich-v3.1.json"
 SUPPORT = runpy.run_path(str(Path(__file__).resolve().with_name("mock_support.py")))
 ARCHIVE = runpy.run_path(str(Path(__file__).resolve().with_name("mock_archive.py")))
+IMPORT = runpy.run_path(str(Path(__file__).resolve().with_name("mock_import.py")))
 MockState = SUPPORT["MockState"]
 is_mutating_request = SUPPORT["is_mutating_request"]
 archive_search_response = ARCHIVE["archive_search_response"]
 archive_original = ARCHIVE["archive_original"]
 archive_asset_response = ARCHIVE["archive_asset_response"]
+route_import = IMPORT["route_import"]
 CLIENT_DISCONNECT_ERRORS = (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)
 
 
@@ -218,7 +220,7 @@ class _Handler(BaseHTTPRequestHandler):
             and configured_fault.get("kind") == "commit_lost_response"
             and not mutating
         )
-        fault = None if skip_lost_response_precheck else self.state.consume_fault(path)
+        fault = None if skip_lost_response_precheck else self.state.consume_fault(path, self.command)
         if fault == "timeout":
             delay_ms = configured_fault.get("delay_ms", 100) if isinstance(configured_fault, dict) else 100
             time.sleep(delay_ms / 1000)
@@ -232,12 +234,21 @@ class _Handler(BaseHTTPRequestHandler):
             self._disconnect()
             return
         elif fault == "commit_lost_response" and mutating:
-            checksum = self.headers.get("x-immich-checksum", "synthetic-unidentified")
-            self.state.commit_asset(checksum)
+            imported = route_import(self.state.imports, self.command, path, query, json_body)
+            if imported is None:
+                checksum = self.headers.get("x-immich-checksum", "synthetic-unidentified")
+                self.state.commit_asset(checksum)
             self.state.record_commit(request)
             self._disconnect()
             return
 
+        imported = route_import(self.state.imports, self.command, path, query, json_body)
+        if imported is not None:
+            status, payload, committed = imported
+            if committed:
+                self.state.record_commit(request)
+            self._json_response(status, payload)
+            return
         version = scenario["version"]
         responses = scenario["responses"]
         if path == "/api/server/ping" and self.command == "GET":

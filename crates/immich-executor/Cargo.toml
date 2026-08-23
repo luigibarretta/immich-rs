@@ -22,9 +22,10 @@ sha1.workspace = true
 sha2.workspace = true
 tokio.workspace = true
 time.workspace = true
+unicode-normalization.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
-zip.workspace = true
 
 [lints]
 workspace = true

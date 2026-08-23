@@ -6,9 +6,15 @@ mod archive_apply;
 mod archive_plan;
 mod config;
 mod error;
+mod import_apply;
 mod import_config;
 mod import_dry_run;
+mod import_effect_support;
+mod import_effects;
+mod import_journal;
 mod import_planner;
+mod import_staging;
+mod import_staging_fs;
 mod journal;
 mod operation;
 mod planner;
@@ -20,6 +26,7 @@ pub use archive_apply::apply_archive;
 pub use archive_plan::{ArchivePlanningConfig, ArchiveSelection, create_archive_manifest};
 pub use config::UploadExecutionConfig;
 pub use error::{ExecutorError, ExecutorErrorClass};
+pub use import_apply::apply_takeout_import;
 pub use import_config::TakeoutImportConfig;
 pub use import_dry_run::dry_run_takeout_import;
 pub use import_planner::create_takeout_upload_plan;
@@ -28,6 +35,8 @@ pub use planner::create_upload_plan;
 /// Human-readable component identity.
 pub const COMPONENT: &str = "immich-rs-executor";
 
+#[cfg(test)]
+mod import_staging_tests;
 #[cfg(test)]
 mod import_tests;
 #[cfg(test)]

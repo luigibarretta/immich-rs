@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from threading import Lock
 from typing import Any
+from pathlib import Path
+import runpy
 
 MOCK_SCHEMA = "mock-immich-v1"
+IMPORT = runpy.run_path(str(Path(__file__).resolve().with_name("mock_import.py")))
+MockImportState = IMPORT["MockImportState"]
 
 
 class MockState:
@@ -16,6 +20,7 @@ class MockState:
         self.requests: list[dict[str, Any]] = []
         self.committed_mutations: list[dict[str, Any]] = []
         self._assets: dict[str, str] = {}
+        self.imports = MockImportState()
         self._lock = Lock()
         fault = scenario.get("fault", {})
         self._fault_remaining = int(fault.get("times", 0)) if isinstance(fault, dict) else 0
@@ -45,13 +50,22 @@ class MockState:
             self._assets[checksum] = asset_id
             return asset_id, "created"
 
-    def consume_fault(self, path: str) -> str | None:
+    def consume_fault(self, path: str, method: str) -> str | None:
         fault = self.scenario.get("fault", {})
         if not isinstance(fault, dict):
             return None
         prefix = fault.get("path_prefix", "/api/")
+        suffix = fault.get("path_suffix", "")
+        selected_method = fault.get("method")
         kind = fault.get("kind")
-        if not isinstance(prefix, str) or not isinstance(kind, str) or not path.startswith(prefix):
+        if (
+            not isinstance(prefix, str)
+            or not isinstance(suffix, str)
+            or not isinstance(kind, str)
+            or not path.startswith(prefix)
+            or not path.endswith(suffix)
+            or (selected_method is not None and selected_method != method)
+        ):
             return None
         with self._lock:
             if self._fault_remaining <= 0:
@@ -66,6 +80,7 @@ class MockState:
                 "requests": [dict(request) for request in self.requests],
                 "committed_mutations": [dict(request) for request in self.committed_mutations],
                 "asset_count": len(self._assets),
+                **self.imports.snapshot(),
             }
 
 

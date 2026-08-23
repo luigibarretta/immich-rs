@@ -3,6 +3,9 @@ name: production-disposable
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - phase7-disposable-*
 
 concurrency:
   group: immich-rs-production-disposable

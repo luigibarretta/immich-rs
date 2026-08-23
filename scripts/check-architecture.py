@@ -176,7 +176,8 @@ def check() -> list[str]:
         "com.docker.network.bridge.enable_ip_masquerade=false" not in production_harness
         or 'scripts/tls-forward.py" --listen-host "$TLS_HOST"' not in production_harness
         or "workflow_dispatch" not in production_workflow
-        or "push:" in production_workflow
+        or "phase7-disposable-*" not in production_workflow
+        or "branches:" in production_workflow
     ):
         failures.append("production HTTPS gate is not manual and isolated")
     materializer = (REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh").read_text(

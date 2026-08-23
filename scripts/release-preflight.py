@@ -71,6 +71,8 @@ def validate(root: Path, tag: str, revision: str) -> None:
         "CHANGELOG.md", "LICENSE", "NOTICE.md", "README.md", "SECURITY.md",
         "docs/migration-from-immich-go.md", "docs/release-process.md",
         "docs/compatibility/phase5-archive.md",
+        "docs/compatibility/phase7-production-https.md",
+        "docs/compatibility/phase8-google-takeout-import.md",
     )
     missing = [name for name in required if not (root / name).is_file()]
     if missing:

@@ -67,6 +67,9 @@ def validate() -> None:
         "${{ matrix.python }} scripts/package-release.py",
         "shell: powershell",
         'py -3.12 scripts/check-pe.py "${{ matrix.binary }}"',
+        "check-production-evidence.py",
+        "check-phase8-evidence.py",
+        "check-phase8-benchmark.py",
     )
     if any(value not in workflow for value in required):
         raise ReleaseCheckError("release identity, SBOM or signing gate drifted")
@@ -77,12 +80,20 @@ def validate() -> None:
     for document in (
         "LICENSE", "NOTICE.md", "README.md", "SECURITY.md", "CHANGELOG.md",
         "docs/migration-from-immich-go.md", "docs/compatibility/phase5-archive.md",
+        "docs/compatibility/phase7-production-https.md",
+        "docs/compatibility/phase8-google-takeout-import.md",
     ):
         if f'"{document}"' not in package:
             raise ReleaseCheckError(f"release package omits {document}")
     preflight = read("scripts/release-preflight.py")
     if '"git", "verify-tag"' not in preflight or "release-signing-key.asc" not in preflight:
         raise ReleaseCheckError("signed-tag preflight drifted")
+    for document in (
+        "docs/compatibility/phase7-production-https.md",
+        "docs/compatibility/phase8-google-takeout-import.md",
+    ):
+        if f'"{document}"' not in preflight:
+            raise ReleaseCheckError(f"release preflight omits {document}")
     finalizer = read("scripts/finalize-release.py")
     if (
         "SHA256SUMS" not in finalizer

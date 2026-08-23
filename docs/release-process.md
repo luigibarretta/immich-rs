@@ -27,8 +27,8 @@ Python 3.12 as `python3.12`; the workflows deliberately avoid privileged
 ## Candidate checklist
 
 1. Confirm `main` is clean, equal to `origin/main` and green on its exact SHA.
-2. Confirm Phase 0–5, both Phase 6 scale and Phase 7 production-HTTPS evidence
-   validators pass.
+2. Confirm Phase 0–5, both Phase 6 scale, Phase 7 production-HTTPS and both
+   Phase 8 Takeout evidence validators pass.
 3. Set the Cargo workspace version to the candidate version and update
    `CHANGELOG.md`, compatibility matrices and this guide with verified facts.
 4. Create an annotated signed tag such as `v0.1.0-rc.1`; verify it locally with

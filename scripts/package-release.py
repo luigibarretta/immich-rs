@@ -34,6 +34,8 @@ DOCUMENTS = (
     "docs/compatibility/phase3-google-takeout.md",
     "docs/compatibility/phase4-apple-photos.md",
     "docs/compatibility/phase5-archive.md",
+    "docs/compatibility/phase7-production-https.md",
+    "docs/compatibility/phase8-google-takeout-import.md",
 )
 
 

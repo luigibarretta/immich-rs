@@ -4,7 +4,8 @@ use immich_rs_core::{
     UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadPlan,
 };
 use immich_rs_executor::{
-    TakeoutImportConfig, apply_production_upload, apply_takeout_import, apply_upload,
+    TakeoutImportConfig, apply_production_takeout_import, apply_production_upload,
+    apply_takeout_import, apply_upload,
 };
 
 use crate::args::ApplyRequest;
@@ -21,36 +22,7 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
             "apply upload does not support this plan schema",
         ));
     }
-    if plan.schema_version == UPLOAD_PLAN_SCHEMA_VERSION_V2 && request.production.is_some() {
-        return Err(CliFailure::usage(
-            "production Takeout import is not yet authorized",
-        ));
-    }
-    let production = request
-        .production
-        .as_ref()
-        .map(|production| {
-            ProductionWriteConfirmation::new(
-                true,
-                production.plan_sha256.clone(),
-                production.expected_operations,
-                production.backup_reference.clone(),
-            )
-            .map_err(|_| CliFailure::usage("invalid production confirmation"))
-        })
-        .transpose()?;
-    if let Some(confirmation) = &production {
-        let digest = upload_plan_sha256(&plan)
-            .map_err(|_| CliFailure::usage("invalid production upload plan"))?;
-        if confirmation.plan_sha256() != digest
-            || confirmation.expected_operations() != plan.summary.operations
-            || confirmation.expected_operations() != plan.operations.len() as u64
-        {
-            return Err(CliFailure::usage(
-                "production confirmation does not match upload plan",
-            ));
-        }
-    }
+    let production = production_confirmation(&request, &plan)?;
     let server = request
         .server
         .as_deref()
@@ -70,7 +42,15 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
         return Err(CliFailure::usage("server does not match upload plan"));
     }
     if plan.schema_version == UPLOAD_PLAN_SCHEMA_VERSION_V2 {
-        return run_takeout(request, &plan, read_client, negotiated, &cancellation).await;
+        return run_takeout(
+            request,
+            &plan,
+            read_client,
+            negotiated,
+            production,
+            &cancellation,
+        )
+        .await;
     }
     let source = request
         .inputs
@@ -112,29 +92,81 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
     output::write_json(&report, "apply report")
 }
 
+fn production_confirmation(
+    request: &ApplyRequest,
+    plan: &UploadPlan,
+) -> Result<Option<ProductionWriteConfirmation>, CliFailure> {
+    let confirmation = request
+        .production
+        .as_ref()
+        .map(|production| {
+            ProductionWriteConfirmation::new(
+                true,
+                production.plan_sha256.clone(),
+                production.expected_operations,
+                production.backup_reference.clone(),
+            )
+            .map_err(|_| CliFailure::usage("invalid production confirmation"))
+        })
+        .transpose()?;
+    let Some(value) = &confirmation else {
+        return Ok(None);
+    };
+    let digest = upload_plan_sha256(plan)
+        .map_err(|_| CliFailure::usage("invalid production upload plan"))?;
+    let expected = if plan.schema_version == UPLOAD_PLAN_SCHEMA_VERSION_V2 {
+        plan.summary.max_mutations
+    } else {
+        plan.summary.operations
+    };
+    let matches = value.plan_sha256() == digest
+        && value.expected_operations() == expected
+        && (plan.schema_version != UPLOAD_PLAN_SCHEMA_VERSION
+            || value.expected_operations() == plan.operations.len() as u64);
+    matches
+        .then_some(confirmation)
+        .ok_or_else(|| CliFailure::usage("production confirmation does not match upload plan"))
+}
+
 async fn run_takeout(
     request: ApplyRequest,
     plan: &UploadPlan,
     read_client: ImmichReadClient,
     negotiated: NegotiatedServer,
+    production: Option<ProductionWriteConfirmation>,
     cancellation: &CancellationToken,
 ) -> Result<(), CliFailure> {
     let config = TakeoutImportConfig {
         source: request.takeout,
         upload: request.config,
     };
-    let client = read_client
-        .authorize_import(negotiated)
-        .map_err(CliFailure::from_client)?;
-    let report = apply_takeout_import(
-        plan,
-        &request.inputs,
-        &request.checkpoint,
-        &config,
-        &client,
-        cancellation,
-    )
-    .await
+    let report = if let Some(confirmation) = production {
+        let client = read_client
+            .authorize_production_import(negotiated, plan, &confirmation)
+            .map_err(CliFailure::from_client)?;
+        apply_production_takeout_import(
+            plan,
+            &request.inputs,
+            &request.checkpoint,
+            &config,
+            &client,
+            cancellation,
+        )
+        .await
+    } else {
+        let client = read_client
+            .authorize_import(negotiated)
+            .map_err(CliFailure::from_client)?;
+        apply_takeout_import(
+            plan,
+            &request.inputs,
+            &request.checkpoint,
+            &config,
+            &client,
+            cancellation,
+        )
+        .await
+    }
     .map_err(CliFailure::from_executor)?;
     if report.cancelled {
         return Err(CliFailure::cancelled());

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use immich_rs_client::ImmichImportClient;
+use immich_rs_client::{ImmichImportClient, ProductionImmichImportClient};
 use immich_rs_core::{
     Cancellation, CancellationToken, IMPORT_APPLY_REPORT_SCHEMA_VERSION, ImportApplyReport,
     SourceKind, UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadOperation, UploadPlan, UploadRole,
@@ -26,9 +26,49 @@ pub async fn apply_takeout_import(
     client: &ImmichImportClient,
     cancellation: &CancellationToken,
 ) -> Result<ImportApplyReport, ExecutorError> {
-    validate_context(plan, config, client)?;
+    apply_takeout_inner(plan, inputs, checkpoint, config, client, None, cancellation).await
+}
+
+/// Apply one exactly authorized production Takeout plan.
+pub async fn apply_production_takeout_import(
+    plan: &UploadPlan,
+    inputs: &[PathBuf],
+    checkpoint: &Path,
+    config: &TakeoutImportConfig,
+    client: &ProductionImmichImportClient,
+    cancellation: &CancellationToken,
+) -> Result<ImportApplyReport, ExecutorError> {
+    if !client.authorization().matches_plan(plan) || !client.import().upload().is_production() {
+        return Err(ExecutorError::new(ExecutorErrorClass::InvalidPlan));
+    }
+    apply_takeout_inner(
+        plan,
+        inputs,
+        checkpoint,
+        config,
+        client.import(),
+        Some(client.authorization().backup_reference_sha256()),
+        cancellation,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn apply_takeout_inner(
+    plan: &UploadPlan,
+    inputs: &[PathBuf],
+    checkpoint: &Path,
+    config: &TakeoutImportConfig,
+    client: &ImmichImportClient,
+    backup_reference_sha256: Option<&str>,
+    cancellation: &CancellationToken,
+) -> Result<ImportApplyReport, ExecutorError> {
+    validate_context(plan, config, client, backup_reference_sha256.is_some())?;
     let resolved = rescan(plan, inputs, config, cancellation)?;
-    let mut journal = ImportJournal::open(checkpoint, plan)?;
+    let mut journal = match backup_reference_sha256 {
+        Some(digest) => ImportJournal::open_production(checkpoint, plan, digest)?,
+        None => ImportJournal::open(checkpoint, plan)?,
+    };
     let state = journal.state()?;
     state.validate_for_plan(plan)?;
     let staging = ImportStaging::open(checkpoint, plan, config)?;
@@ -117,6 +157,7 @@ fn validate_context(
     plan: &UploadPlan,
     config: &TakeoutImportConfig,
     client: &ImmichImportClient,
+    production: bool,
 ) -> Result<(), ExecutorError> {
     config.validate()?;
     plan.validate()
@@ -125,7 +166,7 @@ fn validate_context(
         && plan.source.kind == SourceKind::GoogleTakeout
         && plan.configuration_sha256 == config.identity_sha256()?
         && client.upload().compatibility() == &plan.server
-        && !client.upload().is_production();
+        && client.upload().is_production() == production;
     valid
         .then_some(())
         .ok_or_else(|| ExecutorError::new(ExecutorErrorClass::InvalidPlan))

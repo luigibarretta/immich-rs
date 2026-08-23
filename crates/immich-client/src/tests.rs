@@ -161,6 +161,97 @@ fn production_upload_is_bound_to_plan_count_origin_and_hashed_backup()
 }
 
 #[test]
+fn production_import_is_bound_to_the_maximum_mutation_budget()
+-> Result<(), Box<dyn std::error::Error>> {
+    let compatibility = ServerCompatibility {
+        version: ServerVersion {
+            major: 3,
+            minor: 1,
+            patch: 0,
+        },
+        identity_sha256: "1".repeat(64),
+    };
+    let plan: UploadPlan = serde_json::from_value(serde_json::json!({
+        "schema_version": 2,
+        "normalized_plan_sha256": "2".repeat(64),
+        "source": {
+            "kind": "google_takeout",
+            "label": "synthetic-takeout",
+            "fingerprint_sha256": "3".repeat(64),
+            "case_sensitive": true,
+            "unicode_normalization": "nfc"
+        },
+        "configuration_sha256": "4".repeat(64),
+        "server": compatibility,
+        "operations": [{
+            "operation_id": "5".repeat(64),
+            "relative_path": "Takeout/Google Photos/Photos from 2024/synthetic.jpg",
+            "media_kind": "image",
+            "byte_len": 16,
+            "content_sha256": "6".repeat(64),
+            "created_at_unix_ms": 1,
+            "modified_at_unix_ms": 1,
+            "xmp_sidecar": null,
+            "normalized_metadata": {
+                "description": "synthetic description",
+                "taken_at_utc": null,
+                "location": null,
+                "albums": ["Synthetic Album"]
+            },
+            "role": {"kind": "standalone"}
+        }],
+        "summary": {
+            "operations": 1,
+            "media_bytes": 16,
+            "xmp_sidecars": 0,
+            "live_photo_pairs": 0,
+            "metadata_updates": 1,
+            "album_creates": 1,
+            "album_memberships": 1,
+            "max_mutations": 4
+        }
+    }))?;
+    plan.validate()?;
+    let digest = crate::upload_plan_sha256(&plan)?;
+    let endpoint = ImmichEndpoint::parse("https://example.invalid")?;
+    let origin_sha256 = format!(
+        "{:x}",
+        Sha256::digest(endpoint.canonical_origin().as_bytes())
+    );
+    let client = ImmichReadClient::new_production_read(
+        endpoint,
+        ApiKey::new("synthetic-test-key")?,
+        ClientConfig::default(),
+        true,
+    )?;
+    let negotiated =
+        crate::NegotiatedServer::synthetic_for_test(plan.server.clone(), origin_sha256);
+    let incorrect = ProductionWriteConfirmation::new(
+        true,
+        digest.clone(),
+        plan.summary.operations,
+        "synthetic-backup".to_owned(),
+    )?;
+    assert!(
+        client
+            .clone()
+            .authorize_production_import(negotiated.clone(), &plan, &incorrect)
+            .is_err()
+    );
+    let confirmation = ProductionWriteConfirmation::new(
+        true,
+        digest,
+        plan.summary.max_mutations,
+        "synthetic-backup".to_owned(),
+    )?;
+    let production = client.authorize_production_import(negotiated, &plan, &confirmation)?;
+    assert!(production.import().upload().is_production());
+    assert!(production.authorization().matches_plan(&plan));
+    assert!(!format!("{production:?}").contains("synthetic-backup"));
+    Ok(())
+}
+
+#[test]
 fn retry_contract_is_explicit() {
     let retryable = ClientError::response(
         ClientErrorClass::RateLimited,

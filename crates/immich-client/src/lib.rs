@@ -20,7 +20,8 @@ pub use endpoint::{EndpointAccess, EndpointError, ImmichEndpoint};
 pub use error::{ClientError, ClientErrorClass};
 pub use import::{ImmichImportClient, RemoteAlbum};
 pub use production::{
-    ProductionImmichUploadClient, ProductionUploadAuthorization, upload_plan_sha256,
+    ProductionImmichImportClient, ProductionImmichUploadClient, ProductionImportAuthorization,
+    ProductionUploadAuthorization, upload_plan_sha256,
 };
 pub use read::{ClientConfig, ImmichReadClient, NegotiatedServer};
 pub use tls::TlsRootCertificates;

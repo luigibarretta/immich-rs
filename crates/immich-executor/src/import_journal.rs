@@ -1,16 +1,15 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use immich_rs_core::{UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadPlan};
-use rusqlite::{Connection, OpenFlags, TransactionBehavior, params};
+use immich_rs_core::UploadPlan;
+use rusqlite::{Connection, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 
+use crate::import_journal_db::{
+    checkpoint_error, expected_binding, open_connection, read_binding, validate_plan,
+};
 use crate::{ExecutorError, ExecutorErrorClass};
-
-const CHECKPOINT_SCHEMA: &str = "checkpoint-v2";
-const APPLICATION_ID: i64 = 0x4952_5332;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ImportOutcome {
@@ -141,16 +140,29 @@ pub struct ImportJournal {
 
 impl ImportJournal {
     pub(crate) fn open(path: &Path, plan: &UploadPlan) -> Result<Self, ExecutorError> {
+        Self::open_with_scope(path, plan, None)
+    }
+
+    pub(crate) fn open_production(
+        path: &Path,
+        plan: &UploadPlan,
+        backup_reference_sha256: &str,
+    ) -> Result<Self, ExecutorError> {
+        if !is_lower_sha256(backup_reference_sha256) {
+            return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
+        }
+        Self::open_with_scope(path, plan, Some(backup_reference_sha256))
+    }
+
+    fn open_with_scope(
+        path: &Path,
+        plan: &UploadPlan,
+        backup_reference_sha256: Option<&str>,
+    ) -> Result<Self, ExecutorError> {
         validate_plan(plan)?;
-        reject_symlink(path)?;
-        let flags = OpenFlags::SQLITE_OPEN_READ_WRITE
-            | OpenFlags::SQLITE_OPEN_CREATE
-            | OpenFlags::SQLITE_OPEN_NO_MUTEX;
-        let connection = Connection::open_with_flags(path, flags).map_err(checkpoint_error)?;
-        configure(&connection)?;
-        create_schema(&connection)?;
+        let connection = open_connection(path)?;
         let mut journal = Self { connection };
-        journal.bind_or_validate(plan)?;
+        journal.bind_or_validate(plan, backup_reference_sha256)?;
         Ok(journal)
     }
 
@@ -210,12 +222,16 @@ impl ImportJournal {
         transaction.commit().map_err(checkpoint_error)
     }
 
-    fn bind_or_validate(&mut self, plan: &UploadPlan) -> Result<(), ExecutorError> {
+    fn bind_or_validate(
+        &mut self,
+        plan: &UploadPlan,
+        backup_reference_sha256: Option<&str>,
+    ) -> Result<(), ExecutorError> {
         let count: i64 = self
             .connection
             .query_row("SELECT COUNT(*) FROM metadata", [], |row| row.get(0))
             .map_err(checkpoint_error)?;
-        let expected = expected_binding(plan)?;
+        let expected = expected_binding(plan, backup_reference_sha256)?;
         if count == 0 {
             let transaction = self
                 .connection
@@ -250,101 +266,6 @@ pub fn album_identity(name: &str) -> String {
     format!("{:x}", Sha256::digest(name.as_bytes()))
 }
 
-fn configure(connection: &Connection) -> Result<(), ExecutorError> {
-    connection
-        .busy_timeout(Duration::from_secs(5))
-        .map_err(checkpoint_error)?;
-    connection
-        .execute_batch(
-            "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; \
-             PRAGMA trusted_schema=OFF; PRAGMA application_id=1230132018; PRAGMA user_version=2;",
-        )
-        .map_err(checkpoint_error)
-}
-
-fn create_schema(connection: &Connection) -> Result<(), ExecutorError> {
-    connection
-        .execute_batch(
-            "CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY NOT NULL,value TEXT NOT NULL) STRICT; \
-             CREATE TABLE IF NOT EXISTS effects( \
-               sequence INTEGER PRIMARY KEY AUTOINCREMENT,effect_key TEXT NOT NULL, \
-               outcome TEXT NOT NULL CHECK(outcome IN ('created','duplicate','completed','reused','failed','indeterminate')), \
-               remote_id TEXT,retry_count INTEGER NOT NULL CHECK(retry_count >= 0),recorded_unix_ms INTEGER NOT NULL \
-             ) STRICT; CREATE INDEX IF NOT EXISTS effects_key_sequence ON effects(effect_key,sequence);",
-        )
-        .map_err(checkpoint_error)
-}
-
-fn expected_binding(plan: &UploadPlan) -> Result<BTreeMap<String, String>, ExecutorError> {
-    let bytes =
-        serde_json::to_vec(plan).map_err(|_| ExecutorError::new(ExecutorErrorClass::Invariant))?;
-    Ok([
-        ("schema".to_owned(), CHECKPOINT_SCHEMA.to_owned()),
-        (
-            "upload_plan_sha256".to_owned(),
-            format!("{:x}", Sha256::digest(bytes)),
-        ),
-        (
-            "normalized_plan_sha256".to_owned(),
-            plan.normalized_plan_sha256.clone(),
-        ),
-        (
-            "source_sha256".to_owned(),
-            plan.source.fingerprint_sha256.clone(),
-        ),
-        (
-            "configuration_sha256".to_owned(),
-            plan.configuration_sha256.clone(),
-        ),
-        (
-            "server_identity_sha256".to_owned(),
-            plan.server.identity_sha256.clone(),
-        ),
-    ]
-    .into_iter()
-    .collect())
-}
-
-fn read_binding(connection: &Connection) -> Result<BTreeMap<String, String>, ExecutorError> {
-    validate_application(connection)?;
-    let mut statement = connection
-        .prepare("SELECT key,value FROM metadata ORDER BY key")
-        .map_err(checkpoint_error)?;
-    let rows = statement
-        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
-        .map_err(checkpoint_error)?;
-    let mut result = BTreeMap::new();
-    for row in rows {
-        let (key, value) = row.map_err(checkpoint_error)?;
-        if result.insert(key, value).is_some() {
-            return Err(ExecutorError::new(ExecutorErrorClass::Checkpoint));
-        }
-    }
-    Ok(result)
-}
-
-fn validate_application(connection: &Connection) -> Result<(), ExecutorError> {
-    let application: i64 = connection
-        .pragma_query_value(None, "application_id", |row| row.get(0))
-        .map_err(checkpoint_error)?;
-    let version: i64 = connection
-        .pragma_query_value(None, "user_version", |row| row.get(0))
-        .map_err(checkpoint_error)?;
-    if application == APPLICATION_ID && version == 2 {
-        Ok(())
-    } else {
-        Err(ExecutorError::new(ExecutorErrorClass::Checkpoint))
-    }
-}
-
-fn validate_plan(plan: &UploadPlan) -> Result<(), ExecutorError> {
-    plan.validate()
-        .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidPlan))?;
-    (plan.schema_version == UPLOAD_PLAN_SCHEMA_VERSION_V2)
-        .then_some(())
-        .ok_or_else(|| ExecutorError::new(ExecutorErrorClass::InvalidPlan))
-}
-
 fn validate_effect(
     key: &str,
     outcome: ImportOutcome,
@@ -372,25 +293,10 @@ fn is_lower_sha256(value: &str) -> bool {
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
-fn reject_symlink(path: &Path) -> Result<(), ExecutorError> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.file_type().is_symlink() => {
-            Err(ExecutorError::new(ExecutorErrorClass::Checkpoint))
-        }
-        Ok(_) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(_) => Err(ExecutorError::new(ExecutorErrorClass::Checkpoint)),
-    }
-}
-
 fn now_unix_ms() -> Result<i64, ExecutorError> {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| ExecutorError::new(ExecutorErrorClass::Checkpoint))?;
     i64::try_from(duration.as_millis())
         .map_err(|_| ExecutorError::new(ExecutorErrorClass::Checkpoint))
-}
-
-fn checkpoint_error(_error: rusqlite::Error) -> ExecutorError {
-    ExecutorError::new(ExecutorErrorClass::Checkpoint)
 }

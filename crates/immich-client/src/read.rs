@@ -11,8 +11,9 @@ use crate::models::{UserResponse, VersionResponse};
 use crate::response::{bounded_json, classify_transport};
 use crate::{
     ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichImportClient,
-    ImmichUploadClient, ProductionImmichUploadClient, ProductionUploadAuthorization,
-    TlsRootCertificates, upload_plan_sha256,
+    ImmichUploadClient, ProductionImmichImportClient, ProductionImmichUploadClient,
+    ProductionImportAuthorization, ProductionUploadAuthorization, TlsRootCertificates,
+    upload_plan_sha256,
 };
 
 const SUPPORTED_MAJOR: u32 = 3;
@@ -263,6 +264,42 @@ impl ImmichReadClient {
         );
         let upload = ImmichUploadClient::from_production(self, negotiated.compatibility);
         Ok(ProductionImmichUploadClient::new(upload, proof))
+    }
+
+    /// Construct an import client bound to an exact plan, mutation budget and backup.
+    pub fn authorize_production_import(
+        self,
+        negotiated: NegotiatedServer,
+        plan: &UploadPlan,
+        confirmation: &ProductionWriteConfirmation,
+    ) -> Result<ProductionImmichImportClient, ClientError> {
+        if !self.access.permits_production_upload() {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        self.validate_negotiated_binding(&negotiated)?;
+        if negotiated.compatibility() != &plan.server {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        let plan_sha256 = upload_plan_sha256(plan)?;
+        if confirmation.plan_sha256() != plan_sha256
+            || confirmation.expected_operations() != plan.summary.max_mutations
+            || plan.schema_version != immich_rs_core::UPLOAD_PLAN_SCHEMA_VERSION_V2
+        {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        let proof = ProductionImportAuthorization::new(
+            plan_sha256,
+            confirmation.expected_operations(),
+            format!(
+                "{:x}",
+                Sha256::digest(confirmation.backup_reference().as_bytes())
+            ),
+        );
+        let upload = ImmichUploadClient::from_production(self, negotiated.compatibility);
+        Ok(ProductionImmichImportClient::new(
+            ImmichImportClient::new(upload),
+            proof,
+        ))
     }
 
     fn validate_negotiated_binding(

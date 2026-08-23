@@ -52,9 +52,13 @@ jobs:
             --samples 6 --warmups 2
           python3 scripts/check-phase8-evidence.py \
             --input ".artifacts/phase8-disposable-${{ github.sha }}.json"
+          python3 scripts/check-phase8-benchmark.py \
+            --input ".artifacts/phase8-benchmark-${{ github.sha }}.json"
+          mkdir phase8-artifacts
+          cp -- .artifacts/*.json phase8-artifacts/
       - name: Preserve raw benchmark and disposable evidence
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: phase8-benchmark-${{ github.sha }}
-          path: .artifacts
+          path: phase8-artifacts
           retention-days: 30

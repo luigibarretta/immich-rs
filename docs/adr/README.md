@@ -38,12 +38,13 @@ Run `scripts/check-adrs.sh` before committing.
 | [0019](ADR-0019-phase-two-folder-upload.md) | Phase-two folder upload execution | Superseded by ADR-0020 |
 | [0020](ADR-0020-containerized-disposable-transport.md) | Containerized disposable transport | Superseded by ADR-0027 |
 | [0021](ADR-0021-google-takeout-read-only-foundation.md) | Google Takeout read-only foundation | Superseded by ADR-0022 |
-| [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Accepted |
+| [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Superseded by ADR-0028 |
 | [0023](ADR-0023-apple-photos-read-only-planning.md) | Apple Photos export read-only planning | Accepted |
 | [0024](ADR-0024-read-only-immich-archive.md) | Read-only Immich archive | Superseded by ADR-0027 |
 | [0025](ADR-0025-native-release-candidate-pipeline.md) | Native release-candidate pipeline | Accepted |
 | [0026](ADR-0026-oci-container-and-layered-configuration.md) | OCI container and layered configuration | Accepted |
 | [0027](ADR-0027-production-transport-and-authorization.md) | Production transport and operator authorization | Accepted |
+| [0028](ADR-0028-google-takeout-import.md) | Google Takeout import | Accepted |
 
 ## Template
 

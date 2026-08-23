@@ -1,6 +1,7 @@
 # ADR-0022: Complete Google Takeout read-only planning
 
-- Status: Accepted
+- Status: Superseded
+- Superseded by: ADR-0028
 - Date: 2026-08-15
 - Owners: project maintainers
 - Supersedes: ADR-0021

@@ -7,27 +7,45 @@ DATABASE_IMAGE='ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@s
 RESOURCE_LABEL='io.immich-rs.disposable.run'
 
 usage() {
-  echo 'usage: run-disposable-takeout.sh --binary <path> --commit-sha <sha> --output <path>' >&2
+  echo 'usage: run-disposable-takeout.sh --binary <path> --commit-sha <sha> --output <path> [--oracle <path> --benchmark-output <path> --samples <n> --warmups <n>]' >&2
   exit 2
 }
 
 BINARY=''
 COMMIT_SHA=''
 OUTPUT=''
+ORACLE=''
+BENCHMARK_OUTPUT=''
+SAMPLES=6
+WARMUPS=2
 while (($# > 0)); do
   case "$1" in
     --binary) (($# >= 2)) || usage; BINARY=$2; shift 2 ;;
     --commit-sha) (($# >= 2)) || usage; COMMIT_SHA=$2; shift 2 ;;
     --output) (($# >= 2)) || usage; OUTPUT=$2; shift 2 ;;
+    --oracle) (($# >= 2)) || usage; ORACLE=$2; shift 2 ;;
+    --benchmark-output) (($# >= 2)) || usage; BENCHMARK_OUTPUT=$2; shift 2 ;;
+    --samples) (($# >= 2)) || usage; SAMPLES=$2; shift 2 ;;
+    --warmups) (($# >= 2)) || usage; WARMUPS=$2; shift 2 ;;
     *) usage ;;
   esac
 done
 [[ -f "$BINARY" && -x "$BINARY" && "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || usage
+[[ "$SAMPLES" =~ ^[0-9]+$ && "$WARMUPS" =~ ^[0-9]+$ ]] || usage
 BINARY=$(realpath -- "$BINARY")
+if [[ -n "$ORACLE$BENCHMARK_OUTPUT" ]]; then
+  [[ -f "$ORACLE" && -x "$ORACLE" && -n "$BENCHMARK_OUTPUT" ]] || usage
+  ORACLE=$(realpath -- "$ORACLE")
+fi
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 OUTPUT=$(realpath -m -- "$OUTPUT")
 case "$OUTPUT" in "$ROOT"/.artifacts/*) ;; *) usage ;; esac
 [[ ! -e "$OUTPUT" ]] || { echo 'evidence output already exists' >&2; exit 2; }
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  BENCHMARK_OUTPUT=$(realpath -m -- "$BENCHMARK_OUTPUT")
+  case "$BENCHMARK_OUTPUT" in "$ROOT"/.artifacts/*) ;; *) usage ;; esac
+  [[ ! -e "$BENCHMARK_OUTPUT" ]] || { echo 'benchmark output already exists' >&2; exit 2; }
+fi
 mkdir -p -- "$ROOT/.artifacts"
 
 SUFFIX="$(date -u +%Y%m%dT%H%M%SZ)-$$-$(openssl rand -hex 4)"
@@ -129,10 +147,12 @@ CA_KEY="$WORKSPACE/ca-key.pem"
 CA_CERTIFICATE="$WORKSPACE/ca.pem"
 SERVER_KEY="$WORKSPACE/server-key.pem"
 openssl ecparam -name prime256v1 -genkey -noout -out "$CA_KEY" 2>/dev/null
-openssl req -x509 -new -sha256 -key "$CA_KEY" -days 1 -subj '/CN=immich-rs disposable CA' -out "$CA_CERTIFICATE" 2>/dev/null
+openssl req -x509 -new -sha256 -key "$CA_KEY" -days 1 -subj '/CN=immich-rs disposable CA' \
+  -addext 'basicConstraints=critical,CA:TRUE' -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+  -out "$CA_CERTIFICATE" 2>/dev/null
 openssl ecparam -name prime256v1 -genkey -noout -out "$SERVER_KEY" 2>/dev/null
 openssl req -new -sha256 -key "$SERVER_KEY" -subj '/CN=immich-rs disposable HTTPS' -out "$WORKSPACE/server.csr" 2>/dev/null
-printf 'subjectAltName=IP:%s\nextendedKeyUsage=serverAuth\n' "$TLS_HOST" >"$WORKSPACE/extensions.cnf"
+printf 'subjectAltName=IP:%s\nextendedKeyUsage=serverAuth\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature,keyEncipherment\n' "$TLS_HOST" >"$WORKSPACE/extensions.cnf"
 openssl x509 -req -sha256 -in "$WORKSPACE/server.csr" -CA "$CA_CERTIFICATE" -CAkey "$CA_KEY" \
   -CAcreateserial -days 1 -extfile "$WORKSPACE/extensions.cnf" -out "$WORKSPACE/server.pem" 2>/dev/null
 chmod 0600 "$CA_KEY" "$SERVER_KEY"
@@ -230,6 +250,18 @@ curl --cacert "$CA_CERTIFICATE" --fail --silent --header 'Content-Type: applicat
 POSTCONDITIONS=$(python3 "$ROOT/scripts/verify-takeout-postconditions.py" \
   --search "$WORKSPACE/search.json" --albums "$WORKSPACE/albums.json" \
   --album-assets "$WORKSPACE/album-assets.json")
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  BENCHMARK_SOURCE="$WORKSPACE/benchmark-source"
+  BENCHMARK_MANIFEST="$ROOT/benchmarks/fixtures/phase8-takeout-64m.json"
+  python3 "$ROOT/scripts/materialize-fixture.py" "$BENCHMARK_MANIFEST" "$BENCHMARK_SOURCE"
+  mkdir -- "$WORKSPACE/benchmark"
+  IMMICH_RS_BENCHMARK_ADMIN_TOKEN="$ACCESS_TOKEN" \
+    python3 "$ROOT/scripts/benchmark-phase8.py" --endpoint "$ENDPOINT" \
+      --ca-certificate "$CA_CERTIFICATE" --run-id "$SUFFIX" --source-revision "$COMMIT_SHA" \
+      --source "$BENCHMARK_SOURCE" --fixture-manifest "$BENCHMARK_MANIFEST" \
+      --workspace "$WORKSPACE/benchmark" --immich-rs "$BINARY" --oracle "$ORACLE" \
+      --samples "$SAMPLES" --warmups "$WARMUPS" --output "$BENCHMARK_OUTPUT"
+fi
 SERVER_VERSION=$(curl --cacert "$CA_CERTIFICATE" --fail --silent "$ENDPOINT/api/server/version")
 CA_SHA256=$(sha256sum "$CA_CERTIFICATE" | cut -d' ' -f1)
 BINARY_SHA256=$(sha256sum "$BINARY" | cut -d' ' -f1)

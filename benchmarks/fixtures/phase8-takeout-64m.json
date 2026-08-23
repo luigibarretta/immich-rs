@@ -1,0 +1,130 @@
+{
+  "schema": "fixture-manifest-v1",
+  "fixture_id": "synthetic-phase8-takeout-64m",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "1",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-01.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [17, 33, 49],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-01"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-01.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-01.png\",\"description\":\"synthetic benchmark 01\",\"photoTakenTime\":{\"timestamp\":\"1704067200\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-02.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [18, 34, 50],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-02"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-02.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-02.png\",\"description\":\"synthetic benchmark 02\",\"photoTakenTime\":{\"timestamp\":\"1704153600\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-03.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [19, 35, 51],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-03"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-03.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-03.png\",\"description\":\"synthetic benchmark 03\",\"photoTakenTime\":{\"timestamp\":\"1704240000\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-04.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [20, 36, 52],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-04"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-04.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-04.png\",\"description\":\"synthetic benchmark 04\",\"photoTakenTime\":{\"timestamp\":\"1704326400\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-05.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [21, 37, 53],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-05"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-05.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-05.png\",\"description\":\"synthetic benchmark 05\",\"photoTakenTime\":{\"timestamp\":\"1704412800\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-06.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [22, 38, 54],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-06"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-06.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-06.png\",\"description\":\"synthetic benchmark 06\",\"photoTakenTime\":{\"timestamp\":\"1704499200\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-07.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [23, 39, 55],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-07"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-07.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-07.png\",\"description\":\"synthetic benchmark 07\",\"photoTakenTime\":{\"timestamp\":\"1704585600\"}}\n"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-08.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [24, 40, 56],
+      "bytes": 8388608,
+      "seed": "synthetic-phase8-image-08"
+    },
+    {
+      "path": "Takeout/Google Photos/Photos from 2024/image-08.png.json",
+      "recipe": "text",
+      "content": "{\"title\":\"image-08.png\",\"description\":\"synthetic benchmark 08\",\"photoTakenTime\":{\"timestamp\":\"1704672000\"}}\n"
+    }
+  ],
+  "benchmark": {
+    "media_assets": 8,
+    "metadata_updates": 8,
+    "media_bytes": 67108864,
+    "concurrency": 1
+  }
+}

@@ -247,16 +247,13 @@ temporary key or credential. The committed evidence on SHA
 
 Production capability remains deliberately narrow: remote read-only archive
 and immutable folder upload only, against declared Immich v3.1.x servers.
-Google Takeout and Apple Photos apply, release publication and public forge
-mirroring remain separate later verticals.
+Google Takeout apply is completed in Phase 8. Apple Photos apply, release
+publication and public forge visibility remain separate later verticals.
 
 ## Phase 8 — source-aware imports
 
 ADR-0028 defines Google Takeout import as a distinct capability rather than an
-extension of folder upload. The first read-only planning vertical is complete
-on SHA `b43a21b614f1a49145ea788e9d2011acf49fa741`, with Gitea push CI
-[run 5554](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5554)
-green on that exact revision:
+extension of folder upload. Phase 8 is **complete**:
 
 - `upload-plan-v2` is schema- and source-bound to Google Takeout or Apple
   Photos and cannot be consumed as `upload-plan-v1`;
@@ -266,15 +263,33 @@ green on that exact revision:
   immutable plan;
 - the summary exposes uploads, metadata updates, maximum album creates,
   deterministic membership requests and their maximum mutation sum;
-- the CLI performs only authenticated version probing and emits byte-identical
-  directory/ZIP plans on the synthetic integration corpus;
-- dry-run and mutating apply reject schema v2 before credential or network
-  access, and the mock records no mutation.
+- source-aware dry-run verifies the input offline without a credential,
+  checkpoint or network capability;
+- apply stages at most one archive media entry and optional XMP, verifies exact
+  source facts and removes plan-bound staging on every outcome;
+- a distinct import client converges upload, normalized metadata, exact album
+  creation and membership in order, with bounded retry and lost-response
+  reconciliation;
+- effect-level `checkpoint-v2` resumes committed work, while plan digest,
+  maximum mutation count, server and hashed backup reference remain immutable
+  production authorization inputs;
+- disposable Immich v3.1.0 proves three uploads, three metadata assignments,
+  one album, one membership, resume, fresh-checkpoint duplicate convergence
+  and exact zero-resource cleanup;
+- the paired benchmark proves exact 8-asset/8-metadata/0-retry postcondition
+  parity on the same 64 MiB synthetic corpus and environment.
 
-The Phase 8 gate is **not passed**. Remaining work is bounded ZIP-entry
-staging, source-aware dry-run, a distinct metadata/album client capability,
-effect-level durable checkpoints, cancellation and lost-response recovery,
-disposable Immich HTTPS postconditions, a paired immich-go comparison with raw
-results and committed CI-enforced evidence. Apple Photos apply remains a later
-vertical and no delete, replace, trash or independent maintenance mutation is
+The production authorization implementation is green in Gitea push CI
+[run 5568](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5568)
+on SHA `7387a260818e8f47cfe32b2f3b4eea81c90e2013`. The disposable gate is green in
+[run 5570](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5570)
+on SHA `5172c73fe615658d3a90d5d5849ca2209142db12`, with evidence enforcement green
+in [run 5571](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5571).
+The paired benchmark and cleanup gate are green in
+[run 5578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5578)
+on SHA `4edae0365ac5137a2ee99d216755d8e3693cf9c8`; raw evidence and aggregate
+claims are committed and recalculated by push CI.
+
+Apple Photos apply remains a later vertical. No delete, replace, trash, tag,
+people, stack or independent metadata/album maintenance mutation is
 authorized.

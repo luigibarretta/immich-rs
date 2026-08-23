@@ -5,7 +5,7 @@ archive and migration client for [Immich](https://immich.app/).
 
 ## Performance at a glance
 
-Two reproducible comparisons currently satisfy ADR-0012's threshold for a
+Three reproducible comparisons currently satisfy ADR-0012's threshold for a
 scoped performance statement against the pinned immich-go v0.32.0 oracle:
 
 | Lower is better | immich-rs | immich-go | Difference |
@@ -15,19 +15,26 @@ scoped performance statement against the pinned immich-go v0.32.0 oracle:
 | Read-only archive median | 40.964 ms | 93.808 ms | immich-rs 56.3% lower |
 | Read-only archive p95 | 55.234 ms | 101.784 ms | immich-rs 45.7% lower |
 | Archive median peak RSS | 6.47 MiB | 14.92 MiB | immich-rs 56.6% lower |
+| Takeout plan + import median | 1.162 s | 39.048 s | immich-rs 97.0% lower |
+| Takeout plan + import p95 | 1.671 s | 39.162 s | immich-rs 95.7% lower |
+| Takeout import median peak RSS | 10.55 MiB | 16.45 MiB | immich-rs 35.9% lower |
 
 The folder comparison uses the same page-cached deterministic 64 MiB,
 eight-asset synthetic corpus. The archive comparison uses the same owner and
 four standalone originals totalling 587,015 bytes on one disposable Immich
-v3.1.0 server with a warm cache. Both use concurrency one, alternating order,
-two warmups and six retained pairs. In both comparisons every retained
-immich-rs wall-time sample is below every immich-go sample.
+v3.1.0 server with a warm cache. The Takeout comparison measures complete
+planning and import of the same eight conventional-sidecar assets totalling
+64 MiB into a fresh isolated owner per tool on one disposable HTTPS server.
+All use concurrency one, alternating order, two warmups and six retained
+pairs. Every retained immich-rs wall-time sample is below every corresponding
+immich-go sample.
 
 These are small synthetic CPU/network-loopback results. They do not measure a
-large library, cold storage, production latency, Takeout planning or an
-end-to-end migration. See the [Phase 1 raw report](benchmarks/evidence/phase1-2026-08-21.json),
-the [Phase 5 raw report](benchmarks/evidence/phase5-2026-08-22.json) and the
-full [benchmark methodology](benchmarks/README.md). No broader speed claim is
+large library, cold storage, WAN or production latency. See the
+[Phase 1 raw report](benchmarks/evidence/phase1-2026-08-21.json),
+[Phase 5 raw report](benchmarks/evidence/phase5-2026-08-22.json),
+[Phase 8 raw report](benchmarks/evidence/phase8-2026-08-24.json) and the full
+[benchmark methodology](benchmarks/README.md). No broader speed claim is
 supported by these measurements.
 
 Phase 0 and Phase 1 are complete for implementation SHA
@@ -39,22 +46,23 @@ are green. The first Phase 2 vertical adds an explicit, idempotent folder-upload
 workflow restricted to disposable loopback Immich instances. Delete, replace
 and independent metadata mutation remain unavailable.
 
-Phase 3 completes the read-only Google Takeout planner for one decompressed
+Phase 3 completed the read-only Google Takeout planner for one decompressed
 root or up to 64 independent split ZIP files. It streams archives without
 extraction, reconciles title and supplemental sidecars, collapses
 content-identical aliases, preserves album membership and emits source-neutral
 description, UTC timestamp and location metadata in `normalized-plan-v2`.
 Verification uses only synthetic fixtures and the pinned black-box oracle.
-Takeout apply remains unavailable. Implementation and evidence SHA
+Its implementation and evidence SHA
 `430e7fb95f11188c7c854721ef5ede19cbc2e933` is green in Gitea push CI
 [run 5263](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5263).
-A later read-only planning vertical emits a server-bound `upload-plan-v2` with
-normalized metadata, album membership and the exact maximum mutation budget.
-Its implementation SHA `b43a21b614f1a49145ea788e9d2011acf49fa741`
-is green in Gitea push CI
-[run 5554](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5554).
-The generic apply command rejects this schema before reading a credential or
-reaching a server; this is not yet Takeout import support.
+Phase 8 now applies that normalized state through a separate source-aware
+capability: bounded ZIP staging, asset upload, exact metadata assignment,
+album creation/membership and effect-level `checkpoint-v2` resume. The
+disposable HTTPS gate is green in
+[run 5570](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5570),
+and its paired benchmark is green in
+[run 5578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5578).
+See the [Phase 8 compatibility matrix](docs/compatibility/phase8-google-takeout-import.md).
 
 Phase 4 adds read-only Apple Photos/iCloud directory and split-ZIP planning,
 XMP and Live Photo pairing, preserve-all edited/original handling and explicit
@@ -74,10 +82,12 @@ is green and published both reports. Evidence enforcement commit
 
 ## Release status
 
-No supported release is published yet. Phase 7 now permits a source-built
-client to use the proven read-only archive and immutable folder uploader against
-a remote Immich v3.1.x HTTPS endpoint, but it does not authorize Takeout/Apple
-apply, delete, replace or metadata mutation. The synthetic gate is green in
+No supported release is published yet. Phase 7 permits a source-built client
+to use the proven read-only archive and immutable folder uploader against a
+remote Immich v3.1.x HTTPS endpoint. Phase 8 extends that boundary only to
+plan-bound Google Takeout uploads, normalized metadata and albums; Apple apply,
+delete, replace, trash and independent maintenance remain unavailable. The
+Phase 7 synthetic gate is green in
 Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
 on implementation SHA `db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`;
 its [committed evidence](docs/evidence/phase7-disposable-production-2026-08-23.json)
@@ -126,6 +136,12 @@ five-target rehearsal. No RC is published yet.
   album membership in `normalized-plan-v2`;
 - immutable server-bound Takeout `upload-plan-v2` planning with byte-identical
   directory/ZIP output and an explicit maximum mutation budget;
+- source-aware Takeout dry-run and apply with one-entry-at-a-time ZIP staging,
+  exact source verification and `checkpoint-v2` effect journaling;
+- distinct import-only metadata and album capabilities with bounded retries,
+  lost-response reconciliation and exact production authorization;
+- disposable Immich v3.1.0 postconditions plus paired plan-and-import evidence
+  against the pinned black-box oracle;
 - Apple Photos directory or split-ZIP planning with preserve-all variants,
   XMP, Live Photos, known-noise diagnostics and explicit album modes;
 - read-only Immich inventory and original-byte archive with immutable
@@ -199,8 +215,20 @@ immich-rs inspect upload-plan --plan takeout-upload-plan.json
 
 The server-aware command constructs only a read/probe capability. It emits
 `upload-plan-v2` with asset, metadata, album-create, album-membership and
-maximum mutation counts. Both dry-run and mutating apply currently reject this
-schema before reading credentials or reaching a server.
+maximum mutation counts. Verify the unchanged source offline before applying:
+
+```bash
+immich-rs apply upload --dry-run \
+  --plan takeout-upload-plan.json --source /path/to/export-root \
+  --checkpoint takeout-checkpoint.sqlite
+```
+
+Dry-run reads no credential, creates no checkpoint and cannot construct a
+network client. Actual apply rescans the exact source, streams one ZIP entry at
+a time when needed and journals each upload, metadata and album effect in
+`checkpoint-v2`. Split archives use repeated `--input` instead of `--source`.
+Remote HTTPS execution requires the same exact plan digest, maximum mutation
+count and backup confirmation shown for folder upload below.
 
 Plan an Apple Photos export without uploading it:
 
@@ -285,8 +313,9 @@ environment variables or Compose. See the
   baseline exceptions.
 - Media are never buffered as whole files; configured limits fail closed.
 - Source-only folder, Takeout and Apple planners plus upload dry-run cannot
-  construct an HTTP client or upload capability. Server-bound upload planners
-  can only construct a read/probe capability.
+  construct an HTTP client or mutation capability. Server-bound upload
+  planners can only construct a read/probe capability; Takeout metadata and
+  album methods exist only on the separately authorized import client.
 - Disposable transport accepts only literal loopback origins. Production
   transport accepts only verified remote HTTPS and requires explicit CLI-only
   read authorization; upload also requires the exact write confirmation set.
@@ -315,7 +344,9 @@ The Apple and archive boundaries are recorded in the
 [Phase 4](docs/compatibility/phase4-apple-photos.md) and
 [Phase 5](docs/compatibility/phase5-archive.md) matrices. Remote transport and
 operator binding are recorded in the
-[Phase 7 matrix](docs/compatibility/phase7-production-https.md).
+[Phase 7 matrix](docs/compatibility/phase7-production-https.md). Source-aware
+Takeout execution is recorded in the
+[Phase 8 matrix](docs/compatibility/phase8-google-takeout-import.md).
 
 ## Baselines
 
@@ -326,8 +357,8 @@ operator binding are recorded in the
 | Rust toolchain | 1.88.0, edition 2024 |
 | License | AGPL-3.0-only |
 | Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for Takeout; `normalized-plan-v3` for Apple Photos |
-| Upload plan | `upload-plan-v1` for folder apply; read-only `upload-plan-v2` planning for Takeout |
-| Upload checkpoint | `checkpoint-v1` |
+| Upload plan | `upload-plan-v1` for folder apply; `upload-plan-v2` for Google Takeout apply |
+| Upload checkpoint | `checkpoint-v1` for folder upload; effect-level `checkpoint-v2` for Takeout import |
 | Read-only archive | `archive-manifest-v1`; `archive-apply-report-v1` |
 | Disposable Immich | exact v3.1.x release, currently v3.1.0 |
 
@@ -336,7 +367,7 @@ operator binding are recorded in the
 - `immich-cli`: explicit plan, dry-run and loopback apply command surface;
 - `immich-core`: source-neutral plans, diagnostics, events and cancellation;
 - `immich-client`: version-aware HTTP boundary with distinct opaque read,
-  archive and upload capabilities;
+  archive, folder-upload and source-import capabilities;
 - `immich-executor`: immutable upload/archive planning, verification, retry,
   checkpoint and atomic-file orchestration;
 - `immich-sources`: bounded folder, Google Takeout and Apple Photos discovery
@@ -350,13 +381,15 @@ The crate boundaries are dependency rules, not microservices. See
 Run the complete fast gate:
 
 ```bash
-python3 scripts/check-adrs.py
+scripts/check-adrs.sh
 python3 scripts/check-architecture.py
 python3 scripts/check-benchmark-evidence.py
 python3 scripts/check-disposable-evidence.py
 python3 scripts/check-phase5-evidence.py
 python3 scripts/check-phase6-evidence.py
 python3 scripts/check-production-evidence.py
+python3 scripts/check-phase8-evidence.py
+python3 scripts/check-phase8-benchmark.py
 python3 scripts/check-release.py
 python3 scripts/check-container.py
 python3 scripts/check-fixtures.py
@@ -439,18 +472,34 @@ python3 scripts/check-production-evidence.py \
   --input .artifacts/phase7-production.json
 ```
 
+The Phase 8 gate performs the same disposable cleanup after directory and
+split-ZIP import, normalized metadata and album postcondition checks:
+
+```bash
+scripts/run-disposable-takeout.sh \
+  --binary target/release/immich-rs \
+  --commit-sha "$(git rev-parse HEAD)" \
+  --output .artifacts/phase8-takeout.json
+python3 scripts/check-phase8-evidence.py \
+  --input .artifacts/phase8-takeout.json
+```
+
 Full paired benchmarks are manual and separate from push CI. Read the
 [methodology](benchmarks/README.md) and the committed
 [Phase 1](benchmarks/evidence/phase1-2026-08-14.json) and
 [Phase 2](benchmarks/evidence/phase2-2026-08-15.json) upload evidence plus the
 [Phase 3](benchmarks/evidence/phase3-2026-08-15.json) Takeout,
 [Phase 4](benchmarks/evidence/phase4-2026-08-21.json) Apple and
-[Phase 5](benchmarks/evidence/phase5-2026-08-22.json) archive evidence. Those
-measurements are not generalized performance claims. The
+[Phase 5](benchmarks/evidence/phase5-2026-08-22.json) archive evidence, plus
+the complete [Phase 8](benchmarks/evidence/phase8-2026-08-24.json) Takeout
+import comparison. Those measurements are not generalized performance claims.
+The
 Phase 2 harness completed in Gitea run 5234 and uploaded the raw benchmark plus
 disposable cleanup evidence for its exact implementation SHA. The Phase 3
 harness completed in Gitea run 5264 for implementation SHA
-`430e7fb95f11188c7c854721ef5ede19cbc2e933`.
+`430e7fb95f11188c7c854721ef5ede19cbc2e933`. The Phase 8 harness completed in
+Gitea run 5578 for implementation SHA
+`4edae0365ac5137a2ee99d216755d8e3693cf9c8`.
 
 Read [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the full
 [ADR index](docs/adr/README.md) before implementing a new vertical.

@@ -1,0 +1,398 @@
+{
+  "aggregate": {
+    "immich_go": {
+      "characters_read": {
+        "max": 134608078,
+        "median": 134607921.5,
+        "min": 134607885,
+        "p95": 134608078
+      },
+      "characters_written": {
+        "max": 67355045,
+        "median": 67354990.5,
+        "min": 67354027,
+        "p95": 67355045
+      },
+      "peak_open_file_descriptors": {
+        "max": 17,
+        "median": 17.0,
+        "min": 16,
+        "p95": 17
+      },
+      "peak_rss_bytes": {
+        "max": 17416192,
+        "median": 17252352.0,
+        "min": 16678912,
+        "p95": 17416192
+      },
+      "storage_bytes_read": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "storage_bytes_written": {
+        "max": 73728,
+        "median": 53248.0,
+        "min": 53248,
+        "p95": 73728
+      },
+      "system_cpu_seconds": {
+        "max": 0.22758299999999998,
+        "median": 0.11555550000000003,
+        "min": 0.06319500000000011,
+        "p95": 0.22758299999999998
+      },
+      "user_cpu_seconds": {
+        "max": 0.19442399999999993,
+        "median": 0.15311399999999997,
+        "min": 0.109375,
+        "p95": 0.19442399999999993
+      },
+      "wall_time_seconds": {
+        "max": 39.161930519,
+        "median": 39.0480895745,
+        "min": 31.837547537,
+        "p95": 39.161930519
+      }
+    },
+    "immich_rs": {
+      "characters_read": {
+        "max": 201385233,
+        "median": 201385227.0,
+        "min": 201385225,
+        "p95": 201385233
+      },
+      "characters_written": {
+        "max": 67508147,
+        "median": 67507561.0,
+        "min": 67506667,
+        "p95": 67508147
+      },
+      "peak_open_file_descriptors": {
+        "max": 11,
+        "median": 11.0,
+        "min": 11,
+        "p95": 11
+      },
+      "peak_rss_bytes": {
+        "max": 11362304,
+        "median": 11063296.0,
+        "min": 10694656,
+        "p95": 11362304
+      },
+      "storage_bytes_read": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "storage_bytes_written": {
+        "max": 421888,
+        "median": 421888.0,
+        "min": 421888,
+        "p95": 421888
+      },
+      "system_cpu_seconds": {
+        "max": 0.16192699999999993,
+        "median": 0.116975,
+        "min": 0.06466499999999997,
+        "p95": 0.16192699999999993
+      },
+      "user_cpu_seconds": {
+        "max": 0.29142599999999996,
+        "median": 0.26225199999999993,
+        "min": 0.19899000000000022,
+        "p95": 0.29142599999999996
+      },
+      "wall_time_seconds": {
+        "max": 1.670906485,
+        "median": 1.162271705,
+        "min": 1.0630988289999999,
+        "p95": 1.670906485
+      }
+    }
+  },
+  "claims": [
+    "On this exact 67,108,864-byte eight-asset synthetic Takeout import, immich-rs median wall time was 97.0% lower than immich-go v0.32.0; this is not a large-library, WAN or production claim."
+  ],
+  "manifest": {
+    "environment": {
+      "architecture": "x86_64",
+      "hostname": "<REDACTED_HOST>",
+      "kernel": "6.12.101+deb13-cloud-amd64",
+      "locale": "C.UTF-8",
+      "logical_cpus": 10,
+      "system": "Linux",
+      "timezone": "UTC"
+    },
+    "fixture": {
+      "concurrency": 1,
+      "corpus_sha256": "54c2a3189642c8c26c1c65b28be285df0154d3b06957f349a0cf2e815aeb697f",
+      "id": "synthetic-phase8-takeout-64m",
+      "kind": "synthetic",
+      "license": "CC0-1.0",
+      "manifest_sha256": "e7b4352f7c98189cb4094e645cd8ba22561ca0f75f7055a72847645f83c6cfe2",
+      "media_assets": 8,
+      "media_bytes": 67108864,
+      "metadata_updates": 8
+    },
+    "methodology": {
+      "concurrency": 1,
+      "order": "alternating within pairs",
+      "pairing": "fresh isolated owner per tool on one disposable HTTPS server and one corpus",
+      "percentiles": "nearest-rank p95 over the raw samples",
+      "samples": 6,
+      "scope": "complete plan plus import; account setup, server startup and postcondition probes excluded",
+      "warmups": 2
+    },
+    "source_revision": "4edae0365ac5137a2ee99d216755d8e3693cf9c8",
+    "tools": {
+      "immich_go": {
+        "archive": "immich-go_Linux_x86_64.tar.gz",
+        "archive_sha256": "6e2ad86bafdadb9466d6515de7cb882726c0aea1a21d51164dff361d7d480a97",
+        "binary_sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "license": "AGPL-3.0",
+        "name": "immich-go",
+        "sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "upstream_commit": "f7d19fce34acd4884ea2c02fc3025706a060afdf",
+        "version": "0.32.0"
+      },
+      "immich_rs": {
+        "sha256": "f43403faa316082f424d10bd3a1921ba673aa6601b76b557c793947600eab92c",
+        "version": "immich-rs 0.0.0"
+      }
+    }
+  },
+  "raw_samples": [
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 134607903,
+        "characters_written": 67355045,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 17,
+        "peak_rss_bytes": 17416192,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 73728,
+        "system_cpu_seconds": 0.10178799999999999,
+        "user_cpu_seconds": 0.19442399999999993,
+        "wall_time_seconds": 39.128590974
+      },
+      "immich_rs": {
+        "characters_read": 201385225,
+        "characters_written": 67506667,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 10805248,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 421888,
+        "system_cpu_seconds": 0.16192699999999993,
+        "user_cpu_seconds": 0.29142599999999996,
+        "wall_time_seconds": 1.670906485
+      },
+      "sample": 0
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 134608078,
+        "characters_written": 67355029,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 17358848,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 61440,
+        "system_cpu_seconds": 0.084256,
+        "user_cpu_seconds": 0.109375,
+        "wall_time_seconds": 38.968726382
+      },
+      "immich_rs": {
+        "characters_read": 201385225,
+        "characters_written": 67507847,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 10694656,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 421888,
+        "system_cpu_seconds": 0.078739,
+        "user_cpu_seconds": 0.288678,
+        "wall_time_seconds": 1.190726675
+      },
+      "sample": 1
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 134607919,
+        "characters_written": 67355031,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 16912384,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 53248,
+        "system_cpu_seconds": 0.22758299999999998,
+        "user_cpu_seconds": 0.16190899999999986,
+        "wall_time_seconds": 39.161930519
+      },
+      "immich_rs": {
+        "characters_read": 201385233,
+        "characters_written": 67508147,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 10702848,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 421888,
+        "system_cpu_seconds": 0.11103600000000002,
+        "user_cpu_seconds": 0.19899000000000022,
+        "wall_time_seconds": 1.0630988289999999
+      },
+      "sample": 2
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 134607924,
+        "characters_written": 67354027,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 17,
+        "peak_rss_bytes": 17154048,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 53248,
+        "system_cpu_seconds": 0.06319500000000011,
+        "user_cpu_seconds": 0.14431900000000009,
+        "wall_time_seconds": 31.837547537
+      },
+      "immich_rs": {
+        "characters_read": 201385229,
+        "characters_written": 67507275,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11321344,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 421888,
+        "system_cpu_seconds": 0.13387799999999994,
+        "user_cpu_seconds": 0.27472699999999994,
+        "wall_time_seconds": 1.3700068189999999
+      },
+      "sample": 3
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 134607927,
+        "characters_written": 67354952,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 17,
+        "peak_rss_bytes": 16678912,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 53248,
+        "system_cpu_seconds": 0.12932300000000008,
+        "user_cpu_seconds": 0.12460799999999983,
+        "wall_time_seconds": 39.031389642
+      },
+      "immich_rs": {
+        "characters_read": 201385229,
+        "characters_written": 67506931,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11341824,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 421888,
+        "system_cpu_seconds": 0.12291399999999997,
+        "user_cpu_seconds": 0.24977699999999992,
+        "wall_time_seconds": 1.133816735
+      },
+      "sample": 4
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 134607885,
+        "characters_written": 67354904,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 17,
+        "peak_rss_bytes": 17350656,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 53248,
+        "system_cpu_seconds": 0.17113899999999993,
+        "user_cpu_seconds": 0.17625000000000046,
+        "wall_time_seconds": 39.064789507
+      },
+      "immich_rs": {
+        "characters_read": 201385225,
+        "characters_written": 67507955,
+        "operations": {
+          "metadata_assignments": 8,
+          "retries": 0,
+          "source_operations": 8,
+          "visible_assets": 8
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11362304,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 421888,
+        "system_cpu_seconds": 0.06466499999999997,
+        "user_cpu_seconds": 0.23002599999999962,
+        "wall_time_seconds": 1.124499788
+      },
+      "sample": 5
+    }
+  ],
+  "schema": "phase8-benchmark-report-v1"
+}

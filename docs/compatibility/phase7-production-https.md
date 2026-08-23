@@ -2,8 +2,9 @@
 
 Phase 7 permits the proven folder-upload and read-only archive operations over
 a remote HTTPS origin. The authorization flags are CLI-only and do not broaden
-the operation set: Google Takeout and Apple Photos remain read-only planners,
-and no delete, replace or metadata mutation command exists.
+the Phase 7 operation set: Apple Photos remains a read-only planner, and no
+delete, replace or independent metadata-mutation command exists. Google
+Takeout apply is governed separately by ADR-0028 and the Phase 8 matrix.
 
 | Surface | Declared outcome | Evidence |
 |---|---|---|

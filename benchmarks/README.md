@@ -177,6 +177,45 @@ proves four first-run downloads, four verified resume hits, byte-multiset
 equality and zero remaining labelled containers, volumes or networks. Push CI
 recalculates every aggregate and rejects unsupported claim text.
 
+## Phase 8 Google Takeout import
+
+`scripts/benchmark-phase8.py` measures each tool's complete public plan plus
+import workflow against the same 67,108,864-byte, eight-asset synthetic
+Takeout tree. Every run receives a fresh isolated owner on one disposable
+Immich v3.1.0 HTTPS server. The conventional JSON sidecars produce the same
+observable result for both tools: eight visible assets, eight metadata
+assignments and zero retries. Account creation, server startup and
+postcondition probes are outside the measured interval.
+
+Both tools use concurrency one. Execution order alternates after two warmups
+across six retained pairs. The nearest-rank p95 is therefore the largest
+retained sample. Process measurements include wall/user/system time, peak RSS,
+peak descriptors and `/proc` character/storage I/O; server operation counters
+are recorded separately.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 1.162272 | 1.670906 | 39.048090 | 39.161931 |
+| User CPU (s) | 0.262252 | 0.291426 | 0.153114 | 0.194424 |
+| System CPU (s) | 0.116975 | 0.161927 | 0.115556 | 0.227583 |
+| Peak RSS (bytes) | 11,063,296 | 11,362,304 | 17,252,352 | 17,416,192 |
+| Peak file descriptors | 11 | 11 | 17 | 17 |
+
+Median wall time is 97.0% lower for immich-rs, and its slowest retained sample
+(1.671 s) is below the oracle's fastest (31.838 s). This statement applies
+only to this exact small synthetic, warm-cache, loopback import. It is not a
+large-library, cold-storage, WAN or production claim. The
+[raw evidence](evidence/phase8-2026-08-24.json) binds both binary digests,
+fixture and corpus identities, source revision, environment, raw samples and
+the exact permitted claim text.
+
+Gitea [run 5578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5578)
+reproduced the comparison on SHA
+`4edae0365ac5137a2ee99d216755d8e3693cf9c8` and also proved zero disposable
+containers, volumes, networks and staging residue. Push CI recomputes every
+aggregate and rejects a changed fixture, oracle digest, operation count or
+unsupported performance claim.
+
 ## Authorized private Takeout shadow
 
 An explicitly authorized private Google Photos Takeout was used only for an

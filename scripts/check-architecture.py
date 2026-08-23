@@ -145,6 +145,7 @@ def check() -> list[str]:
             REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh",
             REPOSITORY_ROOT / "scripts" / "prepare-phase2-benchmark-corpus.sh",
             REPOSITORY_ROOT / "scripts" / "run-disposable-archive.sh",
+            REPOSITORY_ROOT / "scripts" / "run-disposable-production.sh",
         )
     ).casefold()
     forbidden_transport = ("--network host", "host.docker.internal", "host-gateway")
@@ -165,6 +166,19 @@ def check() -> list[str]:
         or "asset.delete" in archive_harness
     ):
         failures.append("archive disposable gate violates its isolation boundary")
+    production_harness = (
+        REPOSITORY_ROOT / "scripts" / "run-disposable-production.sh"
+    ).read_text(encoding="utf-8")
+    production_workflow = (
+        REPOSITORY_ROOT / ".gitea" / "workflows" / "production-disposable.yml"
+    ).read_text(encoding="utf-8")
+    if (
+        "com.docker.network.bridge.enable_ip_masquerade=false" not in production_harness
+        or 'scripts/tls-forward.py" --listen-host "$TLS_HOST"' not in production_harness
+        or "workflow_dispatch" not in production_workflow
+        or "push:" in production_workflow
+    ):
+        failures.append("production HTTPS gate is not manual and isolated")
     materializer = (REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh").read_text(
         encoding="utf-8"
     )

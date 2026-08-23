@@ -1,0 +1,44 @@
+---
+name: production-disposable
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-production-disposable
+  cancel-in-progress: false
+
+jobs:
+  production-disposable:
+    runs-on: docker
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore the pinned Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/1.88.0-x86_64-unknown-linux-gnu
+            ~/.rustup/update-hashes/1.88.0-x86_64-unknown-linux-gnu
+          key: rustup-linux-x86-64-1.88.0
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the exact release binary
+        run: cargo build --locked --release -p immich-rs-cli
+      - name: Exercise and remove the isolated production-HTTPS stack
+        run: |
+          mkdir -p .artifacts
+          scripts/run-disposable-production.sh \
+            --binary target/release/immich-rs \
+            --commit-sha "${{ github.sha }}" \
+            --output ".artifacts/phase7-production-${{ github.sha }}.json"
+          python3 scripts/check-production-evidence.py \
+            --input ".artifacts/phase7-production-${{ github.sha }}.json"
+      - name: Preserve aggregate production-HTTPS evidence
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: phase7-production-${{ github.sha }}
+          path: .artifacts/phase7-production-${{ github.sha }}.json
+          retention-days: 14

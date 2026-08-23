@@ -48,6 +48,13 @@ Verification uses only synthetic fixtures and the pinned black-box oracle.
 Takeout apply remains unavailable. Implementation and evidence SHA
 `430e7fb95f11188c7c854721ef5ede19cbc2e933` is green in Gitea push CI
 [run 5263](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5263).
+A later read-only planning vertical emits a server-bound `upload-plan-v2` with
+normalized metadata, album membership and the exact maximum mutation budget.
+Its implementation SHA `b43a21b614f1a49145ea788e9d2011acf49fa741`
+is green in Gitea push CI
+[run 5554](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5554).
+The generic apply command rejects this schema before reading a credential or
+reaching a server; this is not yet Takeout import support.
 
 Phase 4 adds read-only Apple Photos/iCloud directory and split-ZIP planning,
 XMP and Live Photo pairing, preserve-all edited/original handling and explicit
@@ -117,6 +124,8 @@ five-target rehearsal. No RC is published yet.
   JSON reads, deterministic metadata reconciliation and explicit ambiguity;
 - source-neutral Takeout descriptions, UTC timestamps, locations and sorted
   album membership in `normalized-plan-v2`;
+- immutable server-bound Takeout `upload-plan-v2` planning with byte-identical
+  directory/ZIP output and an explicit maximum mutation budget;
 - Apple Photos directory or split-ZIP planning with preserve-all variants,
   XMP, Live Photos, known-noise diagnostics and explicit album modes;
 - read-only Immich inventory and original-byte archive with immutable
@@ -175,8 +184,23 @@ cargo run --locked --release -p immich-rs-cli -- \
 ```
 
 The directory root or ZIP entries must contain `Takeout/Google Photos`.
-Directory and archive inputs cannot be mixed. This command is read-only and
-cannot create a Takeout upload capability.
+Directory and archive inputs cannot be mixed. This source-only command cannot
+construct an HTTP client or upload capability.
+
+Bind the same Takeout to a disposable server without applying it:
+
+```bash
+IMMICH_RS_API_KEY='<disposable-key>' \
+  cargo run --locked --release -p immich-rs-cli -- \
+  plan upload google-takeout --server http://127.0.0.1:2283 \
+  --label synthetic-takeout /path/to/export-root > takeout-upload-plan.json
+immich-rs inspect upload-plan --plan takeout-upload-plan.json
+```
+
+The server-aware command constructs only a read/probe capability. It emits
+`upload-plan-v2` with asset, metadata, album-create, album-membership and
+maximum mutation counts. Both dry-run and mutating apply currently reject this
+schema before reading credentials or reaching a server.
 
 Plan an Apple Photos export without uploading it:
 
@@ -260,8 +284,9 @@ environment variables or Compose. See the
 - Maintained Rust, Python and shell files have a 400-LOC hard limit with no
   baseline exceptions.
 - Media are never buffered as whole files; configured limits fail closed.
-- Folder, Takeout and Apple read-only planners plus upload dry-run cannot
-  construct an HTTP client or upload capability.
+- Source-only folder, Takeout and Apple planners plus upload dry-run cannot
+  construct an HTTP client or upload capability. Server-bound upload planners
+  can only construct a read/probe capability.
 - Disposable transport accepts only literal loopback origins. Production
   transport accepts only verified remote HTTPS and requires explicit CLI-only
   read authorization; upload also requires the exact write confirmation set.
@@ -301,7 +326,7 @@ operator binding are recorded in the
 | Rust toolchain | 1.88.0, edition 2024 |
 | License | AGPL-3.0-only |
 | Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for Takeout; `normalized-plan-v3` for Apple Photos |
-| Upload plan | `upload-plan-v1` |
+| Upload plan | `upload-plan-v1` for folder apply; read-only `upload-plan-v2` planning for Takeout |
 | Upload checkpoint | `checkpoint-v1` |
 | Read-only archive | `archive-manifest-v1`; `archive-apply-report-v1` |
 | Disposable Immich | exact v3.1.x release, currently v3.1.0 |

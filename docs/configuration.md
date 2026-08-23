@@ -65,8 +65,10 @@ destination = "/output"
 
 `scan.source` supplies a folder input and is also the one-input fallback for
 Takeout or Apple planning. `scan.inputs` supplies the ordered set for an export
-adapter. Positional CLI inputs replace the complete configured input set.
-`upload.source` overrides `scan.source` only for upload apply.
+adapter, including `plan upload google-takeout`. Positional CLI inputs replace
+the complete configured input set. `upload.source` overrides `scan.source`
+only for schema-v1 folder apply. Upload execution limits also bind the
+server-aware Takeout plan even though schema-v2 apply is not yet available.
 
 ## Environment matrix
 

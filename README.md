@@ -67,10 +67,17 @@ is green and published both reports. Evidence enforcement commit
 
 ## Release status
 
-No supported release or production cutover exists. Phase 0–5 read-only gates,
-the disposable upload vertical and both Phase 6 scale gates are implemented,
-but ADR-0014/ADR-0025 require five native target builds and an explicitly
-provisioned OpenPGP release identity before an RC can exist. The repository now
+No supported release is published yet. Phase 7 now permits a source-built
+client to use the proven read-only archive and immutable folder uploader against
+a remote Immich v3.1.x HTTPS endpoint, but it does not authorize Takeout/Apple
+apply, delete, replace or metadata mutation. The synthetic gate is green in
+Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
+on implementation SHA `db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`;
+its [committed evidence](docs/evidence/phase7-disposable-production-2026-08-23.json)
+is enforced by push CI.
+
+ADR-0014/ADR-0025 still require five native target builds and an explicitly
+provisioned OpenPGP release identity before an RC can exist. The repository
 contains a fail-closed signed-tag pipeline, deterministic native packaging, a
 hardened multiarch OCI candidate with SPDX SBOM/SLSA provenance checks and a
 [migration/rollback guide](docs/migration-from-immich-go.md).
@@ -80,9 +87,12 @@ The macOS ARM64 native gate is complete on implementation SHA
 [run 5440](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5440)
 ran 64 Python tooling tests, 76 Rust tests, Clippy with warnings denied and a
 native release build, then identified the output as a Mach-O ARM64 executable.
-The remaining RC prerequisites are native Linux ARM64, macOS x86-64 and Windows
-x86-64 runners, the armored maintainer public key, three protected signing
-secrets and one non-publishing five-target rehearsal. No RC is published yet.
+The Windows x86-64 native gate is also green in Gitea
+[run 5470](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5470)
+on SHA `4cf3a4eddfb7dccc9072258ab44fb8ebf64a12b5`. The remaining RC
+prerequisites are native Linux ARM64 and macOS x86-64 runners, the armored
+maintainer public key, three protected signing secrets and one non-publishing
+five-target rehearsal. No RC is published yet.
 
 ## Current capabilities
 
@@ -99,6 +109,8 @@ secrets and one non-publishing five-target rehearsal. No RC is published yet.
 - bounded streaming upload with duplicate convergence and capped retries;
 - durable SQLite checkpoints, clean cancellation and explicit dry-run;
 - disposable Immich v3.1.0 and loopback mock integration gates;
+- verified production HTTPS for folder upload and read-only archive, including
+  bounded private-CA trust, exact plan/count/backup authorization and redaction;
 - paired raw upload benchmarks against immich-go on one disposable server and
   one derived standalone synthetic corpus;
 - decompressed or split-ZIP Google Takeout planning with bounded archive and
@@ -186,7 +198,8 @@ IMMICH_RS_API_KEY='<disposable-key>' \
 ```
 
 The archive command reads originals only. It cannot upload, replace, delete or
-mutate server metadata, and it refuses non-loopback origins.
+mutate server metadata. A remote HTTPS origin additionally requires the
+CLI-only `--authorize-production-read` acknowledgement.
 
 Plan and validate a disposable upload before applying it:
 
@@ -207,6 +220,40 @@ file selected by `IMMICH_RS_API_KEY_FILE`; dry-run reads neither and cannot
 construct a network client. Use only credentials generated for a disposable
 instance.
 
+For a remote HTTPS folder upload, first create and inspect the immutable plan:
+
+```bash
+IMMICH_RS_API_KEY_FILE=/run/secrets/immich-api-key \
+  immich-rs plan upload folder \
+  --server https://immich.example.invalid \
+  --authorize-production-read \
+  /path/to/source > upload-plan.json
+immich-rs inspect upload-plan --plan upload-plan.json
+immich-rs apply upload --dry-run --plan upload-plan.json \
+  --source /path/to/source --checkpoint checkpoint.sqlite
+```
+
+After independently verifying the printed digest, operation count and a usable
+backup or restore point, apply that exact plan:
+
+```bash
+IMMICH_RS_API_KEY_FILE=/run/secrets/immich-api-key \
+  immich-rs apply upload \
+  --server https://immich.example.invalid \
+  --plan upload-plan.json --source /path/to/source \
+  --checkpoint checkpoint.sqlite \
+  --authorize-production-read --authorize-production-write \
+  --confirm-plan-sha256 <64-hex-digest> \
+  --expected-operations <count> \
+  --backup-reference <verified-restore-point-reference>
+```
+
+Add `--ca-certificate /path/to/private-ca.pem` only when the HTTPS deployment
+uses a private CA; hostname verification remains mandatory. All production
+acknowledgements are invocation-only and cannot be enabled through TOML,
+environment variables or Compose. See the
+[Phase 7 matrix](docs/compatibility/phase7-production-https.md).
+
 ## Safety boundary
 
 - The workspace forbids `unsafe`, `unwrap` and `expect`.
@@ -215,8 +262,9 @@ instance.
 - Media are never buffered as whole files; configured limits fail closed.
 - Folder, Takeout and Apple read-only planners plus upload dry-run cannot
   construct an HTTP client or upload capability.
-- Phase 2 upload and Phase 5 archive accept only `127.0.0.1`, `[::1]` or
-  `localhost` server origins.
+- Disposable transport accepts only literal loopback origins. Production
+  transport accepts only verified remote HTTPS and requires explicit CLI-only
+  read authorization; upload also requires the exact write confirmation set.
 - API keys exist only in `IMMICH_RS_API_KEY` or the bounded regular file named
   by `IMMICH_RS_API_KEY_FILE` and are redacted from outputs.
 - Committed fixture media, API responses, credentials and identities are
@@ -240,7 +288,9 @@ The bounded Takeout surface is recorded in the
 [Phase 3 compatibility matrix](docs/compatibility/phase3-google-takeout.md).
 The Apple and archive boundaries are recorded in the
 [Phase 4](docs/compatibility/phase4-apple-photos.md) and
-[Phase 5](docs/compatibility/phase5-archive.md) matrices.
+[Phase 5](docs/compatibility/phase5-archive.md) matrices. Remote transport and
+operator binding are recorded in the
+[Phase 7 matrix](docs/compatibility/phase7-production-https.md).
 
 ## Baselines
 
@@ -281,6 +331,7 @@ python3 scripts/check-benchmark-evidence.py
 python3 scripts/check-disposable-evidence.py
 python3 scripts/check-phase5-evidence.py
 python3 scripts/check-phase6-evidence.py
+python3 scripts/check-production-evidence.py
 python3 scripts/check-release.py
 python3 scripts/check-container.py
 python3 scripts/check-fixtures.py
@@ -348,6 +399,19 @@ scripts/run-disposable-archive.sh \
   --output .artifacts/phase5-disposable.json \
   --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
   --benchmark-output .artifacts/phase5-benchmark.json
+```
+
+The isolated Phase 7 HTTPS gate must run only against a disposable server. It
+creates a private CA and synthetic owner/key, injects transport faults and
+removes its exact containers, volumes, network, workspace and credentials:
+
+```bash
+scripts/run-disposable-production.sh \
+  --binary target/release/immich-rs \
+  --commit-sha "$(git rev-parse HEAD)" \
+  --output .artifacts/phase7-production.json
+python3 scripts/check-production-evidence.py \
+  --input .artifacts/phase7-production.json
 ```
 
 Full paired benchmarks are manual and separate from push CI. Read the

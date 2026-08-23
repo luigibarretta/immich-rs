@@ -101,3 +101,13 @@ response, cancellation, resume and a fresh-checkpoint duplicate run. CI checks
 the dependency graph and scans stdout, stderr, reports and artifacts for the
 secret and backup canaries. Production mode is not documented as supported
 until this evidence is committed and green on the exact implementation SHA.
+
+The gate passed on implementation SHA
+`db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`: push CI run 5539 and isolated
+production-disposable run 5544 are green. The latter created four operations,
+resumed all four, converged all four as duplicates from a fresh checkpoint and
+archived all four originals through verified private-CA HTTPS. Its committed
+aggregate evidence is validated by push CI run 5547 on SHA
+`1d0a7199a0604fec42abbaee711e5aca8fb2ebda`. Cleanup left zero labelled
+containers, volumes and networks, and removed all temporary credentials and
+private keys.

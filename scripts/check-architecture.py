@@ -172,14 +172,18 @@ def check() -> list[str]:
     production_workflow = (
         REPOSITORY_ROOT / ".gitea" / "workflows" / "production-disposable.yml"
     ).read_text(encoding="utf-8")
+    push_workflow = (REPOSITORY_ROOT / ".gitea" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
     if (
         "com.docker.network.bridge.enable_ip_masquerade=false" not in production_harness
         or 'scripts/tls-forward.py" --listen-host "$TLS_HOST"' not in production_harness
         or "workflow_dispatch" not in production_workflow
         or "phase7-disposable-*" not in production_workflow
         or "branches:" in production_workflow
+        or "python3 scripts/check-production-evidence.py" not in push_workflow
     ):
-        failures.append("production HTTPS gate is not manual and isolated")
+        failures.append("production HTTPS gate is not isolated and evidence-enforced")
     materializer = (REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh").read_text(
         encoding="utf-8"
     )

@@ -200,8 +200,10 @@ Rust tests passed, Clippy denied warnings, the release build succeeded and the
 binary was verified as Mach-O ARM64. The non-root host runner was stopped after
 the run and is intentionally offline when not in use.
 
-The Phase 6 release gate is **not passed**. The Linux x86-64 `docker` runner is
-available, but `linux-arm64`, `macos-x64` and `windows-x64` remain unprovisioned.
+The Phase 6 release gate is **not passed**. The Linux x86-64 `docker`, macOS
+ARM64 and Windows x86-64 native gates are complete; Windows Gitea run 5470 is
+green on exact SHA `4cf3a4eddfb7dccc9072258ab44fb8ebf64a12b5`.
+`linux-arm64` and `macos-x64` remain unprovisioned.
 The maintainer has created an offline OpenPGP signing identity, but its armored
 public key is not committed and the private key, fingerprint and passphrase are
 not configured as protected Gitea secrets. A non-publishing rehearsal of all
@@ -233,7 +235,17 @@ Acceptance requires:
 - no production hostname, credential, media or scheduled production mutation;
 - unchanged immich-go periodic homelab smoke and an explicit rollback path.
 
-The gate is **not passed**. Remote endpoints remain rejected until the
-implementation and its committed evidence are green on the exact SHA. Google
-Takeout and Apple Photos apply, release publication and public forge mirroring
-remain separate later verticals.
+The gate is complete on implementation SHA
+`db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`. Push CI run 5539 and disposable
+HTTPS run 5544 are green on that exact SHA. The synthetic gate proved private
+CA and hostname verification, refusal classes, bounded recovery for 429, 5xx,
+disconnect and a lost response after commit, cancellation/resume, four creates,
+four checkpoint resumes, four fresh-checkpoint duplicates and four archived
+originals. Cleanup left zero labelled containers, volumes and networks and no
+temporary key or credential. The committed evidence on SHA
+`1d0a7199a0604fec42abbaee711e5aca8fb2ebda` is green in push CI run 5547.
+
+Production capability remains deliberately narrow: remote read-only archive
+and immutable folder upload only, against declared Immich v3.1.x servers.
+Google Takeout and Apple Photos apply, release publication and public forge
+mirroring remain separate later verticals.

@@ -22,6 +22,7 @@ schema_version = 1
 
 [immich]
 server = "http://127.0.0.1:2283"
+# ca_certificate = "/run/secrets/private-ca.pem"
 
 [scan]
 label = "synthetic-source"
@@ -72,6 +73,7 @@ adapter. Positional CLI inputs replace the complete configured input set.
 | TOML key | Environment | CLI option |
 |---|---|---|
 | `immich.server` | `IMMICH_RS_SERVER` | `--server` |
+| `immich.ca_certificate` | `IMMICH_RS_CA_CERTIFICATE` | `--ca-certificate` |
 | `scan.label` | `IMMICH_RS_LABEL` | `--label` |
 | `scan.source` | `IMMICH_RS_SOURCE` | positional path / `--source` |
 | `scan.inputs` | `IMMICH_RS_INPUTS_JSON` | positional paths |
@@ -121,3 +123,14 @@ Configuring both fails with the authentication exit class. The file contents,
 path and key are never rendered. Compose deployments should prefer a mounted
 secret file. Dry-run does not read either secret source and discards inherited
 server configuration before constructing its execution request.
+
+`immich.ca_certificate` adds a bounded PEM trust bundle for a private HTTPS
+deployment. It never disables certificate or hostname verification, accepts at
+most 64 certificates from a regular non-symlink file of at most 1 MiB, and is
+rejected for disposable HTTP mode. Publicly trusted HTTPS endpoints do not need
+this option.
+
+Production authorization is intentionally not configurable. The read and write
+acknowledgements, exact plan digest, operation budget and verified-backup
+reference exist only as explicit CLI options on the invocation that uses them.
+They have no TOML or environment equivalents and are not persisted verbatim.

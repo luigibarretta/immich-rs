@@ -6,10 +6,10 @@ ADR-0025 prerequisites are provisioned.
 ## One-time prerequisites
 
 1. Retain the existing `docker` Linux x86-64 runner and the manually operated
-   `macos-arm64` host runner validated by Gitea run 5440. Register the remaining
-   protected native runners named `linux-arm64`, `macos-x64` and `windows-x64`.
-   Keep host runners offline outside an intentional validation or release
-   window.
+   `macos-arm64` and `windows-x64` host runners validated by Gitea runs 5440
+   and 5470. Register the remaining protected native runners named
+   `linux-arm64` and `macos-x64`. Keep host runners offline outside an
+   intentional validation or release window.
 2. Create the project release OpenPGP identity offline under maintainer
    control. Commit only its armored public key as `docs/release-signing-key.asc`.
 3. Store the armored private key, its fingerprint and its passphrase as the
@@ -27,7 +27,8 @@ Python 3.12 as `python3.12`; the workflows deliberately avoid privileged
 ## Candidate checklist
 
 1. Confirm `main` is clean, equal to `origin/main` and green on its exact SHA.
-2. Confirm Phase 0–5 evidence validators and both Phase 6 scale validators pass.
+2. Confirm Phase 0–5, both Phase 6 scale and Phase 7 production-HTTPS evidence
+   validators pass.
 3. Set the Cargo workspace version to the candidate version and update
    `CHANGELOG.md`, compatibility matrices and this guide with verified facts.
 4. Create an annotated signed tag such as `v0.1.0-rc.1`; verify it locally with

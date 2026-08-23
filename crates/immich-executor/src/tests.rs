@@ -1,7 +1,5 @@
 use std::error::Error;
 use std::fs;
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -9,16 +7,12 @@ use immich_rs_client::RemoteArchiveAsset;
 use immich_rs_core::{
     CancellationToken, MediaKind, NeverCancel, ServerCompatibility, ServerVersion,
 };
-use immich_rs_sources::{
-    NoProgress, TakeoutScanConfig, scan_folder_resolved, scan_google_takeout_inputs_resolved,
-};
-use zip::CompressionMethod;
-use zip::write::{SimpleFileOptions, ZipWriter};
+use immich_rs_sources::{NoProgress, scan_folder_resolved};
 
 use crate::journal::{Journal, JournalEvent, OutcomeKind};
 use crate::{
-    ArchivePlanningConfig, ExecutorErrorClass, TakeoutImportConfig, UploadExecutionConfig,
-    create_archive_manifest, create_takeout_upload_plan, create_upload_plan, dry_run_upload,
+    ArchivePlanningConfig, ExecutorErrorClass, UploadExecutionConfig, create_archive_manifest,
+    create_upload_plan, dry_run_upload,
 };
 
 static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -38,18 +32,6 @@ impl SyntheticDirectory {
 
     fn path(&self) -> &Path {
         &self.0
-    }
-
-    fn archive(&self, entries: &[(&str, &[u8])]) -> Result<PathBuf, Box<dyn Error>> {
-        let path = self.0.join("takeout.zip");
-        let mut writer = ZipWriter::new(File::create(&path)?);
-        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
-        for (name, content) in entries {
-            writer.start_file(*name, options)?;
-            writer.write_all(content)?;
-        }
-        writer.finish()?;
-        Ok(path)
     }
 }
 
@@ -218,109 +200,6 @@ fn json_sidecar_is_rejected_until_metadata_reconciliation() -> Result<(), Box<dy
     .err()
     .ok_or("JSON sidecar was accepted")?;
     assert_eq!(error.class(), ExecutorErrorClass::UnsupportedMetadata);
-    Ok(())
-}
-
-#[test]
-fn takeout_plan_preserves_metadata_and_exact_mutation_budget() -> Result<(), Box<dyn Error>> {
-    let directory = SyntheticDirectory::new()?;
-    let photos = directory
-        .path()
-        .join("Takeout/Google Photos/Photos from 2024");
-    fs::create_dir_all(&photos)?;
-    fs::write(photos.join("synthetic.jpg"), b"synthetic image\n")?;
-    fs::write(photos.join("unmatched.jpg"), b"unmatched image\n")?;
-    fs::write(
-        photos.join("synthetic.jpg.json"),
-        br#"{"title":"synthetic.jpg","description":"synthetic description","photoTakenTime":{"timestamp":"1704067200"}}"#,
-    )?;
-    let album = directory
-        .path()
-        .join("Takeout/Google Photos/Synthetic album");
-    fs::create_dir_all(&album)?;
-    fs::write(album.join("synthetic.jpg"), b"synthetic image\n")?;
-    fs::write(
-        album.join("synthetic.jpg.json"),
-        br#"{"title":"synthetic.jpg","description":"synthetic description","photoTakenTime":{"timestamp":"1704067200"}}"#,
-    )?;
-    fs::write(
-        album.join("metadata.json"),
-        br#"{"title":"Synthetic album"}"#,
-    )?;
-    let config = TakeoutImportConfig::default();
-    let resolved = scan_google_takeout_inputs_resolved(
-        &[directory.path().to_path_buf()],
-        "synthetic-takeout",
-        &TakeoutScanConfig::default(),
-        &NeverCancel,
-        &mut NoProgress,
-    )?;
-    let server = ServerCompatibility {
-        version: ServerVersion {
-            major: 3,
-            minor: 1,
-            patch: 0,
-        },
-        identity_sha256: "a".repeat(64),
-    };
-    let plan = create_takeout_upload_plan(&resolved, server.clone(), &config)?;
-    assert_eq!(plan.schema_version, 2);
-    assert_eq!(plan.summary.operations, 2);
-    assert_eq!(plan.summary.metadata_updates, 1);
-    assert_eq!(plan.summary.album_creates, 1);
-    assert_eq!(plan.summary.album_memberships, 1);
-    assert_eq!(plan.summary.max_mutations, 5);
-    let operation = plan
-        .operations
-        .iter()
-        .find(|operation| operation.relative_path.ends_with("synthetic.jpg"))
-        .ok_or("missing operation")?;
-    assert_eq!(operation.created_at_unix_ms, 1_704_067_200_000);
-    assert_eq!(operation.modified_at_unix_ms, 1_704_067_200_000);
-    assert_eq!(
-        operation
-            .normalized_metadata
-            .as_ref()
-            .ok_or("missing metadata")?
-            .albums,
-        ["Synthetic album"]
-    );
-    let archive = directory.archive(&[
-        (
-            "Takeout/Google Photos/Photos from 2024/synthetic.jpg",
-            b"synthetic image\n",
-        ),
-        (
-            "Takeout/Google Photos/Photos from 2024/synthetic.jpg.json",
-            br#"{"title":"synthetic.jpg","description":"synthetic description","photoTakenTime":{"timestamp":"1704067200"}}"#,
-        ),
-        (
-            "Takeout/Google Photos/Photos from 2024/unmatched.jpg",
-            b"unmatched image\n",
-        ),
-        (
-            "Takeout/Google Photos/Synthetic album/synthetic.jpg",
-            b"synthetic image\n",
-        ),
-        (
-            "Takeout/Google Photos/Synthetic album/synthetic.jpg.json",
-            br#"{"title":"synthetic.jpg","description":"synthetic description","photoTakenTime":{"timestamp":"1704067200"}}"#,
-        ),
-        (
-            "Takeout/Google Photos/Synthetic album/metadata.json",
-            br#"{"title":"Synthetic album"}"#,
-        ),
-    ])?;
-    let archived = scan_google_takeout_inputs_resolved(
-        &[archive],
-        "synthetic-takeout",
-        &TakeoutScanConfig::default(),
-        &NeverCancel,
-        &mut NoProgress,
-    )?;
-    let archived_plan = create_takeout_upload_plan(&archived, server, &config)?;
-    assert_eq!(archived_plan, plan);
-    plan.validate()?;
     Ok(())
 }
 

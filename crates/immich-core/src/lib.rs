@@ -4,6 +4,7 @@
 mod apply_report;
 mod archive;
 mod cancellation;
+mod import_report;
 mod metadata;
 mod planning;
 mod production;
@@ -17,6 +18,7 @@ pub use archive::{
     ArchiveManifestValidationError,
 };
 pub use cancellation::{Cancellation, CancellationToken, NeverCancel};
+pub use import_report::ImportApplyReport;
 pub use metadata::{GeoCoordinates, NormalizedMetadata};
 pub use planning::{
     CandidateAsset, LivePhotoMember, LivePhotoRole, MediaKind, MetadataCandidate, MetadataKind,
@@ -46,6 +48,8 @@ pub const UPLOAD_PLAN_SCHEMA_VERSION: u32 = 1;
 pub const UPLOAD_PLAN_SCHEMA_VERSION_V2: u32 = 2;
 /// Schema version for privacy-aware apply reports.
 pub const APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
+/// Schema version for source-aware import apply reports.
+pub const IMPORT_APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
 /// Schema version for immutable read-only Immich archive manifests.
 pub const ARCHIVE_MANIFEST_SCHEMA_VERSION: u32 = 1;
 /// Schema version for privacy-aware local archive apply reports.

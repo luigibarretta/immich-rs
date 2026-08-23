@@ -1,6 +1,7 @@
 # ADR-0024: Read-only Immich archive
 
-- Status: Accepted
+- Status: Superseded
+- Superseded by: ADR-0027
 - Date: 2026-08-21
 - Owners: project maintainers
 

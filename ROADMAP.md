@@ -210,3 +210,30 @@ using an unprovisioned Apple SDK. Version remains `0.0.0`; no RC tag or artifact
 is published until these explicit security and operations prerequisites pass.
 
 No replacement of immich-go is considered before Phase 6 evidence.
+
+## Phase 7 — production transport and authorization
+
+ADR-0027 defines the first production-capable surface without authorizing a
+real production test. The implementation must retain every immutable-plan,
+bounded-streaming, checkpoint, retry and duplicate guarantee already proven by
+the disposable folder upload and read-only archive verticals.
+
+Acceptance requires:
+
+- separate disposable-loopback and production-HTTPS endpoint capabilities;
+- CLI-only remote read and write acknowledgements that cannot persist in
+  environment, TOML, Compose or checkpoints;
+- production write binding to the exact upload-plan SHA-256, expected operation
+  count and a redacted verified-backup reference;
+- remote read capability that cannot become a mutation capability;
+- a synthetic disposable Immich behind a dedicated trusted HTTPS origin;
+- certificate, authentication, version, retry, disconnect, lost-response,
+  cancellation, resume and duplicate-convergence coverage;
+- a bounded end-to-end mutating soak with complete disposable cleanup;
+- no production hostname, credential, media or scheduled production mutation;
+- unchanged immich-go periodic homelab smoke and an explicit rollback path.
+
+The gate is **not passed**. Remote endpoints remain rejected until the
+implementation and its committed evidence are green on the exact SHA. Google
+Takeout and Apple Photos apply, release publication and public forge mirroring
+remain separate later verticals.

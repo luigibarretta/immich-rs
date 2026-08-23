@@ -1,6 +1,7 @@
 # ADR-0020: Containerized disposable transport
 
-- Status: Accepted
+- Status: Superseded
+- Superseded by: ADR-0027
 - Date: 2026-08-15
 - Owners: project maintainers
 - Supersedes: ADR-0019

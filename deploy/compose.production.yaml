@@ -1,0 +1,11 @@
+services:
+  immich-rs:
+    network_mode: bridge
+    environment:
+      IMMICH_RS_API_KEY_FILE: /run/secrets/immich_rs_api_key
+    secrets:
+      - immich_rs_api_key
+
+secrets:
+  immich_rs_api_key:
+    file: ${IMMICH_RS_API_KEY_PATH:?set an absolute API-key file path}

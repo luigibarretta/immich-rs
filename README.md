@@ -149,7 +149,7 @@ five-target rehearsal. No RC is published yet.
 - strict schema-v1 TOML and `IMMICH_RS_*` configuration with deterministic
   `CLI > environment > file > default` precedence and redacted inspection;
 - non-root, shell-free `linux/amd64` and `linux/arm64` OCI packaging plus a
-  network-disabled Compose profile for offline planning.
+  network-disabled Compose default and secret-backed opt-in HTTPS override.
 
 Render the effective non-secret configuration:
 

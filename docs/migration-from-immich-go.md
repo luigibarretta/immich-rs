@@ -1,9 +1,11 @@
 # Migration and rollback from immich-go
 
-immich-rs is not yet authorized for production use. The current upload and
-archive server commands deliberately accept loopback/localhost Immich
-instances only. This guide defines the future cutover sequence and the safe
-rollback available today; it does not weaken that boundary.
+No supported immich-rs release is published yet. A source-built client from an
+exact green revision may use only the Phase 7/8 production surface: verified
+remote HTTPS, read-only archive, immutable folder upload and plan-bound Google
+Takeout import. Every remote read/write acknowledgement is CLI-only; no
+configuration file, environment variable or Compose file can silently enable
+production. Delete, replace, trash and independent maintenance remain absent.
 
 ## Compare without mutation
 
@@ -26,17 +28,36 @@ resume. Verify asset counts, Live Photo links, source/server checksums and zero
 unexpected requests. Remove the exact key, owner, containers, volumes, network,
 workspace and downloaded images after evidence capture.
 
+For Google Takeout, additionally prove directory/split-ZIP plan equality,
+normalized metadata, exact album membership, effect-level resume and
+fresh-checkpoint duplicate convergence. Never use personal media for this
+canary; the repository gate provides a complete synthetic fixture.
+
 For a read-only archive canary, run `plan archive immich`, first apply and
 verified resume against the same disposable instance. Compare the original-byte
 digest multiset before cleanup.
 
-## Future production cutover
+## Authorized production cutover
 
-A production import remains blocked until a superseding ADR explicitly grants
-that capability. That ADR must require a verified Immich backup, a bounded
-selected source, least-privilege owner/key, immutable plan, dry-run review,
-expected mutation count, cancellation checkpoint and postcondition checklist.
-The periodic homelab immich-go smoke remains unchanged.
+1. Verify an Immich backup or restore point independently and retain its
+   bounded operator reference.
+2. Create a temporary least-privilege API key for only the selected plan. A
+   Takeout import may require asset upload/read/update and album
+   read/create/membership permissions; it never requires delete or trash.
+3. Create and inspect the immutable server-bound plan, preserve its SHA-256 and
+   maximum mutation count, then run `apply upload --dry-run` without a key.
+4. Apply only that plan with `--authorize-production-read`,
+   `--authorize-production-write`, `--confirm-plan-sha256`,
+   `--expected-operations` and `--backup-reference`. Any mismatch must fail
+   before mutation.
+5. Verify counts, metadata and albums against the reviewed plan, retain the
+   checkpoint until acceptance, then revoke the temporary key.
+
+Do not run immich-rs and immich-go mutations over the same source selection.
+The periodic homelab immich-go smoke remains unchanged. See the
+[Phase 7 transport matrix](compatibility/phase7-production-https.md) and
+[Phase 8 Takeout matrix](compatibility/phase8-google-takeout-import.md) before
+cutover.
 
 ## Rollback
 
@@ -45,8 +66,8 @@ to the pinned immich-go workflow. For a disposable canary, delete only the
 labelled disposable stack after exporting its evidence. Never use immich-rs
 delete/replace commands—none exist.
 
-If a future authorized production import is interrupted, stop new writes,
-retain the immutable plan/checkpoint and verify server state before retrying.
+If an authorized production import is interrupted, stop new writes, retain the
+immutable plan/checkpoint and verify server state before retrying.
 Do not rerun both tools against the same selection. Restore the verified Immich
 backup if postconditions fail, revoke the candidate API key and resume the
 pinned immich-go operational workflow only after the library is consistent.

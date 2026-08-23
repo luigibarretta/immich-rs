@@ -56,16 +56,46 @@ file. Configuring both key variables is an error.
 
 ## Server-aware container boundary
 
-Upload and archive commands accept only literal loopback Immich origins. The
-default Compose service has no network and therefore cannot contact Immich.
-This is intentional: container packaging does not authorize production use or
-broaden the Phase 2/5 safety boundary.
+The default Compose service has no network and therefore cannot contact
+Immich. Keep it as the safe planner default. The binary also supports the
+Phase 7/8 remote HTTPS surface through the supplied
+`deploy/compose.production.yaml` override with outbound networking and a
+secret file. Its complete contract is:
 
-Testing a server-aware command requires an explicitly disposable Immich whose
-network namespace is shared with the test container, disposable credentials
-and complete resource cleanup. The repository integration harnesses create
-that topology themselves. Do not change `network_mode` to a production network
-or weaken the loopback validation.
+```yaml
+services:
+  immich-rs:
+    network_mode: bridge
+    environment:
+      IMMICH_RS_API_KEY_FILE: /run/secrets/immich_rs_api_key
+    secrets:
+      - immich_rs_api_key
+
+secrets:
+  immich_rs_api_key:
+    file: ${IMMICH_RS_API_KEY_PATH:?set an absolute secret-file path}
+```
+
+Use both files and pass every production authorization as an explicit command
+argument:
+
+```bash
+IMMICH_RS_API_KEY_PATH=/absolute/path/to/api-key \
+  docker compose -f compose.yaml -f deploy/compose.production.yaml \
+  run --rm immich-rs \
+  apply upload --server https://immich.example.invalid \
+  --plan /state/upload-plan.json --source /source \
+  --checkpoint /state/checkpoint.sqlite \
+  --authorize-production-read --authorize-production-write \
+  --confirm-plan-sha256 <64-hex-digest> --expected-operations <count> \
+  --backup-reference <verified-restore-point-reference>
+```
+
+The override must not use host networking, expose ports, embed the API key or
+remove the base service's non-root/read-only/capability controls. Production
+acknowledgements intentionally cannot be stored in environment or TOML. Test
+transport changes first against an explicitly disposable Immich; the
+repository integration harnesses create and remove that isolated topology.
 
 ## Verified multiarch OCI archive
 

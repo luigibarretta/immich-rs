@@ -17,6 +17,7 @@ def check(root: Path = REPOSITORY_ROOT) -> list[str]:
     failures: list[str] = []
     containerfile = read(root / "Containerfile", failures)
     compose = read(root / "compose.yaml", failures)
+    production_compose = read(root / "deploy/compose.production.yaml", failures)
     dockerignore = read(root / ".dockerignore", failures)
     environment = read(root / "deploy/immich-rs.env.example", failures)
     provenance = read(root / "deploy/example-source/README.md", failures)
@@ -70,6 +71,25 @@ def check(root: Path = REPOSITORY_ROOT) -> list[str]:
     )
     failures.extend(
         f"Compose contains forbidden token: {token}" for token in forbidden_compose if token in compose
+    )
+    required_production_compose = (
+        "network_mode: bridge",
+        "IMMICH_RS_API_KEY_FILE: /run/secrets/immich_rs_api_key",
+        "file: ${IMMICH_RS_API_KEY_PATH:?set an absolute API-key file path}",
+    )
+    failures.extend(
+        f"Production Compose override is missing: {token}"
+        for token in required_production_compose
+        if token not in production_compose
+    )
+    forbidden_production_compose = (
+        "network_mode: host", "ports:", "privileged: true",
+        "IMMICH_RS_API_KEY:", "authorize-production",
+    )
+    failures.extend(
+        f"Production Compose override contains forbidden token: {token}"
+        for token in forbidden_production_compose
+        if token in production_compose
     )
     required_ignore = (
         "**",
@@ -136,7 +156,7 @@ def main() -> int:
     if failures:
         print("container contract failed:\n" + "\n".join(failures), file=sys.stderr)
         return 1
-    print("container contract passed: pinned, non-root, offline and read-only")
+    print("container contract passed: hardened offline default and secret-backed HTTPS override")
     return 0
 
 

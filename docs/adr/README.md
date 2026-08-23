@@ -45,6 +45,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0026](ADR-0026-oci-container-and-layered-configuration.md) | OCI container and layered configuration | Accepted |
 | [0027](ADR-0027-production-transport-and-authorization.md) | Production transport and operator authorization | Accepted |
 | [0028](ADR-0028-google-takeout-import.md) | Google Takeout import | Accepted |
+| [0029](ADR-0029-opt-in-production-compose.md) | Opt-in production Compose override | Accepted |
 
 ## Template
 

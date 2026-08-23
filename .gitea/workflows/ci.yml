@@ -76,6 +76,8 @@ jobs:
         run: |
           python3 scripts/check-container.py
           docker compose config --quiet
+          IMMICH_RS_API_KEY_PATH=/dev/null docker compose \
+            -f compose.yaml -f deploy/compose.production.yaml config --quiet
       - name: Build and run the hardened amd64 image twice
         run: |
           set -eu

@@ -137,3 +137,27 @@ fn upload_plan_inspection_emits_a_stable_confirmation_digest()
     assert_eq!(inspection["operations"], 1);
     Ok(())
 }
+
+#[test]
+fn invalid_custom_ca_fails_before_authentication_or_network()
+-> Result<(), Box<dyn std::error::Error>> {
+    let path =
+        std::env::temp_dir().join(format!("immich-rs-invalid-ca-{}.pem", std::process::id()));
+    fs::write(&path, b"synthetic invalid CA\n")?;
+    let output = command()
+        .args([
+            "plan",
+            "archive",
+            "immich",
+            "--server",
+            "https://example.invalid",
+            "--authorize-production-read",
+            "--ca-certificate",
+        ])
+        .arg(&path)
+        .output()?;
+    let _cleanup_result = fs::remove_file(&path);
+    assert_eq!(output.status.code(), Some(USAGE_EXIT_CODE));
+    assert!(output.stdout.is_empty());
+    Ok(())
+}

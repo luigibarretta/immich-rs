@@ -30,6 +30,7 @@ pub struct UploadFolderRequest {
     pub folder: FolderRequest,
     pub server: String,
     pub production_read: bool,
+    pub ca_certificate: Option<PathBuf>,
 }
 
 pub struct ApplyRequest {
@@ -40,6 +41,7 @@ pub struct ApplyRequest {
     pub dry_run: bool,
     pub config: UploadExecutionConfig,
     pub production: Option<ProductionWriteRequest>,
+    pub ca_certificate: Option<PathBuf>,
 }
 
 pub struct ProductionWriteRequest {
@@ -52,6 +54,7 @@ pub struct ArchivePlanRequest {
     pub server: String,
     pub config: ArchivePlanningConfig,
     pub production_read: bool,
+    pub ca_certificate: Option<PathBuf>,
 }
 
 pub struct ArchiveApplyRequest {
@@ -59,6 +62,7 @@ pub struct ArchiveApplyRequest {
     pub destination: PathBuf,
     pub server: String,
     pub production_read: bool,
+    pub ca_certificate: Option<PathBuf>,
 }
 
 pub fn folder_config(config: &EffectiveConfig) -> FolderScanConfig {

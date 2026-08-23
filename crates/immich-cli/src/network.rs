@@ -1,27 +1,44 @@
-use immich_rs_client::{ApiKey, ClientConfig, EndpointAccess, ImmichEndpoint, ImmichReadClient};
+use immich_rs_client::{
+    ApiKey, ClientConfig, EndpointAccess, ImmichEndpoint, ImmichReadClient, TlsRootCertificates,
+};
 
 use crate::failure::CliFailure;
 
 const API_KEY_ENVIRONMENT: &str = "IMMICH_RS_API_KEY";
 const API_KEY_FILE_ENVIRONMENT: &str = "IMMICH_RS_API_KEY_FILE";
 const MAX_API_KEY_FILE_BYTES: u64 = 4_097;
+const MAX_CA_CERTIFICATE_BYTES: u64 = 1024 * 1024;
 
-pub fn read_client(server: &str, production_read: bool) -> Result<ImmichReadClient, CliFailure> {
-    read_client_with_config(server, ClientConfig::default(), production_read)
+pub fn read_client(
+    server: &str,
+    production_read: bool,
+    ca_certificate: Option<&std::path::Path>,
+) -> Result<ImmichReadClient, CliFailure> {
+    read_client_with_config(
+        server,
+        ClientConfig::default(),
+        production_read,
+        ca_certificate,
+    )
 }
 
-pub fn archive_client(server: &str, production_read: bool) -> Result<ImmichReadClient, CliFailure> {
+pub fn archive_client(
+    server: &str,
+    production_read: bool,
+    ca_certificate: Option<&std::path::Path>,
+) -> Result<ImmichReadClient, CliFailure> {
     let config = ClientConfig {
         max_response_bytes: 1_024 * 1_024,
         ..ClientConfig::default()
     };
-    read_client_with_config(server, config, production_read)
+    read_client_with_config(server, config, production_read, ca_certificate)
 }
 
 fn read_client_with_config(
     server: &str,
     config: ClientConfig,
     production_read: bool,
+    ca_certificate: Option<&std::path::Path>,
 ) -> Result<ImmichReadClient, CliFailure> {
     let endpoint =
         ImmichEndpoint::parse(server).map_err(|_| CliFailure::usage("invalid server origin"))?;
@@ -31,14 +48,39 @@ fn read_client_with_config(
         EndpointAccess::disposable(&endpoint)
     }
     .map_err(|_| CliFailure::usage("server does not match the authorized access mode"))?;
+    if !production_read && ca_certificate.is_some() {
+        return Err(CliFailure::usage(
+            "custom CA certificates require production HTTPS mode",
+        ));
+    }
+    let roots = ca_certificate.map(read_ca_certificate).transpose()?;
     let key_value = api_key_value()?;
     let api_key = ApiKey::new(&key_value).map_err(|_| CliFailure::authentication())?;
-    let client = if production_read {
+    let client = if let Some(roots) = roots {
+        ImmichReadClient::new_production_read_with_roots(endpoint, api_key, config, true, roots)
+    } else if production_read {
         ImmichReadClient::new_production_read(endpoint, api_key, config, true)
     } else {
         ImmichReadClient::new(endpoint, api_key, config)
     };
     client.map_err(CliFailure::from_client)
+}
+
+fn read_ca_certificate(path: &std::path::Path) -> Result<TlsRootCertificates, CliFailure> {
+    let metadata = std::fs::symlink_metadata(path)
+        .map_err(|_| CliFailure::usage("cannot read CA certificate"))?;
+    if !metadata.file_type().is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.len() == 0
+        || metadata.len() > MAX_CA_CERTIFICATE_BYTES
+    {
+        return Err(CliFailure::usage(
+            "CA certificate must be a bounded regular file",
+        ));
+    }
+    let pem = std::fs::read(path).map_err(|_| CliFailure::usage("cannot read CA certificate"))?;
+    TlsRootCertificates::from_pem_bundle(&pem)
+        .map_err(|_| CliFailure::usage("invalid CA certificate bundle"))
 }
 
 fn api_key_value() -> Result<String, CliFailure> {

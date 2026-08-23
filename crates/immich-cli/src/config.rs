@@ -13,6 +13,7 @@ const MAX_CONFIG_BYTES: u64 = 1024 * 1024;
 pub struct EffectiveConfig {
     pub schema_version: u32,
     pub server: Option<String>,
+    pub ca_certificate: Option<PathBuf>,
     pub label: Option<String>,
     pub source: Option<PathBuf>,
     pub inputs: Option<Vec<PathBuf>>,
@@ -65,6 +66,7 @@ struct FileConfig {
 #[serde(deny_unknown_fields)]
 struct ImmichConfig {
     server: Option<String>,
+    ca_certificate: Option<PathBuf>,
 }
 
 #[derive(Default, Deserialize)]
@@ -179,6 +181,7 @@ fn load_file(path: &Path) -> Result<EffectiveConfig, CliFailure> {
     Ok(EffectiveConfig {
         schema_version: file.schema_version,
         server: file.immich.server,
+        ca_certificate: file.immich.ca_certificate,
         label: file.scan.label,
         source: file.scan.source,
         inputs: file.scan.inputs,

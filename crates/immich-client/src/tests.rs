@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     ApiKey, ClientConfig, ClientError, ClientErrorClass, EndpointAccess, EndpointError,
-    ImmichEndpoint, ImmichReadClient,
+    ImmichEndpoint, ImmichReadClient, TlsRootCertificates,
 };
 
 #[test]
@@ -26,6 +26,7 @@ fn secrets_and_origins_are_redacted() -> Result<(), Box<dyn std::error::Error>> 
 fn endpoint_policy_fails_closed() -> Result<(), Box<dyn std::error::Error>> {
     assert!(ImmichEndpoint::parse("http://127.0.0.1:2283").is_ok());
     assert!(ImmichEndpoint::parse("http://localhost:2283").is_ok());
+    assert!(ImmichEndpoint::parse("http://synthetic.localhost:2283").is_ok());
     assert!(matches!(
         ImmichEndpoint::parse("http://example.invalid"),
         Err(EndpointError::InsecureRemoteOrigin)
@@ -40,6 +41,8 @@ fn endpoint_policy_fails_closed() -> Result<(), Box<dyn std::error::Error>> {
     assert!(EndpointAccess::production_read(&remote, true).is_ok());
     let loopback = ImmichEndpoint::parse("https://127.0.0.1:2283")?;
     assert!(EndpointAccess::production_read(&loopback, true).is_err());
+    let loopback_domain = ImmichEndpoint::parse("https://synthetic.localhost:2283")?;
+    assert!(EndpointAccess::production_read(&loopback_domain, true).is_err());
     Ok(())
 }
 
@@ -149,6 +152,13 @@ fn retry_contract_is_explicit() {
     let permanent = ClientError::new(ClientErrorClass::Authentication);
     assert!(retryable.is_retryable());
     assert!(!permanent.is_retryable());
+}
+
+#[test]
+fn custom_tls_roots_are_bounded_and_fail_closed() {
+    assert!(TlsRootCertificates::from_pem_bundle(b"").is_err());
+    assert!(TlsRootCertificates::from_pem_bundle(b"not a certificate").is_err());
+    assert!(TlsRootCertificates::from_pem_bundle(&vec![b'x'; 1024 * 1024 + 1]).is_err());
 }
 
 #[tokio::test]

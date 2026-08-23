@@ -17,6 +17,7 @@ const KNOWN_NAMES: &[&str] = &[
     "IMMICH_RS_ARCHIVE_PAGE_SIZE",
     "IMMICH_RS_ARCHIVE_SELECTION",
     "IMMICH_RS_BUFFER_BYTES",
+    "IMMICH_RS_CA_CERTIFICATE",
     "IMMICH_RS_CASE_SENSITIVE",
     "IMMICH_RS_COMPRESSION_RATIO_GRACE_BYTES",
     "IMMICH_RS_CONCURRENCY",
@@ -62,6 +63,7 @@ pub fn config_path() -> Result<Option<PathBuf>, CliFailure> {
 
 pub fn overlay(config: &mut EffectiveConfig) -> Result<(), CliFailure> {
     set_string(&mut config.server, "IMMICH_RS_SERVER")?;
+    set_path(&mut config.ca_certificate, "IMMICH_RS_CA_CERTIFICATE")?;
     set_string(&mut config.label, "IMMICH_RS_LABEL")?;
     set_path(&mut config.source, "IMMICH_RS_SOURCE")?;
     if let Some(value) = value("IMMICH_RS_INPUTS_JSON")? {

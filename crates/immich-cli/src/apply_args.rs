@@ -27,6 +27,8 @@ pub fn parse_upload(
     let mut checkpoint = effective.upload_checkpoint.clone();
     let mut server = effective.server.clone();
     let mut server_from_cli = false;
+    let mut ca_certificate = effective.ca_certificate.clone();
+    let mut ca_from_cli = false;
     let mut dry_run = effective.upload_dry_run.unwrap_or(false);
     let mut production = ProductionOptions::default();
     let mut config = args::upload_config(effective);
@@ -49,6 +51,10 @@ pub fn parse_upload(
             Some("--server") => {
                 server = Some(args::string_value(arguments, index, "--server")?);
                 server_from_cli = true;
+            }
+            Some("--ca-certificate") => {
+                ca_certificate = Some(args::path_value(arguments, index, "--ca-certificate")?);
+                ca_from_cli = true;
             }
             Some("--verification-buffer-bytes") => {
                 config.verification_buffer_bytes =
@@ -93,8 +99,10 @@ pub fn parse_upload(
         }
         index += 2;
     }
-    if dry_run && server_from_cli {
-        return Err(CliFailure::usage("dry-run does not accept --server"));
+    if dry_run && (server_from_cli || ca_from_cli) {
+        return Err(CliFailure::usage(
+            "dry-run does not accept server transport options",
+        ));
     }
     if !dry_run && server.is_none() {
         return Err(CliFailure::usage("--server is required for apply"));
@@ -108,6 +116,7 @@ pub fn parse_upload(
         dry_run,
         config,
         production,
+        ca_certificate: if dry_run { None } else { ca_certificate },
     })
 }
 
@@ -185,6 +194,7 @@ pub fn parse_archive(
     let mut destination = effective.archive_destination.clone();
     let mut server = effective.server.clone();
     let mut production_read = false;
+    let mut ca_certificate = effective.ca_certificate.clone();
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].to_str() {
@@ -202,6 +212,9 @@ pub fn parse_archive(
                 index += 1;
                 continue;
             }
+            Some("--ca-certificate") => {
+                ca_certificate = Some(args::path_value(arguments, index, "--ca-certificate")?);
+            }
             _ => return Err(CliFailure::usage("unsupported archive apply option")),
         }
         index += 2;
@@ -211,6 +224,7 @@ pub fn parse_archive(
         destination: destination.ok_or_else(|| CliFailure::usage("--destination is required"))?,
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
         production_read,
+        ca_certificate,
     })
 }
 

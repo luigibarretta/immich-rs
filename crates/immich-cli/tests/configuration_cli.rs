@@ -161,6 +161,7 @@ fn effective_configuration_never_renders_api_key() -> Result<(), Box<dyn std::er
     let output = command()
         .env("IMMICH_RS_API_KEY", "synthetic-secret-value")
         .env("IMMICH_RS_SERVER", "http://127.0.0.1:2283")
+        .env("IMMICH_RS_CA_CERTIFICATE", "synthetic-ca.pem")
         .env("IMMICH_RS_CONCURRENCY", "2")
         .env("IMMICH_RS_ARCHIVE_INCLUDE_TRASHED", "true")
         .args(["config", "show"])
@@ -174,5 +175,6 @@ fn effective_configuration_never_renders_api_key() -> Result<(), Box<dyn std::er
     assert_eq!(value["schema_version"], 1);
     assert_eq!(value["concurrency"], 2);
     assert_eq!(value["archive_include_trashed"], true);
+    assert_eq!(value["ca_certificate"], "synthetic-ca.pem");
     Ok(())
 }

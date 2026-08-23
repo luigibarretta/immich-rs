@@ -14,7 +14,7 @@ pub fn parse_folder(
     arguments: &[OsString],
     config: &EffectiveConfig,
 ) -> Result<FolderRequest, CliFailure> {
-    parse_folder_options(arguments, config, false, "folder").map(|(request, _, _)| request)
+    parse_folder_options(arguments, config, false, "folder").map(|(request, _, _, _)| request)
 }
 
 pub fn parse_google_takeout(
@@ -133,12 +133,13 @@ pub fn parse_upload_folder(
     arguments: &[OsString],
     config: &EffectiveConfig,
 ) -> Result<UploadFolderRequest, CliFailure> {
-    let (folder, server, production_read) =
+    let (folder, server, production_read, ca_certificate) =
         parse_folder_options(arguments, config, true, "folder")?;
     Ok(UploadFolderRequest {
         folder,
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
         production_read,
+        ca_certificate,
     })
 }
 
@@ -147,7 +148,7 @@ fn parse_folder_options(
     effective: &EffectiveConfig,
     allow_server: bool,
     default_label: &str,
-) -> Result<(FolderRequest, Option<String>, bool), CliFailure> {
+) -> Result<(FolderRequest, Option<String>, bool, Option<PathBuf>), CliFailure> {
     let mut label = effective
         .label
         .clone()
@@ -156,6 +157,7 @@ fn parse_folder_options(
     let mut root = None;
     let mut server = effective.server.clone();
     let mut production_read = false;
+    let mut ca_certificate = effective.ca_certificate.clone();
     let mut index = 0;
     while index < arguments.len() {
         if let Some(consumed) = common_scan_option(arguments, index, &mut config)? {
@@ -171,6 +173,9 @@ fn parse_folder_options(
                 production_read = true;
                 index += 1;
                 continue;
+            }
+            Some("--ca-certificate") if allow_server => {
+                ca_certificate = Some(args::path_value(arguments, index, "--ca-certificate")?);
             }
             Some(value) if value.starts_with('-') => {
                 return Err(CliFailure::usage("unsupported plan option"));
@@ -194,6 +199,7 @@ fn parse_folder_options(
         },
         server,
         production_read,
+        ca_certificate,
     ))
 }
 
@@ -204,6 +210,7 @@ pub fn parse_archive_plan(
     let mut server = effective.server.clone();
     let mut config = args::archive_config(effective)?;
     let mut production_read = false;
+    let mut ca_certificate = effective.ca_certificate.clone();
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].to_str() {
@@ -214,6 +221,9 @@ pub fn parse_archive_plan(
                 production_read = true;
                 index += 1;
                 continue;
+            }
+            Some("--ca-certificate") => {
+                ca_certificate = Some(args::path_value(arguments, index, "--ca-certificate")?);
             }
             Some("--selection") => {
                 let value = args::string_value(arguments, index, "--selection")?;
@@ -246,6 +256,7 @@ pub fn parse_archive_plan(
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
         config,
         production_read,
+        ca_certificate,
     })
 }
 

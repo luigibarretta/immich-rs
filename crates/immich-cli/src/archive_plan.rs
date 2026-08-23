@@ -11,7 +11,11 @@ use crate::{network, output, signal};
 pub async fn run(request: ArchivePlanRequest) -> Result<(), CliFailure> {
     let cancellation = CancellationToken::default();
     signal::install(cancellation.clone())?;
-    let client = network::archive_client(&request.server, request.production_read)?;
+    let client = network::archive_client(
+        &request.server,
+        request.production_read,
+        request.ca_certificate.as_deref(),
+    )?;
     let negotiated = client
         .probe(&cancellation)
         .await

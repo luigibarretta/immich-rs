@@ -11,7 +11,8 @@ use crate::models::{UserResponse, VersionResponse};
 use crate::response::{bounded_json, classify_transport};
 use crate::{
     ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichUploadClient,
-    ProductionImmichUploadClient, ProductionUploadAuthorization, upload_plan_sha256,
+    ProductionImmichUploadClient, ProductionUploadAuthorization, TlsRootCertificates,
+    upload_plan_sha256,
 };
 
 const SUPPORTED_MAJOR: u32 = 3;
@@ -108,7 +109,7 @@ impl ImmichReadClient {
     ) -> Result<Self, ClientError> {
         let access = EndpointAccess::disposable(&endpoint)
             .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
-        Self::new_with_access(endpoint, api_key, config, access)
+        Self::new_with_access(endpoint, api_key, config, access, None)
     }
 
     /// Construct an explicitly acknowledged read-only production client.
@@ -120,7 +121,20 @@ impl ImmichReadClient {
     ) -> Result<Self, ClientError> {
         let access = EndpointAccess::production_read(&endpoint, acknowledged)
             .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
-        Self::new_with_access(endpoint, api_key, config, access)
+        Self::new_with_access(endpoint, api_key, config, access, None)
+    }
+
+    /// Construct a production read client that trusts an additional bounded CA bundle.
+    pub fn new_production_read_with_roots(
+        endpoint: ImmichEndpoint,
+        api_key: ApiKey,
+        config: ClientConfig,
+        acknowledged: bool,
+        roots: TlsRootCertificates,
+    ) -> Result<Self, ClientError> {
+        let access = EndpointAccess::production_read(&endpoint, acknowledged)
+            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
+        Self::new_with_access(endpoint, api_key, config, access, Some(roots))
     }
 
     fn new_with_access(
@@ -128,14 +142,21 @@ impl ImmichReadClient {
         api_key: ApiKey,
         config: ClientConfig,
         access: EndpointAccess,
+        roots: Option<TlsRootCertificates>,
     ) -> Result<Self, ClientError> {
         let config = config.validate()?;
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-        let http = reqwest::Client::builder()
+        let mut builder = reqwest::Client::builder()
             .default_headers(headers)
             .timeout(config.request_timeout)
-            .redirect(reqwest::redirect::Policy::none())
+            .redirect(reqwest::redirect::Policy::none());
+        if let Some(roots) = roots {
+            for certificate in roots.certificates {
+                builder = builder.add_root_certificate(certificate);
+            }
+        }
+        let http = builder
             .build()
             .map_err(|_| ClientError::new(ClientErrorClass::Protocol))?;
         Ok(Self {

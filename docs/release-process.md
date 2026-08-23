@@ -17,7 +17,8 @@ ADR-0025 prerequisites are provisioned.
    `RELEASE_SIGNING_FINGERPRINT` and `RELEASE_SIGNING_PASSPHRASE`. Do not expose
    them to pull requests or ordinary push jobs.
 4. Validate all five host targets, repository secrets and runner isolation with
-   a non-publishing workflow dispatch.
+   a non-publishing `release-rehearsal` workflow dispatch. It retains no
+   artifact and does not create a tag or release.
 
 The project does not download or redistribute Apple SDKs. Both macOS artifacts
 must be built and tested on native Apple hosts. macOS host runners must provide

@@ -76,6 +76,20 @@ def validate() -> None:
     forbidden = ("workflow_dispatch", "pull_request", "latest", "zigbuild", "cargo xwin")
     if any(value in workflow for value in forbidden):
         raise ReleaseCheckError("release workflow has an unsupported trigger or cross-build path")
+    rehearsal = read(".gitea/workflows/release-rehearsal.yml")
+    for target, runner in TARGETS.items():
+        if rehearsal.count(f"target: {target}") != 1 or rehearsal.count(f"runner: {runner}") != 1:
+            raise ReleaseCheckError(f"rehearsal target mapping drifted: {target}")
+    required_rehearsal = (
+        "workflow_dispatch", "RELEASE_SIGNING_PRIVATE_KEY",
+        "RELEASE_SIGNING_FINGERPRINT", "RELEASE_SIGNING_PASSPHRASE",
+        "gpg --batch --verify", "cargo test --locked --workspace --all-targets",
+        "cargo build --locked --release -p immich-rs-cli", "host: ${{ matrix.target }}",
+    )
+    if any(value not in rehearsal for value in required_rehearsal):
+        raise ReleaseCheckError("non-publishing rehearsal contract drifted")
+    if "upload-artifact" in rehearsal or "push:" in rehearsal:
+        raise ReleaseCheckError("release rehearsal must not publish artifacts")
     package = read("scripts/package-release.py")
     for document in (
         "LICENSE", "NOTICE.md", "README.md", "SECURITY.md", "CHANGELOG.md",
@@ -109,7 +123,7 @@ def main() -> int:
     except ReleaseCheckError as error:
         print(f"release pipeline check failed: {error}", file=sys.stderr)
         return 1
-    print("release pipeline contract passed: five native targets, SBOM, provenance, signing")
+    print("release pipeline contract passed: rehearsal, five targets, SBOM, provenance, signing")
     return 0
 
 

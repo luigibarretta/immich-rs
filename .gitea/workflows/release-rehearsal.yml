@@ -1,0 +1,92 @@
+---
+name: release-rehearsal
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: immich-rs-release-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  signing-identity:
+    runs-on: docker
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify protected signing material without publishing
+        env:
+          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
+          RELEASE_SIGNING_FINGERPRINT: ${{ secrets.RELEASE_SIGNING_FINGERPRINT }}
+          RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
+        run: |
+          set -eu
+          test -s docs/release-signing-key.asc
+          test -n "$RELEASE_SIGNING_PRIVATE_KEY"
+          test -n "$RELEASE_SIGNING_FINGERPRINT"
+          test -n "$RELEASE_SIGNING_PASSPHRASE"
+          REHEARSAL_GNUPG=$(mktemp -d)
+          export GNUPGHOME="$REHEARSAL_GNUPG"
+          trap 'rm -rf -- "$REHEARSAL_GNUPG"' EXIT
+          gpg --batch --quiet --import docs/release-signing-key.asc
+          printf '%s' "$RELEASE_SIGNING_PRIVATE_KEY" | gpg --batch --quiet --import
+          PUBLIC_FINGERPRINT=$(gpg --batch --show-keys --with-colons \
+            docs/release-signing-key.asc | awk -F: '$1 == "fpr" {print $10; exit}')
+          test "$PUBLIC_FINGERPRINT" = "$RELEASE_SIGNING_FINGERPRINT"
+          printf 'immich-rs release rehearsal\n' > "$REHEARSAL_GNUPG/canary"
+          printf '%s' "$RELEASE_SIGNING_PASSPHRASE" | \
+            gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+              --local-user "$RELEASE_SIGNING_FINGERPRINT" --detach-sign \
+              --output "$REHEARSAL_GNUPG/canary.sig" "$REHEARSAL_GNUPG/canary"
+          gpg --batch --verify "$REHEARSAL_GNUPG/canary.sig" "$REHEARSAL_GNUPG/canary"
+
+  native:
+    needs: signing-identity
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: docker
+            target: x86_64-unknown-linux-gnu
+            python: python
+            setup_python: true
+          - runner: linux-arm64
+            target: aarch64-unknown-linux-gnu
+            python: python
+            setup_python: true
+          - runner: macos-x64
+            target: x86_64-apple-darwin
+            python: python3.12
+            setup_python: false
+          - runner: macos-arm64
+            target: aarch64-apple-darwin
+            python: python3.12
+            setup_python: false
+          - runner: windows-x64
+            target: x86_64-pc-windows-msvc
+            python: py -3.12
+            setup_python: false
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        if: ${{ matrix.setup_python }}
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Verify, test and build on the exact native host
+        run: |
+          ${{ matrix.python }} -c "import subprocess; assert 'host: ${{ matrix.target }}' in subprocess.check_output(['rustc', '-vV'], text=True)"
+          ${{ matrix.python }} -m unittest discover -s tests/tooling -p 'test_*.py'
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+          cargo test --locked --workspace --all-targets
+          cargo build --locked --release -p immich-rs-cli

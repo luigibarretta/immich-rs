@@ -4,8 +4,8 @@ use super::{
     CandidateAsset, GeoCoordinates, MediaKind, NORMALIZED_PLAN_SCHEMA_VERSION,
     NORMALIZED_PLAN_SCHEMA_VERSION_V2, NORMALIZED_PLAN_SCHEMA_VERSION_V3, NeverCancel,
     NormalizedMetadata, NormalizedPlan, PlanSummary, ServerCompatibility, ServerVersion,
-    SourceDescriptor, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UnicodeNormalization,
-    UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
+    SourceDescriptor, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UPLOAD_PLAN_SCHEMA_VERSION_V2,
+    UnicodeNormalization, UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
 };
 
 fn valid_archive_manifest() -> ArchiveManifest {
@@ -172,6 +172,7 @@ fn upload_plan_validates_live_photo_dependencies() -> Result<(), Box<dyn std::er
             created_at_unix_ms: 0,
             modified_at_unix_ms: 0,
             xmp_sidecar: None,
+            normalized_metadata: None,
             role: UploadRole::LivePhotoVideo {
                 pair_id: "pair-v1".to_owned(),
             },
@@ -185,6 +186,7 @@ fn upload_plan_validates_live_photo_dependencies() -> Result<(), Box<dyn std::er
             created_at_unix_ms: 0,
             modified_at_unix_ms: 0,
             xmp_sidecar: None,
+            normalized_metadata: None,
             role: UploadRole::LivePhotoImage {
                 pair_id: "pair-v1".to_owned(),
                 video_operation_id: video_id,
@@ -209,6 +211,10 @@ fn upload_plan_validates_live_photo_dependencies() -> Result<(), Box<dyn std::er
             media_bytes: 16,
             xmp_sidecars: 0,
             live_photo_pairs: 1,
+            metadata_updates: 0,
+            album_creates: 0,
+            album_memberships: 0,
+            max_mutations: 0,
         },
         operations,
     };
@@ -216,6 +222,60 @@ fn upload_plan_validates_live_photo_dependencies() -> Result<(), Box<dyn std::er
     let encoded = serde_json::to_vec(&plan)?;
     let decoded: UploadPlan = serde_json::from_slice(&encoded)?;
     assert_eq!(decoded, plan);
+    Ok(())
+}
+
+#[test]
+fn import_plan_summary_is_schema_bound_and_counts_mutation_budget()
+-> Result<(), Box<dyn std::error::Error>> {
+    let metadata = NormalizedMetadata {
+        description: Some("synthetic description".to_owned()),
+        taken_at_utc: Some("2024-01-01T00:00:00Z".to_owned()),
+        location: None,
+        albums: vec!["Synthetic album".to_owned()],
+    };
+    let operation = UploadOperation {
+        operation_id: "b".repeat(64),
+        relative_path: "image.jpg".to_owned(),
+        media_kind: MediaKind::Image,
+        byte_len: 4,
+        content_sha256: "c".repeat(64),
+        created_at_unix_ms: 1_704_067_200_000,
+        modified_at_unix_ms: 1_704_067_200_000,
+        xmp_sidecar: None,
+        normalized_metadata: Some(metadata),
+        role: UploadRole::Standalone,
+    };
+    let operations = vec![operation];
+    let mut plan = UploadPlan {
+        schema_version: UPLOAD_PLAN_SCHEMA_VERSION_V2,
+        normalized_plan_sha256: "d".repeat(64),
+        source: SourceDescriptor {
+            kind: SourceKind::GoogleTakeout,
+            label: "synthetic-takeout".to_owned(),
+            fingerprint_sha256: "e".repeat(64),
+            case_sensitive: true,
+            unicode_normalization: UnicodeNormalization::Nfc,
+        },
+        configuration_sha256: "f".repeat(64),
+        server: ServerCompatibility {
+            version: ServerVersion {
+                major: 3,
+                minor: 1,
+                patch: 0,
+            },
+            identity_sha256: "a".repeat(64),
+        },
+        summary: UploadPlanSummary::from_operations(UPLOAD_PLAN_SCHEMA_VERSION_V2, &operations),
+        operations,
+    };
+    assert_eq!(plan.summary.metadata_updates, 1);
+    assert_eq!(plan.summary.album_creates, 1);
+    assert_eq!(plan.summary.album_memberships, 1);
+    assert_eq!(plan.summary.max_mutations, 4);
+    plan.validate()?;
+    plan.source.kind = SourceKind::Folder;
+    assert!(plan.validate().is_err());
     Ok(())
 }
 

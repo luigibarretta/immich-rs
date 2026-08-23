@@ -203,7 +203,7 @@ fn process_regular_file(
     }
     before_read(path);
     match stream_identity(path, metadata, config.buffer_bytes, cancellation) {
-        Ok((byte_len, content_sha256, changed)) => {
+        Ok((byte_len, content_sha256, content_sha1_base64, changed)) => {
             state.bytes_read = state.bytes_read.saturating_add(byte_len);
             if changed {
                 state.errors.push(diagnostic(
@@ -215,10 +215,12 @@ fn process_regular_file(
             if let Some(kind) = media {
                 state.media.push(DiscoveredMedia {
                     native_path: path.to_path_buf(),
+                    archive_index: None,
                     relative_path,
                     kind,
                     byte_len,
                     content_sha256,
+                    content_sha1_base64,
                     metadata: Vec::new(),
                     normalized_metadata: None,
                     live_photo: None,
@@ -230,10 +232,12 @@ fn process_regular_file(
             } else if let Some(kind) = sidecar {
                 state.sidecars.push(DiscoveredSidecar {
                     native_path: path.to_path_buf(),
+                    archive_index: None,
                     relative_path,
                     kind,
                     byte_len,
                     content_sha256,
+                    content_sha1_base64,
                     takeout_document: None,
                     takeout_parse_error: None,
                 });

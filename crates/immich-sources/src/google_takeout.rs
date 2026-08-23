@@ -9,8 +9,9 @@ use sha2::{Digest, Sha256};
 use crate::reconcile::{attach_sidecar, complete, diagnostic, prepare};
 use crate::takeout_metadata::{MAX_JSON_BYTES, ParseError, TakeoutDocument, parse_bytes};
 use crate::{
-    DiscoveredSidecar, FolderScanConfig, MAX_DIAGNOSTIC_PATHS, ProgressObserver, ScanError,
-    ScanState, ScanStrategy, TakeoutScanConfig, scan_resolved_internal,
+    DiscoveredSidecar, FolderScanConfig, MAX_DIAGNOSTIC_PATHS, ProgressObserver,
+    ResolvedFolderPlan, ScanError, ScanState, ScanStrategy, TakeoutScanConfig,
+    scan_resolved_internal,
 };
 
 /// Scan one decompressed Google Takeout layout into a read-only normalized plan.
@@ -47,6 +48,18 @@ pub fn scan_google_takeout_inputs(
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
 ) -> Result<NormalizedPlan, ScanError> {
+    scan_google_takeout_inputs_resolved(inputs, source_label, config, cancellation, observer)
+        .map(|resolved| resolved.plan)
+}
+
+/// Scan Takeout inputs and retain exact native or ZIP-entry source locators.
+pub fn scan_google_takeout_inputs_resolved(
+    inputs: &[PathBuf],
+    source_label: &str,
+    config: &TakeoutScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
     if let [input] = inputs {
         if std::fs::symlink_metadata(input).is_ok_and(|metadata| {
@@ -66,8 +79,7 @@ pub fn scan_google_takeout_inputs(
                     reconcile_state: crate::takeout_reconcile::reconcile,
                     skip_path: |_| None,
                 },
-            )
-            .map(|resolved| resolved.plan);
+            );
         }
     }
     if inputs.iter().any(|input| {
@@ -77,7 +89,13 @@ pub fn scan_google_takeout_inputs(
             "directory and ZIP inputs cannot be mixed",
         ));
     }
-    crate::takeout_archive::scan_archives(inputs, source_label, config, cancellation, observer)
+    crate::takeout_archive::scan_archives_resolved(
+        inputs,
+        source_label,
+        config,
+        cancellation,
+        observer,
+    )
 }
 
 pub fn validate_layout(root: &Path) -> Result<(), ScanError> {

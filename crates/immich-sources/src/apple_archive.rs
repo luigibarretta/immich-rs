@@ -3,10 +3,13 @@ use std::fs::{File, Metadata};
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 use immich_rs_core::{
     Cancellation, MediaKind, MetadataKind, NORMALIZED_PLAN_SCHEMA_VERSION_V3, NormalizedPlan,
     PROGRESS_EVENT_SCHEMA_VERSION, ProgressEvent, ProgressStage, RuleEvidence, SourceKind, rule_id,
 };
+use sha1::Sha1;
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization as _;
 use zip::read::ZipFile;
@@ -28,6 +31,7 @@ struct EntryIdentity {
     kind: EntryKind,
     byte_len: u64,
     content_sha256: String,
+    content_sha1_base64: String,
 }
 
 pub fn scan_archives(
@@ -130,16 +134,18 @@ fn scan_archive(
             _ => continue,
         };
         validate_entry(&entry, config)?;
-        let (byte_len, content_sha256) =
+        let (byte_len, content_sha256, content_sha1_base64) =
             stream_entry(&mut entry, config.scan.buffer_bytes, cancellation)?;
         state.bytes_read = state.bytes_read.saturating_add(byte_len);
         merge_entry(
             path,
+            index,
             relative_path,
             EntryIdentity {
                 kind,
                 byte_len,
                 content_sha256,
+                content_sha1_base64,
             },
             state,
             seen,
@@ -223,9 +229,10 @@ fn stream_entry<R: Read>(
     entry: &mut ZipFile<'_, R>,
     buffer_bytes: usize,
     cancellation: &impl Cancellation,
-) -> Result<(u64, String), ScanError> {
+) -> Result<(u64, String, String), ScanError> {
     let mut buffer = vec![0_u8; buffer_bytes];
     let mut digest = Sha256::new();
+    let mut sha1 = Sha1::new();
     let mut byte_len = 0_u64;
     loop {
         check_cancelled(cancellation)?;
@@ -236,16 +243,22 @@ fn stream_entry<R: Read>(
             break;
         }
         digest.update(&buffer[..count]);
+        sha1.update(&buffer[..count]);
         byte_len = byte_len.saturating_add(count as u64);
     }
     if byte_len != entry.size() {
         return Err(ScanError::InvalidArchive("ZIP entry size mismatch"));
     }
-    Ok((byte_len, format!("{:x}", digest.finalize())))
+    Ok((
+        byte_len,
+        format!("{:x}", digest.finalize()),
+        STANDARD.encode(sha1.finalize()),
+    ))
 }
 
 fn merge_entry(
     archive_path: &Path,
+    archive_index: usize,
     relative_path: String,
     identity: EntryIdentity,
     state: &mut ScanState,
@@ -278,10 +291,12 @@ fn merge_entry(
     match identity.kind {
         EntryKind::Media(kind) => state.media.push(DiscoveredMedia {
             native_path: archive_path.to_path_buf(),
+            archive_index: Some(archive_index),
             relative_path,
             kind,
             byte_len: identity.byte_len,
             content_sha256: identity.content_sha256,
+            content_sha1_base64: identity.content_sha1_base64,
             metadata: Vec::new(),
             normalized_metadata: None,
             live_photo: None,
@@ -292,10 +307,12 @@ fn merge_entry(
         }),
         EntryKind::Sidecar(kind) => state.sidecars.push(DiscoveredSidecar {
             native_path: archive_path.to_path_buf(),
+            archive_index: Some(archive_index),
             relative_path,
             kind,
             byte_len: identity.byte_len,
             content_sha256: identity.content_sha256,
+            content_sha1_base64: identity.content_sha1_base64,
             takeout_document: None,
             takeout_parse_error: None,
         }),

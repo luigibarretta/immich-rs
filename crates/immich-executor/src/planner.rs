@@ -48,6 +48,7 @@ pub fn create_upload_plan(
             created_at_unix_ms,
             modified_at_unix_ms,
             xmp_sidecar,
+            normalized_metadata: None,
             role: upload_role(asset, &video_operations)?,
         });
     }
@@ -147,5 +148,9 @@ fn summarize(operations: &[UploadOperation]) -> UploadPlanSummary {
             .iter()
             .filter(|operation| matches!(operation.role, UploadRole::LivePhotoImage { .. }))
             .count() as u64,
+        metadata_updates: 0,
+        album_creates: 0,
+        album_memberships: 0,
+        max_mutations: 0,
     }
 }

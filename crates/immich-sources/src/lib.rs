@@ -23,7 +23,9 @@ mod takeout_metadata;
 mod takeout_reconcile;
 
 pub use apple_photos::{AlbumMode, ApplePhotosScanConfig, scan_apple_photos_inputs};
-pub use google_takeout::{scan_google_takeout, scan_google_takeout_inputs};
+pub use google_takeout::{
+    scan_google_takeout, scan_google_takeout_inputs, scan_google_takeout_inputs_resolved,
+};
 pub use scan::{FolderScanConfig, NoProgress, ProgressObserver, ScanError, TakeoutScanConfig};
 
 const MAX_DIAGNOSTIC_PATHS: usize = 8;
@@ -31,10 +33,12 @@ const MAX_DIAGNOSTIC_PATHS: usize = 8;
 #[derive(Clone, Debug)]
 struct DiscoveredMedia {
     native_path: PathBuf,
+    archive_index: Option<usize>,
     relative_path: String,
     kind: MediaKind,
     byte_len: u64,
     content_sha256: String,
+    content_sha1_base64: String,
     metadata: Vec<MetadataCandidate>,
     normalized_metadata: Option<NormalizedMetadata>,
     live_photo: Option<LivePhotoMember>,
@@ -44,10 +48,12 @@ struct DiscoveredMedia {
 #[derive(Clone, Debug)]
 struct DiscoveredSidecar {
     native_path: PathBuf,
+    archive_index: Option<usize>,
     relative_path: String,
     kind: MetadataKind,
     byte_len: u64,
     content_sha256: String,
+    content_sha1_base64: String,
     takeout_document: Option<takeout_metadata::TakeoutDocument>,
     takeout_parse_error: Option<takeout_metadata::ParseError>,
 }
@@ -80,8 +86,10 @@ impl ResolvedFolderPlan {
 #[derive(Clone, Debug)]
 pub struct ResolvedSourceFile {
     native_path: PathBuf,
+    archive_index: Option<usize>,
     byte_len: u64,
     content_sha256: String,
+    content_sha1_base64: String,
 }
 
 impl ResolvedSourceFile {
@@ -89,6 +97,12 @@ impl ResolvedSourceFile {
     #[must_use]
     pub fn native_path(&self) -> &Path {
         &self.native_path
+    }
+
+    /// ZIP entry index when the native path names an archive rather than a file.
+    #[must_use]
+    pub const fn archive_index(&self) -> Option<usize> {
+        self.archive_index
     }
 
     /// Exact length observed during the streaming identity read.
@@ -101,6 +115,12 @@ impl ResolvedSourceFile {
     #[must_use]
     pub fn content_sha256(&self) -> &str {
         &self.content_sha256
+    }
+
+    /// Base64 SHA-1 computed during the same bounded identity read.
+    #[must_use]
+    pub fn content_sha1_base64(&self) -> &str {
+        &self.content_sha1_base64
     }
 }
 
@@ -251,7 +271,19 @@ pub(crate) fn scan_resolved_internal(
     (strategy.reconcile_state)(&mut state);
     state.progress(ProgressStage::Reconciliation, observer);
     let complete_sequence = state.event_sequence.saturating_add(1);
-    let files = state
+    let files = resolved_files(&state);
+    let plan = reconcile::finalize_plan(
+        strategy.schema_version,
+        strategy.source_kind,
+        source_label,
+        config,
+        state,
+    );
+    finish_resolved(plan, files, complete_sequence, observer)
+}
+
+pub(crate) fn resolved_files(state: &ScanState) -> BTreeMap<String, ResolvedSourceFile> {
+    state
         .media
         .iter()
         .map(|media| {
@@ -259,8 +291,10 @@ pub(crate) fn scan_resolved_internal(
                 media.relative_path.clone(),
                 ResolvedSourceFile {
                     native_path: media.native_path.clone(),
+                    archive_index: media.archive_index,
                     byte_len: media.byte_len,
                     content_sha256: media.content_sha256.clone(),
+                    content_sha1_base64: media.content_sha1_base64.clone(),
                 },
             )
         })
@@ -269,19 +303,22 @@ pub(crate) fn scan_resolved_internal(
                 sidecar.relative_path.clone(),
                 ResolvedSourceFile {
                     native_path: sidecar.native_path.clone(),
+                    archive_index: sidecar.archive_index,
                     byte_len: sidecar.byte_len,
                     content_sha256: sidecar.content_sha256.clone(),
+                    content_sha1_base64: sidecar.content_sha1_base64.clone(),
                 },
             )
         }))
-        .collect::<BTreeMap<_, _>>();
-    let plan = reconcile::finalize_plan(
-        strategy.schema_version,
-        strategy.source_kind,
-        source_label,
-        config,
-        state,
-    );
+        .collect()
+}
+
+pub(crate) fn finish_resolved(
+    plan: NormalizedPlan,
+    files: BTreeMap<String, ResolvedSourceFile>,
+    complete_sequence: u64,
+    observer: &mut impl ProgressObserver,
+) -> Result<ResolvedFolderPlan, ScanError> {
     plan.validate()?;
     observer.observe(ProgressEvent {
         schema_version: PROGRESS_EVENT_SCHEMA_VERSION,

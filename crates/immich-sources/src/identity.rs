@@ -2,7 +2,10 @@ use std::fs::{self, File, Metadata};
 use std::io::Read;
 use std::path::Path;
 
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 use immich_rs_core::Cancellation;
+use sha1::Sha1;
 use sha2::{Digest, Sha256};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,7 +65,7 @@ pub fn stream_identity(
     discovered_metadata: &Metadata,
     buffer_bytes: usize,
     cancellation: &impl Cancellation,
-) -> Result<(u64, String, bool), StreamError> {
+) -> Result<(u64, String, String, bool), StreamError> {
     if lacks_read_permissions(discovered_metadata) {
         return Err(StreamError::Unreadable);
     }
@@ -71,6 +74,7 @@ pub fn stream_identity(
     let opened = file.metadata().map_err(|_| StreamError::Unreadable)?;
     let opened_snapshot = FileSnapshot::from_metadata(&opened);
     let mut digest = Sha256::new();
+    let mut sha1 = Sha1::new();
     let mut buffer = vec![0_u8; buffer_bytes];
     let mut bytes_read = 0_u64;
     while bytes_read < opened_snapshot.len {
@@ -87,6 +91,7 @@ pub fn stream_identity(
             break;
         }
         digest.update(&buffer[..read]);
+        sha1.update(&buffer[..read]);
         bytes_read = bytes_read
             .checked_add(read as u64)
             .ok_or(StreamError::Unreadable)?;
@@ -97,5 +102,10 @@ pub fn stream_identity(
         || opened_snapshot != FileSnapshot::from_metadata(&after_open)
         || opened_snapshot != FileSnapshot::from_metadata(&after_path)
         || bytes_read != opened_snapshot.len;
-    Ok((bytes_read, format!("{:x}", digest.finalize()), changed))
+    Ok((
+        bytes_read,
+        format!("{:x}", digest.finalize()),
+        STANDARD.encode(sha1.finalize()),
+        changed,
+    ))
 }

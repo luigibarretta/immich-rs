@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 //! Source-neutral domain and execution contracts.
 
+mod apply_report;
 mod archive;
 mod cancellation;
 mod metadata;
@@ -10,6 +11,7 @@ mod progress;
 pub mod rule_id;
 mod upload;
 
+pub use apply_report::ApplyReport;
 pub use archive::{
     ArchiveApplyReport, ArchiveAsset, ArchiveManifest, ArchiveManifestSummary,
     ArchiveManifestValidationError,
@@ -24,8 +26,8 @@ pub use planning::{
 pub use production::{ProductionConfirmationError, ProductionWriteConfirmation};
 pub use progress::{ProgressEvent, ProgressStage};
 pub use upload::{
-    ApplyReport, ServerCompatibility, ServerVersion, UploadOperation, UploadPlan,
-    UploadPlanSummary, UploadPlanValidationError, UploadRole, UploadSidecar,
+    ServerCompatibility, ServerVersion, UploadOperation, UploadPlan, UploadPlanSummary,
+    UploadPlanValidationError, UploadRole, UploadSidecar,
 };
 
 /// Schema version for synthetic fixture manifests.
@@ -40,6 +42,8 @@ pub const NORMALIZED_PLAN_SCHEMA_VERSION_V3: u32 = 3;
 pub const PROGRESS_EVENT_SCHEMA_VERSION: u32 = 1;
 /// Schema version for immutable upload plans.
 pub const UPLOAD_PLAN_SCHEMA_VERSION: u32 = 1;
+/// Schema version for source-aware imports with normalized metadata and albums.
+pub const UPLOAD_PLAN_SCHEMA_VERSION_V2: u32 = 2;
 /// Schema version for privacy-aware apply reports.
 pub const APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
 /// Schema version for immutable read-only Immich archive manifests.

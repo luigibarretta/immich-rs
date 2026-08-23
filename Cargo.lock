@@ -602,16 +602,20 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha2",
+ "time",
  "tokio",
+ "zip",
 ]
 
 [[package]]
 name = "immich-rs-sources"
 version = "0.0.0"
 dependencies = [
+ "base64",
  "immich-rs-core",
  "serde",
  "serde_json",
+ "sha1",
  "sha2",
  "time",
  "unicode-normalization",

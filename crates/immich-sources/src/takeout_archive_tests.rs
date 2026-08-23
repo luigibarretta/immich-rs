@@ -7,7 +7,10 @@ use immich_rs_core::{CancellationToken, NORMALIZED_PLAN_SCHEMA_VERSION_V2, Never
 use zip::CompressionMethod;
 use zip::write::{SimpleFileOptions, ZipWriter};
 
-use super::{NoProgress, ScanError, TakeoutScanConfig, scan_google_takeout_inputs};
+use super::{
+    NoProgress, ScanError, TakeoutScanConfig, scan_google_takeout_inputs,
+    scan_google_takeout_inputs_resolved,
+};
 
 static DIRECTORY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -171,6 +174,43 @@ fn split_archives_are_streamed_and_input_order_is_not_semantic()
     assert_eq!(forward.summary.assets, 2);
     assert_eq!(forward.summary.sidecars, 2);
     assert!(forward.errors.is_empty());
+    Ok(())
+}
+
+#[test]
+fn resolved_archive_entries_retain_bounded_locators_and_identities()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("resolved")?;
+    let archive = directory.archive(
+        "takeout.zip",
+        &[
+            (
+                "Takeout/Google Photos/Photos from 2024/alpha.png",
+                b"synthetic-alpha",
+            ),
+            (
+                "Takeout/Google Photos/Photos from 2024/alpha.png.json",
+                br#"{"title":"alpha.png"}"#,
+            ),
+        ],
+    )?;
+    let resolved = scan_google_takeout_inputs_resolved(
+        std::slice::from_ref(&archive),
+        "synthetic-resolved",
+        &TakeoutScanConfig::default(),
+        &NeverCancel,
+        &mut NoProgress,
+    )?;
+    for asset in &resolved.plan.assets {
+        let source = resolved
+            .source_file(&asset.relative_path)
+            .ok_or("missing resolved media")?;
+        assert_eq!(source.native_path(), archive);
+        assert!(source.archive_index().is_some());
+        assert_eq!(source.byte_len(), asset.byte_len);
+        assert_eq!(source.content_sha256(), asset.content_sha256);
+        assert_eq!(source.content_sha1_base64().len(), 28);
+    }
     Ok(())
 }
 

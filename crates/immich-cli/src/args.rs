@@ -29,6 +29,7 @@ pub struct ApplePhotosRequest {
 pub struct UploadFolderRequest {
     pub folder: FolderRequest,
     pub server: String,
+    pub production_read: bool,
 }
 
 pub struct ApplyRequest {
@@ -43,12 +44,14 @@ pub struct ApplyRequest {
 pub struct ArchivePlanRequest {
     pub server: String,
     pub config: ArchivePlanningConfig,
+    pub production_read: bool,
 }
 
 pub struct ArchiveApplyRequest {
     pub manifest: PathBuf,
     pub destination: PathBuf,
     pub server: String,
+    pub production_read: bool,
 }
 
 pub fn folder_config(config: &EffectiveConfig) -> FolderScanConfig {

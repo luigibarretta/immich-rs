@@ -102,6 +102,7 @@ pub fn parse_archive(
     let mut manifest = effective.archive_manifest.clone();
     let mut destination = effective.archive_destination.clone();
     let mut server = effective.server.clone();
+    let mut production_read = false;
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].to_str() {
@@ -114,6 +115,11 @@ pub fn parse_archive(
             Some("--server") => {
                 server = Some(args::string_value(arguments, index, "--server")?);
             }
+            Some("--authorize-production-read") => {
+                production_read = true;
+                index += 1;
+                continue;
+            }
             _ => return Err(CliFailure::usage("unsupported archive apply option")),
         }
         index += 2;
@@ -122,5 +128,51 @@ pub fn parse_archive(
         manifest: manifest.ok_or_else(|| CliFailure::usage("--manifest is required"))?,
         destination: destination.ok_or_else(|| CliFailure::usage("--destination is required"))?,
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
+        production_read,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_archive, parse_upload};
+    use crate::config::EffectiveConfig;
+    use std::ffi::OsString;
+
+    fn arguments(values: &[&str]) -> Vec<OsString> {
+        values.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn production_read_is_limited_to_archive_apply() {
+        let config = EffectiveConfig::default();
+        let archive = parse_archive(
+            &arguments(&[
+                "--manifest",
+                "manifest.json",
+                "--destination",
+                "archive",
+                "--server",
+                "https://example.invalid",
+                "--authorize-production-read",
+            ]),
+            &config,
+        );
+        assert!(matches!(archive, Ok(request) if request.production_read));
+
+        let upload = parse_upload(
+            &arguments(&[
+                "--plan",
+                "plan.json",
+                "--source",
+                "source",
+                "--checkpoint",
+                "checkpoint.sqlite",
+                "--server",
+                "https://example.invalid",
+                "--authorize-production-read",
+            ]),
+            &config,
+        );
+        assert!(upload.is_err());
+    }
 }

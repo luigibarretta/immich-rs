@@ -1,4 +1,4 @@
-use immich_rs_client::{ApiKey, ClientConfig, ImmichEndpoint, ImmichReadClient};
+use immich_rs_client::{ApiKey, ClientConfig, EndpointAccess, ImmichEndpoint, ImmichReadClient};
 
 use crate::failure::CliFailure;
 
@@ -6,32 +6,39 @@ const API_KEY_ENVIRONMENT: &str = "IMMICH_RS_API_KEY";
 const API_KEY_FILE_ENVIRONMENT: &str = "IMMICH_RS_API_KEY_FILE";
 const MAX_API_KEY_FILE_BYTES: u64 = 4_097;
 
-pub fn read_client(server: &str) -> Result<ImmichReadClient, CliFailure> {
-    read_client_with_config(server, ClientConfig::default())
+pub fn read_client(server: &str, production_read: bool) -> Result<ImmichReadClient, CliFailure> {
+    read_client_with_config(server, ClientConfig::default(), production_read)
 }
 
-pub fn archive_client(server: &str) -> Result<ImmichReadClient, CliFailure> {
+pub fn archive_client(server: &str, production_read: bool) -> Result<ImmichReadClient, CliFailure> {
     let config = ClientConfig {
         max_response_bytes: 1_024 * 1_024,
         ..ClientConfig::default()
     };
-    read_client_with_config(server, config)
+    read_client_with_config(server, config, production_read)
 }
 
 fn read_client_with_config(
     server: &str,
     config: ClientConfig,
+    production_read: bool,
 ) -> Result<ImmichReadClient, CliFailure> {
-    let endpoint = ImmichEndpoint::parse(server)
-        .map_err(|_| CliFailure::usage("invalid or non-loopback Phase-2 server"))?;
-    if !endpoint.is_loopback() {
-        return Err(CliFailure::usage(
-            "Phase-2 server must resolve to a literal loopback origin",
-        ));
+    let endpoint =
+        ImmichEndpoint::parse(server).map_err(|_| CliFailure::usage("invalid server origin"))?;
+    if production_read {
+        EndpointAccess::production_read(&endpoint, true)
+    } else {
+        EndpointAccess::disposable(&endpoint)
     }
+    .map_err(|_| CliFailure::usage("server does not match the authorized access mode"))?;
     let key_value = api_key_value()?;
     let api_key = ApiKey::new(&key_value).map_err(|_| CliFailure::authentication())?;
-    ImmichReadClient::new(endpoint, api_key, config).map_err(CliFailure::from_client)
+    let client = if production_read {
+        ImmichReadClient::new_production_read(endpoint, api_key, config, true)
+    } else {
+        ImmichReadClient::new(endpoint, api_key, config)
+    };
+    client.map_err(CliFailure::from_client)
 }
 
 fn api_key_value() -> Result<String, CliFailure> {

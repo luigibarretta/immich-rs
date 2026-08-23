@@ -14,7 +14,7 @@ pub fn parse_folder(
     arguments: &[OsString],
     config: &EffectiveConfig,
 ) -> Result<FolderRequest, CliFailure> {
-    parse_folder_options(arguments, config, false, "folder").map(|(request, _)| request)
+    parse_folder_options(arguments, config, false, "folder").map(|(request, _, _)| request)
 }
 
 pub fn parse_google_takeout(
@@ -133,10 +133,12 @@ pub fn parse_upload_folder(
     arguments: &[OsString],
     config: &EffectiveConfig,
 ) -> Result<UploadFolderRequest, CliFailure> {
-    let (folder, server) = parse_folder_options(arguments, config, true, "folder")?;
+    let (folder, server, production_read) =
+        parse_folder_options(arguments, config, true, "folder")?;
     Ok(UploadFolderRequest {
         folder,
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
+        production_read,
     })
 }
 
@@ -145,7 +147,7 @@ fn parse_folder_options(
     effective: &EffectiveConfig,
     allow_server: bool,
     default_label: &str,
-) -> Result<(FolderRequest, Option<String>), CliFailure> {
+) -> Result<(FolderRequest, Option<String>, bool), CliFailure> {
     let mut label = effective
         .label
         .clone()
@@ -153,6 +155,7 @@ fn parse_folder_options(
     let mut config = args::folder_config(effective);
     let mut root = None;
     let mut server = effective.server.clone();
+    let mut production_read = false;
     let mut index = 0;
     while index < arguments.len() {
         if let Some(consumed) = common_scan_option(arguments, index, &mut config)? {
@@ -163,6 +166,11 @@ fn parse_folder_options(
             Some("--label") => label = args::string_value(arguments, index, "--label")?,
             Some("--server") if allow_server => {
                 server = Some(args::string_value(arguments, index, "--server")?);
+            }
+            Some("--authorize-production-read") if allow_server => {
+                production_read = true;
+                index += 1;
+                continue;
             }
             Some(value) if value.starts_with('-') => {
                 return Err(CliFailure::usage("unsupported plan option"));
@@ -185,6 +193,7 @@ fn parse_folder_options(
             config,
         },
         server,
+        production_read,
     ))
 }
 
@@ -194,11 +203,17 @@ pub fn parse_archive_plan(
 ) -> Result<ArchivePlanRequest, CliFailure> {
     let mut server = effective.server.clone();
     let mut config = args::archive_config(effective)?;
+    let mut production_read = false;
     let mut index = 0;
     while index < arguments.len() {
         match arguments[index].to_str() {
             Some("--server") => {
                 server = Some(args::string_value(arguments, index, "--server")?);
+            }
+            Some("--authorize-production-read") => {
+                production_read = true;
+                index += 1;
+                continue;
             }
             Some("--selection") => {
                 let value = args::string_value(arguments, index, "--selection")?;
@@ -230,6 +245,7 @@ pub fn parse_archive_plan(
     Ok(ArchivePlanRequest {
         server: server.ok_or_else(|| CliFailure::usage("--server is required"))?,
         config,
+        production_read,
     })
 }
 
@@ -287,4 +303,46 @@ pub fn common_scan_option(
         _ => return Ok(None),
     };
     Ok(Some(consumed))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_archive_plan, parse_folder, parse_upload_folder};
+    use crate::config::EffectiveConfig;
+    use std::ffi::OsString;
+
+    fn arguments(values: &[&str]) -> Vec<OsString> {
+        values.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn production_read_is_an_explicit_server_command_flag() {
+        let config = EffectiveConfig::default();
+        let upload = parse_upload_folder(
+            &arguments(&[
+                "--server",
+                "https://example.invalid",
+                "--authorize-production-read",
+                "synthetic-source",
+            ]),
+            &config,
+        );
+        assert!(matches!(upload, Ok(request) if request.production_read));
+
+        let archive = parse_archive_plan(
+            &arguments(&[
+                "--server",
+                "https://example.invalid",
+                "--authorize-production-read",
+            ]),
+            &config,
+        );
+        assert!(matches!(archive, Ok(request) if request.production_read));
+
+        let folder = parse_folder(
+            &arguments(&["--authorize-production-read", "synthetic-source"]),
+            &config,
+        );
+        assert!(folder.is_err());
+    }
 }

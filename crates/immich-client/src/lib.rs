@@ -12,7 +12,7 @@ mod upload;
 
 pub use archive::{ArchiveDownload, ArchiveListConfig, ArchiveVisibility, RemoteArchiveAsset};
 pub use auth::{ApiKey, ApiKeyError};
-pub use endpoint::{EndpointError, ImmichEndpoint};
+pub use endpoint::{EndpointAccess, EndpointError, ImmichEndpoint};
 pub use error::{ClientError, ClientErrorClass};
 pub use read::{ClientConfig, ImmichReadClient, NegotiatedServer};
 pub use upload::{DuplicateCheck, ImmichUploadClient, UploadRequest, UploadResult};

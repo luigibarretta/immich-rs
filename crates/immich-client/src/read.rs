@@ -7,7 +7,9 @@ use sha2::{Digest, Sha256};
 
 use crate::models::{UserResponse, VersionResponse};
 use crate::response::{bounded_json, classify_transport};
-use crate::{ApiKey, ClientError, ClientErrorClass, ImmichEndpoint, ImmichUploadClient};
+use crate::{
+    ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichUploadClient,
+};
 
 const SUPPORTED_MAJOR: u32 = 3;
 const SUPPORTED_MINOR: u32 = 1;
@@ -55,6 +57,7 @@ pub struct ImmichReadClient {
     pub(crate) endpoint: ImmichEndpoint,
     pub(crate) api_key: ApiKey,
     pub(crate) config: ClientConfig,
+    access: EndpointAccess,
 }
 
 /// Opaque proof of a successful authenticated compatibility probe.
@@ -69,6 +72,21 @@ impl NegotiatedServer {
     #[must_use]
     pub const fn compatibility(&self) -> &ServerCompatibility {
         &self.compatibility
+    }
+
+    #[cfg(test)]
+    pub(crate) fn synthetic_for_test() -> Self {
+        Self {
+            compatibility: ServerCompatibility {
+                version: ServerVersion {
+                    major: SUPPORTED_MAJOR,
+                    minor: SUPPORTED_MINOR,
+                    patch: 0,
+                },
+                identity_sha256: "a".repeat(64),
+            },
+            origin_sha256: "b".repeat(64),
+        }
     }
 }
 
@@ -89,6 +107,29 @@ impl ImmichReadClient {
         api_key: ApiKey,
         config: ClientConfig,
     ) -> Result<Self, ClientError> {
+        let access = EndpointAccess::disposable(&endpoint)
+            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
+        Self::new_with_access(endpoint, api_key, config, access)
+    }
+
+    /// Construct an explicitly acknowledged read-only production client.
+    pub fn new_production_read(
+        endpoint: ImmichEndpoint,
+        api_key: ApiKey,
+        config: ClientConfig,
+        acknowledged: bool,
+    ) -> Result<Self, ClientError> {
+        let access = EndpointAccess::production_read(&endpoint, acknowledged)
+            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
+        Self::new_with_access(endpoint, api_key, config, access)
+    }
+
+    fn new_with_access(
+        endpoint: ImmichEndpoint,
+        api_key: ApiKey,
+        config: ClientConfig,
+        access: EndpointAccess,
+    ) -> Result<Self, ClientError> {
         let config = config.validate()?;
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
@@ -103,6 +144,7 @@ impl ImmichReadClient {
             endpoint,
             api_key,
             config,
+            access,
         })
     }
 
@@ -111,9 +153,6 @@ impl ImmichReadClient {
         &self,
         cancellation: &impl Cancellation,
     ) -> Result<NegotiatedServer, ClientError> {
-        self.endpoint
-            .require_phase_two_loopback()
-            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
         check_cancelled(cancellation)?;
         let version: VersionResponse = self.get_json("api/server/version").await?;
         if version.major != SUPPORTED_MAJOR
@@ -150,6 +189,9 @@ impl ImmichReadClient {
         self,
         negotiated: NegotiatedServer,
     ) -> Result<ImmichUploadClient, ClientError> {
+        if !self.access.permits_upload() {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
         let origin_sha256 = format!(
             "{:x}",
             Sha256::digest(self.endpoint.canonical_origin().as_bytes())
@@ -194,6 +236,7 @@ impl Debug for ImmichReadClient {
             .field("endpoint", &self.endpoint)
             .field("api_key", &self.api_key)
             .field("config", &self.config)
+            .field("access", &self.access)
             .finish_non_exhaustive()
     }
 }

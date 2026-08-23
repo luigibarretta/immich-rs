@@ -11,7 +11,7 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
         .server
         .as_deref()
         .ok_or_else(|| CliFailure::usage("--server is required for apply"))?;
-    let read_client = network::read_client(server)?;
+    let read_client = network::read_client(server, false)?;
     let cancellation = CancellationToken::default();
     signal::install(cancellation.clone())?;
     let negotiated = read_client

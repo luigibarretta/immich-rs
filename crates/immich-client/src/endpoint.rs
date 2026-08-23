@@ -10,6 +10,50 @@ pub struct ImmichEndpoint {
     loopback: bool,
 }
 
+/// Validated network scope for one authenticated read client.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EndpointAccess {
+    mode: AccessMode,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AccessMode {
+    Disposable,
+    ProductionRead,
+}
+
+impl EndpointAccess {
+    /// Authorize only a literal loopback endpoint for disposable testing.
+    pub fn disposable(endpoint: &ImmichEndpoint) -> Result<Self, EndpointError> {
+        endpoint
+            .loopback
+            .then_some(Self {
+                mode: AccessMode::Disposable,
+            })
+            .ok_or(EndpointError::DisposableRequiresLoopback)
+    }
+
+    /// Authorize a remote HTTPS endpoint for an explicit read-only operation.
+    pub fn production_read(
+        endpoint: &ImmichEndpoint,
+        acknowledged: bool,
+    ) -> Result<Self, EndpointError> {
+        if !acknowledged {
+            return Err(EndpointError::ProductionReadNotAcknowledged);
+        }
+        if endpoint.loopback || endpoint.origin.scheme() != "https" {
+            return Err(EndpointError::ProductionReadRequiresRemoteHttps);
+        }
+        Ok(Self {
+            mode: AccessMode::ProductionRead,
+        })
+    }
+
+    pub(crate) const fn permits_upload(self) -> bool {
+        matches!(self.mode, AccessMode::Disposable)
+    }
+}
+
 impl ImmichEndpoint {
     /// Parse an HTTPS origin, or an HTTP origin only when it is loopback.
     pub fn parse(value: &str) -> Result<Self, EndpointError> {
@@ -37,12 +81,6 @@ impl ImmichEndpoint {
     #[must_use]
     pub const fn is_loopback(&self) -> bool {
         self.loopback
-    }
-
-    pub(crate) fn require_phase_two_loopback(&self) -> Result<(), EndpointError> {
-        self.loopback
-            .then_some(())
-            .ok_or(EndpointError::PhaseTwoRequiresLoopback)
     }
 
     pub(crate) fn api_url(&self, path: &str) -> Result<Url, EndpointError> {
@@ -83,8 +121,12 @@ pub enum EndpointError {
     UnsupportedScheme,
     /// Plain HTTP is permitted only on loopback.
     InsecureRemoteOrigin,
-    /// Phase 2 intentionally permits only disposable loopback servers.
-    PhaseTwoRequiresLoopback,
+    /// Disposable mode requires a literal loopback origin.
+    DisposableRequiresLoopback,
+    /// Remote read access was not explicitly acknowledged.
+    ProductionReadNotAcknowledged,
+    /// Production read mode requires a non-loopback HTTPS origin.
+    ProductionReadRequiresRemoteHttps,
 }
 
 impl Display for EndpointError {
@@ -93,7 +135,13 @@ impl Display for EndpointError {
             Self::InvalidOrigin => "endpoint must be a credential-free URL origin",
             Self::UnsupportedScheme => "endpoint scheme must be HTTP or HTTPS",
             Self::InsecureRemoteOrigin => "plain HTTP requires a loopback endpoint",
-            Self::PhaseTwoRequiresLoopback => "phase two requires a loopback endpoint",
+            Self::DisposableRequiresLoopback => "disposable mode requires a loopback endpoint",
+            Self::ProductionReadNotAcknowledged => {
+                "production read access requires an explicit acknowledgement"
+            }
+            Self::ProductionReadRequiresRemoteHttps => {
+                "production read access requires a remote HTTPS endpoint"
+            }
         };
         formatter.write_str(message)
     }

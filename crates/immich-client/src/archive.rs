@@ -188,9 +188,6 @@ impl ImmichReadClient {
     }
 
     fn validate_binding(&self, negotiated: &NegotiatedServer) -> Result<(), ClientError> {
-        self.endpoint
-            .require_phase_two_loopback()
-            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
         let origin_sha256 = format!(
             "{:x}",
             Sha256::digest(self.endpoint.canonical_origin().as_bytes())

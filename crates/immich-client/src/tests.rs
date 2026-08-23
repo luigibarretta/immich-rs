@@ -3,8 +3,8 @@ use std::time::Duration;
 use immich_rs_core::CancellationToken;
 
 use crate::{
-    ApiKey, ClientConfig, ClientError, ClientErrorClass, EndpointError, ImmichEndpoint,
-    ImmichReadClient,
+    ApiKey, ClientConfig, ClientError, ClientErrorClass, EndpointAccess, EndpointError,
+    ImmichEndpoint, ImmichReadClient,
 };
 
 #[test]
@@ -20,7 +20,7 @@ fn secrets_and_origins_are_redacted() -> Result<(), Box<dyn std::error::Error>> 
 }
 
 #[test]
-fn endpoint_policy_fails_closed() {
+fn endpoint_policy_fails_closed() -> Result<(), Box<dyn std::error::Error>> {
     assert!(ImmichEndpoint::parse("http://127.0.0.1:2283").is_ok());
     assert!(ImmichEndpoint::parse("http://localhost:2283").is_ok());
     assert!(matches!(
@@ -31,6 +31,27 @@ fn endpoint_policy_fails_closed() {
         ImmichEndpoint::parse("https://user@example.invalid"),
         Err(EndpointError::InvalidOrigin)
     ));
+    let remote = ImmichEndpoint::parse("https://example.invalid")?;
+    assert!(EndpointAccess::disposable(&remote).is_err());
+    assert!(EndpointAccess::production_read(&remote, false).is_err());
+    assert!(EndpointAccess::production_read(&remote, true).is_ok());
+    let loopback = ImmichEndpoint::parse("https://127.0.0.1:2283")?;
+    assert!(EndpointAccess::production_read(&loopback, true).is_err());
+    Ok(())
+}
+
+#[test]
+fn production_read_cannot_be_upgraded_to_upload() -> Result<(), Box<dyn std::error::Error>> {
+    let endpoint = ImmichEndpoint::parse("https://example.invalid")?;
+    let key = ApiKey::new("synthetic-test-key")?;
+    let client =
+        ImmichReadClient::new_production_read(endpoint, key, ClientConfig::default(), true)?;
+    let error = client
+        .authorize_upload(crate::NegotiatedServer::synthetic_for_test())
+        .err()
+        .ok_or("production read unexpectedly became upload")?;
+    assert_eq!(error.class(), ClientErrorClass::Compatibility);
+    Ok(())
 }
 
 #[test]

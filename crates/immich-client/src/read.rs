@@ -10,9 +10,9 @@ use sha2::{Digest, Sha256};
 use crate::models::{UserResponse, VersionResponse};
 use crate::response::{bounded_json, classify_transport};
 use crate::{
-    ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichUploadClient,
-    ProductionImmichUploadClient, ProductionUploadAuthorization, TlsRootCertificates,
-    upload_plan_sha256,
+    ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichImportClient,
+    ImmichUploadClient, ProductionImmichUploadClient, ProductionUploadAuthorization,
+    TlsRootCertificates, upload_plan_sha256,
 };
 
 const SUPPORTED_MAJOR: u32 = 3;
@@ -217,6 +217,19 @@ impl ImmichReadClient {
             self,
             negotiated.compatibility,
         ))
+    }
+
+    /// Consume this read client and a matching probe proof to enable disposable import effects.
+    pub fn authorize_import(
+        self,
+        negotiated: NegotiatedServer,
+    ) -> Result<ImmichImportClient, ClientError> {
+        if !self.access.permits_upload() {
+            return Err(ClientError::new(ClientErrorClass::Compatibility));
+        }
+        self.validate_negotiated_binding(&negotiated)?;
+        let upload = ImmichUploadClient::from_negotiated(self, negotiated.compatibility);
+        Ok(ImmichImportClient::new(upload))
     }
 
     /// Construct an uploader bound to an exact plan and explicit production confirmation.

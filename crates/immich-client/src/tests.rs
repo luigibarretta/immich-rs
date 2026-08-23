@@ -47,12 +47,25 @@ fn endpoint_policy_fails_closed() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn production_read_cannot_be_upgraded_to_upload() -> Result<(), Box<dyn std::error::Error>> {
+fn production_read_cannot_be_upgraded_without_plan_authorization()
+-> Result<(), Box<dyn std::error::Error>> {
     let endpoint = ImmichEndpoint::parse("https://example.invalid")?;
     let key = ApiKey::new("synthetic-test-key")?;
     let client =
         ImmichReadClient::new_production_read(endpoint, key, ClientConfig::default(), true)?;
+    let negotiated = crate::NegotiatedServer::synthetic_for_test(
+        ServerCompatibility {
+            version: ServerVersion {
+                major: 3,
+                minor: 1,
+                patch: 0,
+            },
+            identity_sha256: "a".repeat(64),
+        },
+        "b".repeat(64),
+    );
     let error = client
+        .clone()
         .authorize_upload(crate::NegotiatedServer::synthetic_for_test(
             ServerCompatibility {
                 version: ServerVersion {
@@ -66,6 +79,11 @@ fn production_read_cannot_be_upgraded_to_upload() -> Result<(), Box<dyn std::err
         ))
         .err()
         .ok_or("production read unexpectedly became upload")?;
+    assert_eq!(error.class(), ClientErrorClass::Compatibility);
+    let error = client
+        .authorize_import(negotiated)
+        .err()
+        .ok_or("production read unexpectedly became import")?;
     assert_eq!(error.class(), ClientErrorClass::Compatibility);
     Ok(())
 }

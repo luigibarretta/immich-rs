@@ -94,7 +94,7 @@ impl Debug for UploadRequest<'_> {
 
 /// Upload capability constructed only after successful negotiation.
 pub struct ImmichUploadClient {
-    read: ImmichReadClient,
+    pub(crate) read: ImmichReadClient,
     compatibility: ServerCompatibility,
     production: bool,
 }

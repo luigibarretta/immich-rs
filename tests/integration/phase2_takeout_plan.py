@@ -51,26 +51,57 @@ def exercise_takeout_plan(binary, workspace: Path, mock, invoke, invoke_process)
         plan_path = workspace / "takeout-plan.json"
         plan_path.write_text(json.dumps(directory_plan), encoding="utf-8")
         requests_before_apply = len(server.state.snapshot()["requests"])
-        refused = [
-            invoke_process(
-                binary,
-                [
-                    "apply",
-                    "upload",
-                    *mode,
-                    "--server",
-                    server.url,
-                    "--plan",
-                    str(plan_path),
-                    "--source",
-                    str(source),
-                    "--checkpoint",
-                    str(workspace / "takeout.sqlite"),
-                ],
-                with_key=False,
-            )
-            for mode in (["--dry-run"], [])
-        ]
+        checkpoint = workspace / "takeout.sqlite"
+        dry_directory = invoke(
+            binary,
+            [
+                "apply",
+                "upload",
+                "--dry-run",
+                "--plan",
+                str(plan_path),
+                "--buffer-bytes",
+                "4096",
+                "--source",
+                str(source),
+                "--checkpoint",
+                str(checkpoint),
+            ],
+            with_key=False,
+        )
+        dry_archive = invoke(
+            binary,
+            [
+                "apply",
+                "upload",
+                "--dry-run",
+                "--plan",
+                str(plan_path),
+                "--buffer-bytes",
+                "4096",
+                "--input",
+                str(archive),
+                "--checkpoint",
+                str(checkpoint),
+            ],
+            with_key=False,
+        )
+        refused = invoke_process(
+            binary,
+            [
+                "apply",
+                "upload",
+                "--server",
+                server.url,
+                "--plan",
+                str(plan_path),
+                "--source",
+                str(source),
+                "--checkpoint",
+                str(checkpoint),
+            ],
+            with_key=False,
+        )
         snapshot = server.state.snapshot()
     if directory_plan != archive_plan:
         raise RuntimeError("directory and ZIP Takeout upload plans differ")
@@ -81,7 +112,14 @@ def exercise_takeout_plan(binary, workspace: Path, mock, invoke, invoke_process)
         or summary.get("max_mutations") != 4
         or server.url in json.dumps(directory_plan)
         or snapshot["committed_mutations"]
-        or any(item.returncode != 2 or item.stdout for item in refused)
+        or dry_directory != dry_archive
+        or dry_directory.get("would_upload") != 1
+        or dry_directory.get("would_update_metadata") != 1
+        or dry_directory.get("would_create_albums") != 1
+        or dry_directory.get("would_add_album_memberships") != 1
+        or checkpoint.exists()
+        or refused.returncode != 2
+        or refused.stdout
         or len(snapshot["requests"]) != requests_before_apply
     ):
         raise RuntimeError("Takeout upload plan is incomplete, unsafe or endpoint-bearing")

@@ -1,6 +1,9 @@
 use std::ffi::OsString;
 use std::time::Duration;
 
+use immich_rs_executor::UploadExecutionConfig;
+use immich_rs_sources::TakeoutScanConfig;
+
 use crate::args::{self, ApplyRequest, ArchiveApplyRequest, ProductionWriteRequest};
 use crate::config::EffectiveConfig;
 use crate::failure::CliFailure;
@@ -20,10 +23,8 @@ pub fn parse_upload(
     effective: &EffectiveConfig,
 ) -> Result<ApplyRequest, CliFailure> {
     let mut plan = effective.upload_plan.clone();
-    let mut source = effective
-        .upload_source
-        .clone()
-        .or_else(|| effective.source.clone());
+    let mut cli_source = None;
+    let mut cli_inputs = Vec::new();
     let mut checkpoint = effective.upload_checkpoint.clone();
     let mut server = effective.server.clone();
     let mut server_from_cli = false;
@@ -32,6 +33,7 @@ pub fn parse_upload(
     let mut dry_run = effective.upload_dry_run.unwrap_or(false);
     let mut production = ProductionOptions::default();
     let mut config = args::upload_config(effective);
+    let mut takeout = args::takeout_config(effective);
     let mut index = 0;
     while index < arguments.len() {
         if let Some(consumed) = common_scan_option(arguments, index, &mut config.scan)? {
@@ -42,9 +44,25 @@ pub fn parse_upload(
             index += consumed;
             continue;
         }
+        if let Some(consumed) = takeout_option(arguments, index, &mut takeout)? {
+            index += consumed;
+            continue;
+        }
+        if let Some(consumed) = execution_option(arguments, index, &mut config)? {
+            index += consumed;
+            continue;
+        }
         match arguments[index].to_str() {
             Some("--plan") => plan = Some(args::path_value(arguments, index, "--plan")?),
-            Some("--source") => source = Some(args::path_value(arguments, index, "--source")?),
+            Some("--source") => {
+                if cli_source.is_some() {
+                    return Err(CliFailure::usage("--source may be supplied only once"));
+                }
+                cli_source = Some(args::path_value(arguments, index, "--source")?);
+            }
+            Some("--input") => {
+                cli_inputs.push(args::path_value(arguments, index, "--input")?);
+            }
             Some("--checkpoint") => {
                 checkpoint = Some(args::path_value(arguments, index, "--checkpoint")?);
             }
@@ -55,35 +73,6 @@ pub fn parse_upload(
             Some("--ca-certificate") => {
                 ca_certificate = Some(args::path_value(arguments, index, "--ca-certificate")?);
                 ca_from_cli = true;
-            }
-            Some("--verification-buffer-bytes") => {
-                config.verification_buffer_bytes =
-                    args::usize_value(arguments, index, "--verification-buffer-bytes")?;
-            }
-            Some("--concurrency") => {
-                config.concurrency = args::usize_value(arguments, index, "--concurrency")?;
-            }
-            Some("--max-attempts-per-operation") => {
-                config.max_attempts_per_operation =
-                    args::u32_value(arguments, index, "--max-attempts-per-operation")?;
-            }
-            Some("--max-retries-per-run") => {
-                config.max_retries_per_run =
-                    args::u32_value(arguments, index, "--max-retries-per-run")?;
-            }
-            Some("--retry-base-delay-ms") => {
-                config.retry_base_delay = Duration::from_millis(args::u64_value(
-                    arguments,
-                    index,
-                    "--retry-base-delay-ms",
-                )?);
-            }
-            Some("--retry-delay-cap-ms") => {
-                config.retry_delay_cap = Duration::from_millis(args::u64_value(
-                    arguments,
-                    index,
-                    "--retry-delay-cap-ms",
-                )?);
             }
             Some("--dry-run") => {
                 dry_run = true;
@@ -99,6 +88,7 @@ pub fn parse_upload(
         }
         index += 2;
     }
+    takeout.scan.clone_from(&config.scan);
     if dry_run && (server_from_cli || ca_from_cli) {
         return Err(CliFailure::usage(
             "dry-run does not accept server transport options",
@@ -110,14 +100,103 @@ pub fn parse_upload(
     let production = production.into_request(dry_run)?;
     Ok(ApplyRequest {
         plan: plan.ok_or_else(|| CliFailure::usage("--plan is required"))?,
-        source: source.ok_or_else(|| CliFailure::usage("--source is required"))?,
+        inputs: apply_inputs(cli_source, cli_inputs, effective)?,
         checkpoint: checkpoint.ok_or_else(|| CliFailure::usage("--checkpoint is required"))?,
         server: if dry_run { None } else { server },
         dry_run,
         config,
+        takeout,
         production,
         ca_certificate: if dry_run { None } else { ca_certificate },
     })
+}
+
+fn execution_option(
+    arguments: &[OsString],
+    index: usize,
+    config: &mut UploadExecutionConfig,
+) -> Result<Option<usize>, CliFailure> {
+    match arguments[index].to_str() {
+        Some("--verification-buffer-bytes") => {
+            config.verification_buffer_bytes =
+                args::usize_value(arguments, index, "--verification-buffer-bytes")?;
+        }
+        Some("--concurrency") => {
+            config.concurrency = args::usize_value(arguments, index, "--concurrency")?;
+        }
+        Some("--max-attempts-per-operation") => {
+            config.max_attempts_per_operation =
+                args::u32_value(arguments, index, "--max-attempts-per-operation")?;
+        }
+        Some("--max-retries-per-run") => {
+            config.max_retries_per_run =
+                args::u32_value(arguments, index, "--max-retries-per-run")?;
+        }
+        Some("--retry-base-delay-ms") => {
+            config.retry_base_delay =
+                Duration::from_millis(args::u64_value(arguments, index, "--retry-base-delay-ms")?);
+        }
+        Some("--retry-delay-cap-ms") => {
+            config.retry_delay_cap =
+                Duration::from_millis(args::u64_value(arguments, index, "--retry-delay-cap-ms")?);
+        }
+        _ => return Ok(None),
+    }
+    Ok(Some(2))
+}
+
+fn takeout_option(
+    arguments: &[OsString],
+    index: usize,
+    config: &mut TakeoutScanConfig,
+) -> Result<Option<usize>, CliFailure> {
+    match arguments[index].to_str() {
+        Some("--max-archives") => {
+            config.max_archives = args::usize_value(arguments, index, "--max-archives")?;
+        }
+        Some("--max-archive-entry-bytes") => {
+            config.max_archive_entry_bytes =
+                args::u64_value(arguments, index, "--max-archive-entry-bytes")?;
+        }
+        Some("--max-compression-ratio") => {
+            config.max_compression_ratio =
+                args::u64_value(arguments, index, "--max-compression-ratio")?;
+        }
+        Some("--compression-ratio-grace-bytes") => {
+            config.compression_ratio_grace_bytes =
+                args::u64_value(arguments, index, "--compression-ratio-grace-bytes")?;
+        }
+        _ => return Ok(None),
+    }
+    Ok(Some(2))
+}
+
+fn apply_inputs(
+    cli_source: Option<std::path::PathBuf>,
+    cli_inputs: Vec<std::path::PathBuf>,
+    effective: &EffectiveConfig,
+) -> Result<Vec<std::path::PathBuf>, CliFailure> {
+    if cli_source.is_some() && !cli_inputs.is_empty() {
+        return Err(CliFailure::usage("--source and --input cannot be mixed"));
+    }
+    let inputs = if !cli_inputs.is_empty() {
+        cli_inputs
+    } else if let Some(source) = cli_source.or_else(|| effective.upload_source.clone()) {
+        vec![source]
+    } else if let Some(inputs) = effective.inputs.clone() {
+        inputs
+    } else if let Some(source) = effective.source.clone() {
+        vec![source]
+    } else {
+        Vec::new()
+    };
+    if inputs.is_empty() {
+        Err(CliFailure::usage(
+            "--source or at least one --input is required",
+        ))
+    } else {
+        Ok(inputs)
+    }
 }
 
 fn production_option(
@@ -226,91 +305,4 @@ pub fn parse_archive(
         production_read,
         ca_certificate,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{parse_archive, parse_upload};
-    use crate::config::EffectiveConfig;
-    use std::ffi::OsString;
-
-    fn arguments(values: &[&str]) -> Vec<OsString> {
-        values.iter().map(OsString::from).collect()
-    }
-
-    #[test]
-    fn production_read_is_limited_to_archive_apply() {
-        let config = EffectiveConfig::default();
-        let archive = parse_archive(
-            &arguments(&[
-                "--manifest",
-                "manifest.json",
-                "--destination",
-                "archive",
-                "--server",
-                "https://example.invalid",
-                "--authorize-production-read",
-            ]),
-            &config,
-        );
-        assert!(matches!(archive, Ok(request) if request.production_read));
-
-        let upload = parse_upload(
-            &arguments(&[
-                "--plan",
-                "plan.json",
-                "--source",
-                "source",
-                "--checkpoint",
-                "checkpoint.sqlite",
-                "--server",
-                "https://example.invalid",
-                "--authorize-production-read",
-            ]),
-            &config,
-        );
-        assert!(upload.is_err());
-    }
-
-    #[test]
-    fn production_upload_requires_the_complete_cli_confirmation() {
-        let config = EffectiveConfig::default();
-        let complete = parse_upload(
-            &arguments(&[
-                "--plan",
-                "plan.json",
-                "--source",
-                "source",
-                "--checkpoint",
-                "checkpoint.sqlite",
-                "--server",
-                "https://example.invalid",
-                "--authorize-production-read",
-                "--authorize-production-write",
-                "--confirm-plan-sha256",
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "--expected-operations",
-                "1",
-                "--backup-reference",
-                "synthetic-backup",
-            ]),
-            &config,
-        );
-        assert!(matches!(complete, Ok(request) if request.production.is_some()));
-
-        let dry_run = parse_upload(
-            &arguments(&[
-                "--plan",
-                "plan.json",
-                "--source",
-                "source",
-                "--checkpoint",
-                "checkpoint.sqlite",
-                "--dry-run",
-                "--authorize-production-write",
-            ]),
-            &config,
-        );
-        assert!(matches!(dry_run, Ok(request) if request.production.is_none()));
-    }
 }

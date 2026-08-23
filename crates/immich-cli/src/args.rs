@@ -46,11 +46,12 @@ pub struct UploadTakeoutRequest {
 
 pub struct ApplyRequest {
     pub plan: PathBuf,
-    pub source: PathBuf,
+    pub inputs: Vec<PathBuf>,
     pub checkpoint: PathBuf,
     pub server: Option<String>,
     pub dry_run: bool,
     pub config: UploadExecutionConfig,
+    pub takeout: TakeoutScanConfig,
     pub production: Option<ProductionWriteRequest>,
     pub ca_certificate: Option<PathBuf>,
 }

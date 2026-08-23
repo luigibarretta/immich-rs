@@ -13,6 +13,11 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
             "apply upload does not yet support source-aware import plans",
         ));
     }
+    let source = request
+        .inputs
+        .first()
+        .filter(|_| request.inputs.len() == 1)
+        .ok_or_else(|| CliFailure::usage("folder apply requires exactly one source"))?;
     let production = request
         .production
         .map(|production| {
@@ -61,7 +66,7 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
             .map_err(CliFailure::from_client)?;
         apply_production_upload(
             &plan,
-            &request.source,
+            source,
             &request.checkpoint,
             &request.config,
             &client,
@@ -75,7 +80,7 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
             .map_err(CliFailure::from_client)?;
         apply_upload(
             &plan,
-            &request.source,
+            source,
             &request.checkpoint,
             &request.config,
             &client,

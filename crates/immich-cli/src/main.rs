@@ -2,6 +2,8 @@
 
 mod apple_photos;
 mod apply_args;
+#[cfg(test)]
+mod apply_args_tests;
 mod archive_apply;
 mod archive_plan;
 mod args;

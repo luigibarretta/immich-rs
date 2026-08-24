@@ -18,18 +18,23 @@ class LoopbackForwardTests(unittest.TestCase):
         self.assertIsNotNone(pattern.fullmatch("immich-rs-20260815T010203Z-42-deadbeef-server"))
         self.assertIsNotNone(
             pattern.fullmatch(
-                "immichrs-applephotos-20260824T180932Z-3094-460c937f-server-1"
+                "immichrs-applephotos-20260824t180932z-3094-460c937f-server-1"
             )
         )
         self.assertIsNotNone(
             pattern.fullmatch(
-                "immichrs-migration-source-20260824T180932Z-3094-460c937f-server-1"
+                "immichrs-migration-source-20260824t180932z-3094-460c937f-server-1"
             )
         )
         self.assertIsNone(pattern.fullmatch("production-immich"))
         self.assertIsNone(
             pattern.fullmatch(
-                "immichrs-production-20260824T180932Z-3094-460c937f-server-1"
+                "immichrs-applephotos-20260824T180932Z-3094-460c937f-server-1"
+            )
+        )
+        self.assertIsNone(
+            pattern.fullmatch(
+                "immichrs-production-20260824t180932z-3094-460c937f-server-1"
             )
         )
         self.assertEqual(FORWARDER["TARGET_PORT"], 2283)

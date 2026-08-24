@@ -15,7 +15,7 @@ TARGET_PORT = 2283
 TARGET_PATTERN = re.compile(
     r"^(?:immich-rs-[0-9TZ-]+-[0-9]+-[0-9a-f]{8}-server|"
     r"immichrs-(?:applephotos|picasa|migration-(?:source|destination))-"
-    r"[0-9TZ-]+-[0-9]+-[0-9a-f]{8}-server-1)$"
+    r"[0-9tz-]+-[0-9]+-[0-9a-f]{8}-server-1)$"
 )
 STOP = threading.Event()
 

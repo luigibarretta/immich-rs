@@ -46,6 +46,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0027](ADR-0027-production-transport-and-authorization.md) | Production transport and operator authorization | Accepted |
 | [0028](ADR-0028-google-takeout-import.md) | Google Takeout import | Accepted |
 | [0029](ADR-0029-opt-in-production-compose.md) | Opt-in production Compose override | Accepted |
+| [0030](ADR-0030-apple-photos-import.md) | Apple Photos import | Accepted |
 
 ## Template
 

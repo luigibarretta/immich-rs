@@ -166,7 +166,10 @@ impl UploadPlan {
             UPLOAD_PLAN_SCHEMA_VERSION => self.source.kind == SourceKind::Folder,
             UPLOAD_PLAN_SCHEMA_VERSION_V2 => matches!(
                 self.source.kind,
-                SourceKind::GoogleTakeout | SourceKind::ApplePhotos | SourceKind::Picasa
+                SourceKind::GoogleTakeout
+                    | SourceKind::ApplePhotos
+                    | SourceKind::Picasa
+                    | SourceKind::Immich
             ),
             _ => false,
         };

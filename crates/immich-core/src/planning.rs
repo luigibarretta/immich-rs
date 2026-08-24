@@ -21,6 +21,8 @@ pub enum SourceKind {
     ApplePhotos,
     /// A Picasa folder or archive export.
     Picasa,
+    /// A read-only inventory from another Immich server.
+    Immich,
 }
 
 /// Explicit Unicode normalization policy applied to portable relative paths.
@@ -211,6 +213,9 @@ impl NormalizedPlan {
         if self.source.kind == SourceKind::Picasa
             && self.schema_version != NORMALIZED_PLAN_SCHEMA_VERSION_V4
         {
+            return Err(PlanValidationError::InvalidSchemaSource);
+        }
+        if self.source.kind == SourceKind::Immich {
             return Err(PlanValidationError::InvalidSchemaSource);
         }
         if self.source.label.is_empty() || self.source.fingerprint_sha256.len() != 64 {

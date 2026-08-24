@@ -216,6 +216,11 @@ async fn run_import(
             .await?;
             return write_import_report(report);
         }
+        SourceKind::Immich => {
+            return Err(CliFailure::usage(
+                "Immich migration plans require the migration command",
+            ));
+        }
         SourceKind::Folder => return Err(CliFailure::usage("unsupported import source kind")),
     }
     .map_err(CliFailure::from_executor)?;

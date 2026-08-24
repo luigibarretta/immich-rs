@@ -6,6 +6,7 @@ mod archive;
 mod cancellation;
 mod import_report;
 mod metadata;
+mod migration;
 mod planning;
 mod production;
 mod progress;
@@ -20,6 +21,10 @@ pub use archive::{
 pub use cancellation::{Cancellation, CancellationToken, NeverCancel};
 pub use import_report::ImportApplyReport;
 pub use metadata::{GeoCoordinates, NormalizedMetadata};
+pub use migration::{
+    MigrationAlbum, MigrationAsset, MigrationPlan, MigrationPlanSummary,
+    MigrationPlanValidationError, MigrationServer,
+};
 pub use planning::{
     CandidateAsset, LivePhotoMember, LivePhotoRole, MediaKind, MetadataCandidate, MetadataKind,
     NormalizedPlan, PlanDiagnostic, PlanSummary, PlanValidationError, RuleEvidence,
@@ -56,6 +61,10 @@ pub const IMPORT_APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
 pub const ARCHIVE_MANIFEST_SCHEMA_VERSION: u32 = 1;
 /// Schema version for privacy-aware local archive apply reports.
 pub const ARCHIVE_APPLY_REPORT_SCHEMA_VERSION: u32 = 1;
+/// Schema version for immutable Immich-to-Immich migration plans.
+pub const MIGRATION_PLAN_SCHEMA_VERSION: u32 = 1;
 
+#[cfg(test)]
+mod migration_tests;
 #[cfg(test)]
 mod tests;

@@ -66,6 +66,11 @@ pub fn run(request: &ApplyRequest) -> Result<(), CliFailure> {
                 SourceKind::Folder => {
                     return Err(CliFailure::usage("unsupported import source kind"));
                 }
+                SourceKind::Immich => {
+                    return Err(CliFailure::usage(
+                        "Immich migration plans require the migration command",
+                    ));
+                }
             }
             .map_err(CliFailure::from_executor)?;
             output::write_json(&report, "import dry-run report")

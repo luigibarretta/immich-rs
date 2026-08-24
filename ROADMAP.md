@@ -297,8 +297,8 @@ maintenance mutation is authorized.
 ## Phase 9 — Apple Photos import
 
 ADR-0030 authorizes Apple Photos/iCloud import without changing the Phase 4
-preserve-all scan contract. The implementation is complete for synthetic local
-gates:
+preserve-all scan contract. The implementation and synthetic compatibility
+gate are complete:
 
 - directory and bounded split-ZIP scans retain ephemeral native locators;
 - `upload-plan-v2` binds Apple source configuration, transport timestamps,
@@ -308,10 +308,70 @@ gates:
   one-entry staging, capped retries and effect-level `checkpoint-v2` resume;
 - source or configuration drift fails before mutation;
 - no Apple JSON is interpreted as authorization for independent metadata
-  mutation.
+  mutation;
+- disposable Immich v3.1.0 proves five assets, one Live Photo link, one
+  five-member album, seven-effect resume and duplicate convergence;
+- the pinned black-box `from-icloud` run has normalized asset, XMP, Live Photo,
+  album and membership parity, while containing the oracle's five job writes;
+- comparable paired raw measurements use the same 64 MiB/eight-asset corpus,
+  server, concurrency and alternating order.
 
-The Phase 9 gate is **not yet passed**. It still requires an exact disposable
-Immich apply/resume/duplicate cleanup run, pinned black-box `from-icloud`
-differential evidence, comparable raw benchmarks and an explicitly authorized
-personal Apple export shadow run. No Apple performance or production-readiness
-claim is permitted before those artifacts exist.
+The synthetic Phase 9 gate is passed. The broader Phase 9 gate remains open
+only for the aggregate-only personal Apple export shadow explicitly required by
+ADR-0030. No private export has been supplied. On the exact synthetic 64 MiB
+compatibility intersection, immich-rs median wall time is 97.8% lower and all
+retained ranges are disjoint; this is not a private-export, WAN or production
+claim.
+
+## Phase 10 — Picasa import
+
+ADR-0031 defines Picasa as a source contract rather than treating it as a
+generic folder. Its implementation and synthetic compatibility gate are
+complete:
+
+- one directory or bounded split-ZIP set with deterministic source binding;
+- bounded UTF-8 `.picasa.ini` album and per-file caption handling;
+- optional filename-date fallback that never overrides stronger metadata;
+- XMP, Live Photo, collision, cancellation and source-drift behavior inherited
+  from the bounded source scanner;
+- immutable `upload-plan-v2`, offline dry-run, one-entry staging and
+  effect-level `checkpoint-v2` apply;
+- four-asset real disposable apply, eight-effect resume, fresh-checkpoint
+  duplicate convergence and zero-resource cleanup;
+- black-box `from-picasa` asset/date/XMP/Live Photo parity, with caption and
+  Picasa-album preservation declared as immich-rs extensions;
+- comparable raw measurements on the same 64 MiB/eight-asset upload-only
+  compatibility intersection.
+
+The synthetic Phase 10 gate is passed. The authorized personal Picasa export
+shadow required by ADR-0031 remains pending because no private export has been
+supplied. On the exact synthetic 64 MiB compatibility intersection, immich-rs
+median wall time is 99.2% lower and all retained ranges are disjoint; this is
+not a private-export, WAN or production claim.
+
+## Phase 11 — Immich-to-Immich migration
+
+ADR-0032 defines a distinct two-server migration rather than composing archive
+and folder upload manually. Its disposable compatibility gate is complete:
+
+- `migration-plan-v1` binds distinct source and destination identities,
+  bounded inventory and a maximum mutation budget;
+- the source capability is read-only by type and source/destination credentials
+  must be different;
+- apply stages and verifies at most one original before destination upload;
+- capture time, description, location and owned albums are preserved;
+- effect-level checkpoint resume, fresh-checkpoint duplicate convergence,
+  response-loss recovery and cancellation are bounded;
+- two real Immich v3.1.0 stacks prove source immutability, three destination
+  assets, metadata, album membership and exact zero-resource cleanup;
+- the pinned `from-immich` oracle matches the declared originals, metadata and
+  album surface; linked Live Photo motion preservation is an immich-rs
+  extension;
+- comparable real-server raw measurements use fresh owners, the same 64 MiB
+  corpus, two servers, concurrency one and alternating order.
+
+The disposable Phase 11 gate is passed. An explicitly authorized
+non-production export shadow remains pending. Production migration is not
+authorized by ADR-0032. On the exact synthetic 64 MiB two-server corpus,
+immich-rs median wall time is 98.9% lower and all retained ranges are disjoint;
+this is not a non-production shadow, WAN or production claim.

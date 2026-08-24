@@ -5,7 +5,7 @@ archive and migration client for [Immich](https://immich.app/).
 
 ## Performance at a glance
 
-Three reproducible comparisons currently satisfy ADR-0012's threshold for a
+Six reproducible comparisons currently satisfy ADR-0012's threshold for a
 scoped performance statement against the pinned immich-go v0.32.0 oracle:
 
 | Lower is better | immich-rs | immich-go | Difference |
@@ -18,6 +18,15 @@ scoped performance statement against the pinned immich-go v0.32.0 oracle:
 | Takeout plan + import median | 1.162 s | 39.048 s | immich-rs 97.0% lower |
 | Takeout plan + import p95 | 1.671 s | 39.162 s | immich-rs 95.7% lower |
 | Takeout import median peak RSS | 10.55 MiB | 16.45 MiB | immich-rs 35.9% lower |
+| Apple plan + import median | 0.729 s | 33.788 s | immich-rs 97.8% lower |
+| Apple plan + import p95 | 0.770 s | 93.021 s | immich-rs 99.2% lower |
+| Apple import median peak RSS | 10.58 MiB | 15.77 MiB | immich-rs 32.9% lower |
+| Picasa plan + import median | 0.725 s | 87.064 s | immich-rs 99.2% lower |
+| Picasa plan + import p95 | 0.783 s | 99.286 s | immich-rs 99.2% lower |
+| Picasa import median peak RSS | 10.43 MiB | 15.11 MiB | immich-rs 31.0% lower |
+| Immich migration median | 1.395 s | 124.048 s | immich-rs 98.9% lower |
+| Immich migration p95 | 1.641 s | 128.529 s | immich-rs 98.7% lower |
+| Migration median peak RSS | 12.66 MiB | 16.30 MiB | immich-rs 22.4% lower |
 
 The folder comparison uses the same page-cached deterministic 64 MiB,
 eight-asset synthetic corpus. The archive comparison uses the same owner and
@@ -29,11 +38,22 @@ All use concurrency one, alternating order, two warmups and six retained
 pairs. Every retained immich-rs wall-time sample is below every corresponding
 immich-go sample.
 
+The Apple Photos and Picasa comparisons measure complete immutable planning
+plus apply into a fresh owner per tool on one server. The Immich migration
+comparison measures complete inventory, planning and migration between fresh
+owners on the same two servers. All three use the same 64 MiB/eight-asset
+synthetic compatibility intersection, concurrency one, alternating order, two
+warmups and six retained pairs. Setup, seeding and postcondition probes are
+outside the measured interval.
+
 These are small synthetic CPU/network-loopback results. They do not measure a
 large library, cold storage, WAN or production latency. See the
 [Phase 1 raw report](benchmarks/evidence/phase1-2026-08-21.json),
 [Phase 5 raw report](benchmarks/evidence/phase5-2026-08-22.json),
-[Phase 8 raw report](benchmarks/evidence/phase8-2026-08-24.json) and the full
+[Phase 8 raw report](benchmarks/evidence/phase8-2026-08-24.json),
+[Apple](benchmarks/evidence/phase9-source-import-benchmark-2026-08-24.json),
+[Picasa](benchmarks/evidence/phase10-source-import-benchmark-2026-08-24.json),
+[migration](benchmarks/evidence/phase11-real-2026-08-24.json) and the full
 [benchmark methodology](benchmarks/README.md). No broader speed claim is
 supported by these measurements.
 
@@ -72,13 +92,23 @@ checksum verification, atomic files and idempotent resume. See the
 [Phase 4 matrix](docs/compatibility/phase4-apple-photos.md) and
 [Phase 5 matrix](docs/compatibility/phase5-archive.md).
 
-The first Apple Photos import implementation now binds that read-only output
-to `upload-plan-v2`, preserves source transport timestamps, verifies directory
-or split-ZIP inputs offline and reuses the bounded effect-level import engine.
-Synthetic unit and CLI gates are green; the disposable-server, black-box
-`from-icloud` and authorized personal-export gates remain pending and no
-performance claim is made. See the
-[Apple import matrix](docs/compatibility/phase9-apple-photos-import.md).
+Apple Photos and Picasa imports now bind their read-only outputs to
+`upload-plan-v2`, verify directory or split-ZIP inputs offline and reuse the
+bounded effect-level import engine. Their disposable Immich, resume,
+fresh-checkpoint convergence and pinned black-box differential gates are
+complete. Immich-to-Immich migration likewise binds a read-only source and a
+separate destination into `migration-plan-v1`, with one-file staging and
+effect-level resume across two disposable servers. The external private-export
+shadows remain pending until explicitly authorized exports are supplied. See
+the [Apple](docs/compatibility/phase9-apple-photos-import.md),
+[Picasa](docs/compatibility/phase10-picasa-import.md) and
+[migration](docs/compatibility/phase11-immich-migration.md) matrices.
+Apple/Picasa gate and benchmark
+[run 5675](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5675)
+is green on `f8c13eb4d9c7cfab968b1355004ae403a146d0f9`; the corrected
+two-server migration
+[run 5678](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5678)
+is green on `88d9a59d1ca1d0cd92b3ef28349ff4b95a5f8095`.
 
 The expanded synthetic image/XMP, video and live-photo matrix and its paired
 raw upload benchmark are verified on implementation SHA
@@ -93,9 +123,11 @@ is green and published both reports. Evidence enforcement commit
 No supported release is published yet. Phase 7 permits a source-built client
 to use the proven read-only archive and immutable folder uploader against a
 remote Immich v3.1.x HTTPS endpoint. Phase 8 extends that boundary to
-plan-bound Google Takeout uploads, normalized metadata and albums. Apple apply
-is implemented but remains pre-release until its disposable and differential
-gates pass; delete, replace, trash and independent maintenance remain
+plan-bound Google Takeout, Apple Photos and Picasa uploads, normalized metadata
+and albums. The source import synthetic gates are complete; their explicitly
+authorized private-export shadows remain release evidence. Disposable
+Immich-to-Immich migration is implemented, while production migration is not
+authorized. Delete, replace, trash and independent maintenance remain
 unavailable. The
 Phase 7 synthetic gate is green in
 Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
@@ -156,12 +188,26 @@ five-target rehearsal. No RC is published yet.
   XMP, Live Photos, known-noise diagnostics and explicit album modes;
 - immutable Apple Photos `upload-plan-v2`, offline source-aware dry-run,
   one-entry ZIP staging and plan-selected checkpointed import execution;
+- bounded Picasa directory/split-ZIP planning and import with explicit
+  `.picasa.ini` album/caption fields and optional filename-date fallback;
+- immutable `migration-plan-v1` with separate read-only source and destination
+  credentials, bounded one-original staging and effect-level resume;
+- real disposable Apple, Picasa and two-server migration postconditions plus
+  pinned black-box differential reports and comparable raw benchmarks;
 - read-only Immich inventory and original-byte archive with immutable
   `archive-manifest-v1`, atomic writes and verified idempotent resume;
 - strict schema-v1 TOML and `IMMICH_RS_*` configuration with deterministic
   `CLI > environment > file > default` precedence and redacted inspection;
 - non-root, shell-free `linux/amd64` and `linux/arm64` OCI packaging plus a
   network-disabled Compose default and secret-backed opt-in HTTPS override.
+
+| Source workflow | Plan/apply contract | Current gate |
+|---|---|---|
+| Folder (`from-folder`) | `normalized-plan-v1` / `upload-plan-v1` | Complete, including disposable and production-HTTPS boundaries |
+| Google Photos (`from-google-photos`) | `normalized-plan-v2` / `upload-plan-v2` | Complete, including authorized aggregate Takeout shadow |
+| Apple Photos (`from-icloud`) | `normalized-plan-v3` / `upload-plan-v2` | Synthetic/disposable/differential complete; private export shadow pending |
+| Picasa (`from-picasa`) | `normalized-plan-v4` / `upload-plan-v2` | Synthetic/disposable/differential complete; private export shadow pending |
+| Immich (`from-immich`) | `migration-plan-v1` / `checkpoint-v2` | Two-server disposable/differential complete; non-production shadow pending; production not authorized |
 
 Render the effective non-secret configuration:
 
@@ -268,6 +314,22 @@ selects the Apple adapter; a caller cannot reinterpret it as folder or Takeout
 input. Filesystem or ZIP timestamps are transport fields only and are never
 promoted to normalized capture metadata.
 
+Plan and dry-run a Picasa export with explicitly bounded metadata behavior:
+
+```bash
+IMMICH_RS_API_KEY='<disposable-key>' \
+  immich-rs plan upload picasa --server http://127.0.0.1:2283 \
+  --picasa-albums --filename-date /path/to/picasa-export \
+  > picasa-upload-plan.json
+immich-rs apply upload --dry-run --plan picasa-upload-plan.json \
+  --source /path/to/picasa-export --picasa-albums --filename-date \
+  --checkpoint picasa-checkpoint.sqlite
+```
+
+Only the bounded Picasa album name, per-file caption and optional filename
+date enter the plan. Unknown INI data cannot authorize tags, people,
+favorites, stacks or destructive mutations.
+
 Archive originals from an isolated loopback Immich instance:
 
 ```bash
@@ -283,6 +345,25 @@ IMMICH_RS_API_KEY='<disposable-key>' \
 The archive command reads originals only. It cannot upload, replace, delete or
 mutate server metadata. A remote HTTPS origin additionally requires the
 CLI-only `--authorize-production-read` acknowledgement.
+
+Create and verify a disposable Immich-to-Immich migration plan:
+
+```bash
+IMMICH_RS_SOURCE_API_KEY='<disposable-source-key>' \
+IMMICH_RS_DESTINATION_API_KEY='<disposable-destination-key>' \
+  immich-rs plan migration immich \
+  --source-server http://127.0.0.1:2284 \
+  --destination-server http://127.0.0.1:2285 \
+  --max-assets 1000 --max-total-bytes 107374182400 \
+  > migration-plan.json
+immich-rs apply migration immich --dry-run \
+  --plan migration-plan.json --max-assets 1000 \
+  --max-total-bytes 107374182400
+```
+
+Live migration additionally requires the two distinct keys, both exact
+loopback origins and a checkpoint. Production migration is deliberately
+rejected by the current ADR.
 
 Plan and validate a disposable upload before applying it:
 
@@ -343,10 +424,13 @@ environment variables or Compose. See the
 - Maintained Rust, Python and shell files have a 400-LOC hard limit with no
   baseline exceptions.
 - Media are never buffered as whole files; configured limits fail closed.
-- Source-only folder, Takeout and Apple planners plus upload dry-run cannot
+- Source-only folder, Takeout, Apple and Picasa planners plus upload dry-run cannot
   construct an HTTP client or mutation capability. Server-bound upload
-  planners can only construct a read/probe capability; Takeout and Apple
+  planners can only construct a read/probe capability; Takeout, Apple and Picasa
   metadata/album methods exist only on the separately authorized import client.
+- The migration source capability has no mutation methods, its key must differ
+  from the destination key and the current transport accepts only two distinct
+  disposable loopback origins.
 - Disposable transport accepts only literal loopback origins. Production
   transport accepts only verified remote HTTPS and requires explicit CLI-only
   read authorization; upload also requires the exact write confirmation set.
@@ -380,6 +464,9 @@ Takeout execution is recorded in the
 [Phase 8 matrix](docs/compatibility/phase8-google-takeout-import.md).
 Apple execution status is recorded separately in the
 [Apple import matrix](docs/compatibility/phase9-apple-photos-import.md).
+Picasa execution and Immich-to-Immich migration are recorded in the
+[Phase 10](docs/compatibility/phase10-picasa-import.md) and
+[Phase 11](docs/compatibility/phase11-immich-migration.md) matrices.
 
 ## Baselines
 
@@ -389,9 +476,10 @@ Apple execution status is recorded separately in the
 | First Immich target | Immich v3.1 synthetic mock fixtures |
 | Rust toolchain | 1.88.0, edition 2024 |
 | License | AGPL-3.0-only |
-| Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for Takeout; `normalized-plan-v3` for Apple Photos |
-| Upload plan | `upload-plan-v1` for folder apply; `upload-plan-v2` for Google Takeout and Apple Photos apply |
+| Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for Takeout; `normalized-plan-v3` for Apple Photos; `normalized-plan-v4` for Picasa |
+| Upload plan | `upload-plan-v1` for folder apply; `upload-plan-v2` for Google Takeout, Apple Photos and Picasa apply |
 | Upload checkpoint | `checkpoint-v1` for folder upload; effect-level `checkpoint-v2` for source-aware imports |
+| Migration | `migration-plan-v1`; effect-level `checkpoint-v2` |
 | Read-only archive | `archive-manifest-v1`; `archive-apply-report-v1` |
 | Disposable Immich | exact v3.1.x release, currently v3.1.0 |
 
@@ -403,7 +491,7 @@ Apple execution status is recorded separately in the
   archive, folder-upload and source-import capabilities;
 - `immich-executor`: immutable upload/archive planning, verification, retry,
   checkpoint and atomic-file orchestration;
-- `immich-sources`: bounded folder, Google Takeout and Apple Photos discovery
+- `immich-sources`: bounded folder, Google Takeout, Apple Photos and Picasa discovery
   and reconciliation.
 
 The crate boundaries are dependency rules, not microservices. See
@@ -423,6 +511,10 @@ python3 scripts/check-phase6-evidence.py
 python3 scripts/check-production-evidence.py
 python3 scripts/check-phase8-evidence.py
 python3 scripts/check-phase8-benchmark.py
+python3 scripts/check-source-import-evidence.py
+python3 scripts/check-source-import-benchmark.py
+python3 scripts/check-migration-evidence.py
+python3 scripts/check-real-migration-benchmark.py
 python3 scripts/check-release.py
 python3 scripts/check-container.py
 python3 scripts/check-fixtures.py
@@ -517,6 +609,24 @@ python3 scripts/check-phase8-evidence.py \
   --input .artifacts/phase8-takeout.json
 ```
 
+The Apple/Picasa source gate and the two-server migration gate are also manual
+and disposable:
+
+```bash
+scripts/run-disposable-source-import.sh --adapter apple-photos \
+  --binary target/release/immich-rs --oracle /path/to/verified/immich-go \
+  --commit-sha "$(git rev-parse HEAD)" \
+  --output .artifacts/apple-source-import.json
+scripts/run-disposable-source-import.sh --adapter picasa \
+  --binary target/release/immich-rs --oracle /path/to/verified/immich-go \
+  --commit-sha "$(git rev-parse HEAD)" \
+  --output .artifacts/picasa-source-import.json
+scripts/run-disposable-migration.sh --binary target/release/immich-rs \
+  --oracle /path/to/verified/immich-go \
+  --commit-sha "$(git rev-parse HEAD)" \
+  --output .artifacts/immich-migration.json
+```
+
 Full paired benchmarks are manual and separate from push CI. Read the
 [methodology](benchmarks/README.md) and the committed
 [Phase 1](benchmarks/evidence/phase1-2026-08-14.json) and
@@ -525,7 +635,10 @@ Full paired benchmarks are manual and separate from push CI. Read the
 [Phase 4](benchmarks/evidence/phase4-2026-08-21.json) Apple and
 [Phase 5](benchmarks/evidence/phase5-2026-08-22.json) archive evidence, plus
 the complete [Phase 8](benchmarks/evidence/phase8-2026-08-24.json) Takeout
-import comparison. Those measurements are not generalized performance claims.
+import comparison and the complete [Apple](benchmarks/evidence/phase9-source-import-benchmark-2026-08-24.json),
+[Picasa](benchmarks/evidence/phase10-source-import-benchmark-2026-08-24.json)
+and [migration](benchmarks/evidence/phase11-real-2026-08-24.json) reports.
+Those measurements are not generalized performance claims.
 The
 Phase 2 harness completed in Gitea run 5234 and uploaded the raw benchmark plus
 disposable cleanup evidence for its exact implementation SHA. The Phase 3

@@ -216,6 +216,79 @@ containers, volumes, networks and staging residue. Push CI recomputes every
 aggregate and rejects a changed fixture, oracle digest, operation count or
 unsupported performance claim.
 
+## Phase 9 Apple Photos import
+
+`scripts/benchmark-source-import.py` measures complete immutable planning plus
+apply for immich-rs and the public immich-go `upload from-icloud` command. Both
+tools receive a fresh owner on the same disposable Immich v3.1.0 server and the
+same 67,108,864-byte, eight-asset upload-only compatibility intersection.
+Concurrency is one, execution order alternates after two warmups and six pairs
+are retained. Server/account setup and postcondition probes are excluded.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 0.729086 | 0.769765 | 33.788357 | 93.021256 |
+| User CPU (s) | 0.176117 | 0.203603 | 0.116218 | 0.124090 |
+| System CPU (s) | 0.093473 | 0.112809 | 0.105796 | 0.113330 |
+| Peak RSS (bytes) | 11,094,016 | 11,403,264 | 16,535,552 | 16,592,896 |
+| Peak file descriptors | 11 | 11 | 19 | 20 |
+
+Median wall time is 97.8% lower for immich-rs, and its slowest retained sample
+(0.770 s) is below the oracle's fastest (24.705 s). This satisfies ADR-0012
+only for this exact small synthetic, warm-cache, loopback Apple import. It is
+not a large-library, WAN, storage or production claim. The
+[raw evidence](evidence/phase9-source-import-benchmark-2026-08-24.json) binds
+all samples, identities, operations and the permitted claim text.
+
+## Phase 10 Picasa import
+
+The Picasa comparison uses the same harness, server, 64 MiB/eight-asset
+upload-only intersection, fresh-owner isolation and alternating one-worker
+methodology as Phase 9. Picasa album and caption extensions are intentionally
+disabled because immich-go v0.32.0 does not expose the same observable surface.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 0.724882 | 0.783389 | 87.063794 | 99.286263 |
+| User CPU (s) | 0.181498 | 0.222404 | 0.081423 | 0.099788 |
+| System CPU (s) | 0.070181 | 0.104038 | 0.083799 | 0.120155 |
+| Peak RSS (bytes) | 10,936,320 | 11,202,560 | 15,845,376 | 16,539,648 |
+| Peak file descriptors | 11 | 11 | 14 | 14 |
+
+Median wall time is 99.2% lower for immich-rs, and its slowest retained sample
+(0.783 s) is below the oracle's fastest (24.581 s). This satisfies ADR-0012
+only for the exact synthetic compatibility intersection; it is not a private
+export, large-library, WAN or production claim. Review the
+[raw evidence](evidence/phase10-source-import-benchmark-2026-08-24.json) and
+its operation counters before publishing any comparison.
+
+## Phase 11 Immich-to-Immich migration
+
+`scripts/benchmark-real-migration.py` gives each tool fresh isolated source and
+destination owners on the same two disposable Immich v3.1.0 servers. Every
+source contains the same eight assets and 67,108,864 bytes. The measured scope
+is complete inventory, immutable plan and migration for immich-rs versus the
+public immich-go `upload from-immich` command; seeding, owner setup and outcome
+probes are excluded. Both tools use concurrency one, alternate order after two
+warmups and retain six pairs.
+
+| Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
+|---|---:|---:|---:|---:|
+| Wall time (s) | 1.394889 | 1.641281 | 124.048386 | 128.529436 |
+| User CPU (s) | 0.291948 | 0.414094 | 0.194051 | 0.225151 |
+| System CPU (s) | 0.249503 | 0.301722 | 0.224009 | 0.318159 |
+| Peak RSS (bytes) | 13,271,040 | 14,184,448 | 17,096,704 | 19,091,456 |
+| Peak file descriptors | 12 | 12 | 20 | 22 |
+
+Median wall time is 98.9% lower for immich-rs, and its slowest retained sample
+(1.641 s) is below the oracle's fastest (106.151 s). This satisfies ADR-0012
+only for this exact small synthetic, loopback, two-server migration. It is not
+a large-library, WAN or production claim, and production migration remains
+unauthorized. The
+[raw evidence](evidence/phase11-real-2026-08-24.json) binds all samples and
+Gitea [run 5678](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5678)
+to source SHA `88d9a59d1ca1d0cd92b3ef28349ff4b95a5f8095`.
+
 ## Authorized private Takeout shadow
 
 An explicitly authorized private Google Photos Takeout was used only for an

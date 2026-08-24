@@ -1,19 +1,21 @@
 # Migration and rollback from immich-go
 
 No supported immich-rs release is published yet. A source-built client from an
-exact green revision may use only the Phase 7/8 production surface: verified
-remote HTTPS, read-only archive, immutable folder upload and plan-bound Google
-Takeout import. Every remote read/write acknowledgement is CLI-only; no
+exact green revision may use only the proven production surface: verified
+remote HTTPS, read-only archive and immutable plan-bound folder, Google
+Takeout, Apple Photos and Picasa imports. Every remote read/write
+acknowledgement is CLI-only; no
 configuration file, environment variable or Compose file can silently enable
-production. Delete, replace, trash and independent maintenance remain absent.
+production. Immich-to-Immich migration remains disposable-loopback only.
+Delete, replace, trash and independent maintenance remain absent.
 
 ## Compare without mutation
 
 1. Keep the verified immich-go v0.32.0 binary and its pinned SHA-256 from
    `tests/oracle/baseline.toml` available as the rollback tool.
-2. Run immich-rs folder, Google Takeout or Apple Photos planning against a copy
-   or read-only source. Save the normalized plan, source identity, tool version
-   and warnings/errors.
+2. Run immich-rs folder, Google Takeout, Apple Photos or Picasa planning against
+   a copy or read-only source. Save the normalized plan, source identity, tool
+   version and warnings/errors.
 3. Run the documented black-box comparison only with synthetic fixtures and a
    loopback mock. Do not point the oracle dry-run at production: its five known
    job-resume PUTs are contained only by the mock.
@@ -33,16 +35,28 @@ normalized metadata, exact album membership, effect-level resume and
 fresh-checkpoint duplicate convergence. Never use personal media for this
 canary; the repository gate provides a complete synthetic fixture.
 
+For Apple Photos, additionally verify XMP, Live Photo links, preserve-all
+variants and the selected folder/path album rule. For Picasa, verify only the
+reviewed album, caption and optional filename-date fields; unknown INI data
+must have no server effect. Both repository gates provide synthetic directory
+and split-ZIP fixtures.
+
 For a read-only archive canary, run `plan archive immich`, first apply and
 verified resume against the same disposable instance. Compare the original-byte
 digest multiset before cleanup.
+
+For Immich-to-Immich migration, use two different disposable stacks and two
+different scoped keys. Verify source inventory before and after, destination
+originals/metadata/owned albums, checkpoint resume, fresh-checkpoint duplicate
+convergence and exact cleanup. ADR-0032 does not authorize substituting either
+endpoint with production.
 
 ## Authorized production cutover
 
 1. Verify an Immich backup or restore point independently and retain its
    bounded operator reference.
 2. Create a temporary least-privilege API key for only the selected plan. A
-   Takeout import may require asset upload/read/update and album
+   A source-aware import may require asset upload/read/update and album
    read/create/membership permissions; it never requires delete or trash.
 3. Create and inspect the immutable server-bound plan, preserve its SHA-256 and
    maximum mutation count, then run `apply upload --dry-run` without a key.
@@ -56,8 +70,10 @@ digest multiset before cleanup.
 Do not run immich-rs and immich-go mutations over the same source selection.
 The periodic homelab immich-go smoke remains unchanged. See the
 [Phase 7 transport matrix](compatibility/phase7-production-https.md) and
-[Phase 8 Takeout matrix](compatibility/phase8-google-takeout-import.md) before
-cutover.
+[Phase 8 Takeout](compatibility/phase8-google-takeout-import.md),
+[Phase 9 Apple](compatibility/phase9-apple-photos-import.md) or
+[Phase 10 Picasa](compatibility/phase10-picasa-import.md) matrix before
+cutover. Immich-to-Immich production cutover is intentionally absent.
 
 ## Rollback
 

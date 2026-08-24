@@ -25,5 +25,15 @@ Semantic Versioning.
   disposable postcondition evidence.
 - Reproducible paired Takeout plan/import benchmark against the pinned
   immich-go v0.32.0 black-box oracle.
+- Source-aware Apple Photos import with preserve-all assets, XMP, Live Photos,
+  explicit albums, offline dry-run and resumable directory/split-ZIP apply.
+- Bounded Picasa adapter for directory/split-ZIP sources, reviewed
+  `.picasa.ini` albums/captions and optional filename-date fallback.
+- Disposable Immich-to-Immich migration with a read-only source capability,
+  distinct credentials, immutable plans, one-original staging and durable
+  effect-level resume.
+- Real disposable compatibility gates and paired raw benchmarks for Apple
+  Photos, Picasa and two-server migration, with ADR-0012-scoped synthetic
+  performance claims and no generalized or production claim.
 
 No supported release has been published.

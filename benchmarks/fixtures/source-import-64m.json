@@ -1,0 +1,91 @@
+{
+  "schema": "fixture-manifest-v1",
+  "fixture_id": "synthetic-source-import-64m",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "1",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "Synthetic Export/image-01.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [41, 61, 81],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-01"
+    },
+    {
+      "path": "Synthetic Export/image-02.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [42, 62, 82],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-02"
+    },
+    {
+      "path": "Synthetic Export/image-03.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [43, 63, 83],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-03"
+    },
+    {
+      "path": "Synthetic Export/image-04.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [44, 64, 84],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-04"
+    },
+    {
+      "path": "Synthetic Export/image-05.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [45, 65, 85],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-05"
+    },
+    {
+      "path": "Synthetic Export/image-06.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [46, 66, 86],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-06"
+    },
+    {
+      "path": "Synthetic Export/image-07.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [47, 67, 87],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-07"
+    },
+    {
+      "path": "Synthetic Export/image-08.png",
+      "recipe": "synthetic_padded_png",
+      "width": 2,
+      "height": 2,
+      "rgb": [48, 68, 88],
+      "bytes": 8388608,
+      "seed": "synthetic-source-import-image-08"
+    }
+  ],
+  "benchmark": {
+    "media_assets": 8,
+    "media_bytes": 67108864,
+    "metadata_updates": 0,
+    "album_mutations": 0,
+    "concurrency": 1
+  }
+}

@@ -1,0 +1,69 @@
+---
+name: source-import-benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - source-import-benchmark-*
+
+concurrency:
+  group: immich-rs-source-import-benchmark
+  cancel-in-progress: false
+
+jobs:
+  paired-benchmark:
+    runs-on: docker
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [apple-photos, picasa]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Restore the pinned Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/1.88.0-x86_64-unknown-linux-gnu
+            ~/.rustup/update-hashes/1.88.0-x86_64-unknown-linux-gnu
+          key: rustup-linux-x86-64-1.88.0
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Restore the pinned oracle cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/oracle
+          key: immich-go-v0.32.0-linux-x86-64-6e2ad86b
+      - name: Fetch and verify the official oracle on cache miss
+        run: python3 scripts/fetch-oracle.py
+      - name: Build the exact release subject
+        run: cargo build --locked --release -p immich-rs-cli
+      - name: Run paired 64 MiB source-import samples
+        run: |
+          mkdir -p .artifacts
+          scripts/run-disposable-source-import.sh \
+            --adapter "${{ matrix.adapter }}" \
+            --binary target/release/immich-rs \
+            --commit-sha "${{ github.sha }}" \
+            --output ".artifacts/${{ matrix.adapter }}-gate-${{ github.sha }}.json" \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --benchmark-output ".artifacts/${{ matrix.adapter }}-benchmark-${{ github.sha }}.json" \
+            --samples 6 --warmups 2
+          python3 scripts/check-source-import-evidence.py \
+            --input ".artifacts/${{ matrix.adapter }}-gate-${{ github.sha }}.json"
+          python3 scripts/check-source-import-benchmark.py \
+            --input ".artifacts/${{ matrix.adapter }}-benchmark-${{ github.sha }}.json"
+      - name: Preserve raw benchmark and aggregate gate evidence
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: source-import-benchmark-${{ matrix.adapter }}-${{ github.sha }}
+          path: |
+            .artifacts/${{ matrix.adapter }}-gate-${{ github.sha }}.json
+            .artifacts/${{ matrix.adapter }}-benchmark-${{ github.sha }}.json
+          retention-days: 30

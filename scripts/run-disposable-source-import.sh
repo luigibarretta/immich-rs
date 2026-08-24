@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo 'usage: run-disposable-source-import.sh --adapter <apple-photos|picasa> --binary <path> --commit-sha <sha> --output <path>' >&2
+  echo 'usage: run-disposable-source-import.sh --adapter <apple-photos|picasa> --binary <path> --commit-sha <sha> --output <path> [--oracle <path> --benchmark-output <path> --samples <n> --warmups <n>]' >&2
   exit 2
 }
 
@@ -10,12 +10,20 @@ ADAPTER=''
 BINARY=''
 COMMIT_SHA=''
 OUTPUT=''
+ORACLE=''
+BENCHMARK_OUTPUT=''
+SAMPLES=6
+WARMUPS=2
 while (($# > 0)); do
   case "$1" in
     --adapter) (($# >= 2)) || usage; ADAPTER=$2; shift 2 ;;
     --binary) (($# >= 2)) || usage; BINARY=$2; shift 2 ;;
     --commit-sha) (($# >= 2)) || usage; COMMIT_SHA=$2; shift 2 ;;
     --output) (($# >= 2)) || usage; OUTPUT=$2; shift 2 ;;
+    --oracle) (($# >= 2)) || usage; ORACLE=$2; shift 2 ;;
+    --benchmark-output) (($# >= 2)) || usage; BENCHMARK_OUTPUT=$2; shift 2 ;;
+    --samples) (($# >= 2)) || usage; SAMPLES=$2; shift 2 ;;
+    --warmups) (($# >= 2)) || usage; WARMUPS=$2; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -27,6 +35,15 @@ OUTPUT=$(realpath -m -- "$OUTPUT")
 case "$OUTPUT" in "$ROOT"/.artifacts/*) ;; *) usage ;; esac
 [[ ! -e "$OUTPUT" ]] || { echo 'evidence output already exists' >&2; exit 2; }
 mkdir -p -- "$ROOT/.artifacts"
+if [[ -n "$ORACLE$BENCHMARK_OUTPUT" ]]; then
+  [[ -f "$ORACLE" && -x "$ORACLE" && -n "$BENCHMARK_OUTPUT" ]] || usage
+  [[ "$SAMPLES" =~ ^[0-9]+$ && "$WARMUPS" =~ ^[0-9]+$ ]] || usage
+  ((SAMPLES >= 2 && SAMPLES <= 10 && WARMUPS <= 2)) || usage
+  ORACLE=$(realpath -- "$ORACLE")
+  BENCHMARK_OUTPUT=$(realpath -m -- "$BENCHMARK_OUTPUT")
+  case "$BENCHMARK_OUTPUT" in "$ROOT"/.artifacts/*) ;; *) usage ;; esac
+  [[ ! -e "$BENCHMARK_OUTPUT" ]] || { echo 'benchmark output already exists' >&2; exit 2; }
+fi
 
 SUFFIX="$(date -u +%Y%m%dT%H%M%SZ)-$$-$(openssl rand -hex 4)"
 RUN_ID="source-import-$ADAPTER-$SUFFIX"
@@ -197,6 +214,21 @@ LIVE_LINKS=$(jq -r '[.assets.items[] | select(.livePhotoVideoId != null)] | leng
 DESCRIPTIONS=$(jq -r '[.assets.items[] | select(.exifInfo.description? != null and .exifInfo.description != "")] | length' "$WORKSPACE/search.json")
 [[ "$OBSERVED_MEMBERS" == "$EXPECTED_ASSETS" && "$LIVE_LINKS" == 1 ]]
 if [[ "$ADAPTER" == picasa ]]; then [[ "$DESCRIPTIONS" == 1 ]]; fi
+
+if [[ -n "$BENCHMARK_OUTPUT" ]]; then
+  echo 'running paired compatibility-intersection benchmark' >&2
+  BENCHMARK_MANIFEST="$ROOT/benchmarks/fixtures/source-import-64m.json"
+  BENCHMARK_SOURCE="$WORKSPACE/benchmark-source"
+  BENCHMARK_WORKSPACE="$WORKSPACE/benchmark-work"
+  python3 "$ROOT/scripts/materialize-fixture.py" "$BENCHMARK_MANIFEST" "$BENCHMARK_SOURCE"
+  mkdir -- "$BENCHMARK_WORKSPACE"
+  IMMICH_RS_BENCHMARK_ADMIN_TOKEN="$ACCESS_TOKEN" \
+    python3 "$ROOT/scripts/benchmark-source-import.py" --adapter "$ADAPTER" \
+      --endpoint "$ENDPOINT" --run-id "$SUFFIX" --source-revision "$COMMIT_SHA" \
+      --source "$BENCHMARK_SOURCE" --fixture-manifest "$BENCHMARK_MANIFEST" \
+      --workspace "$BENCHMARK_WORKSPACE" --immich-rs "$BINARY" --oracle "$ORACLE" \
+      --samples "$SAMPLES" --warmups "$WARMUPS" --output "$BENCHMARK_OUTPUT"
+fi
 
 SERVER_VERSION=$(curl --fail --silent "$ENDPOINT/api/server/version")
 BINARY_SHA256=$(sha256sum "$BINARY" | cut -d' ' -f1)

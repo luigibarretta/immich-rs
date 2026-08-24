@@ -219,6 +219,16 @@ jobs:
             .artifacts/oracle/picasa-directory-observation.json \
             .artifacts/oracle/picasa-zip-observation.json \
             --output .artifacts/oracle/picasa-report.json
+          python3 scripts/run-import-differential.py \
+            tests/oracle/compatibility/apple-import-v1.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --immich-rs target/debug/immich-rs \
+            --output .artifacts/oracle/apple-import-report.json
+          python3 scripts/run-import-differential.py \
+            tests/oracle/compatibility/picasa-import-v1.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --immich-rs target/debug/immich-rs \
+            --output .artifacts/oracle/picasa-import-report.json
           python3 scripts/run-migration-differential.py \
             tests/oracle/compatibility/immich-migration-v1.json \
             --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \

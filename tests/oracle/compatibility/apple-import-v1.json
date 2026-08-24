@@ -1,0 +1,15 @@
+{
+  "schema": "source-import-differential-expectation-v1",
+  "case_id": "apple-import-v1",
+  "adapter": "apple-photos",
+  "fixture": "../../fixtures/v3/synthetic-apple-photos/manifest.json",
+  "matrix": [
+    { "id": "oracle_identity", "outcome": "exact_pinned_black_box" },
+    { "id": "asset_uploads", "outcome": "parity" },
+    { "id": "owned_album", "outcome": "parity" },
+    { "id": "live_photo", "outcome": "parity" },
+    { "id": "xmp_sidecar", "outcome": "parity_after_normalization" },
+    { "id": "checkpoint_resume", "outcome": "immich_rs_extension" },
+    { "id": "job_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

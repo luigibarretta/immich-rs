@@ -57,6 +57,17 @@ for item in sockets: item.bind(("127.0.0.1", 0))
 print(*(item.getsockname()[1] for item in sockets))
 for item in sockets: item.close()
 ')
+DRIVER_CONTAINER=''
+SOURCE_FORWARD_PID=''
+DESTINATION_FORWARD_PID=''
+SOURCE_NETWORK="${SOURCE_PROJECT}_default"
+DESTINATION_NETWORK="${DESTINATION_PROJECT}_default"
+if [[ -n "${HOSTNAME:-}" ]]; then
+  candidate=$(docker inspect --format '{{.Id}}' "$HOSTNAME" 2>/dev/null || true)
+  if [[ -n "$candidate" && "$candidate" == "$HOSTNAME"* ]]; then
+    DRIVER_CONTAINER=$candidate
+  fi
+fi
 
 stack() {
   local role=$1
@@ -73,7 +84,19 @@ stack() {
 }
 
 cleanup() {
+  local process network
   set +e
+  for process in "$SOURCE_FORWARD_PID" "$DESTINATION_FORWARD_PID"; do
+    if [[ -n "$process" ]]; then
+      kill "$process" >/dev/null 2>&1
+      wait "$process" >/dev/null 2>&1
+    fi
+  done
+  if [[ -n "$DRIVER_CONTAINER" ]]; then
+    for network in "$SOURCE_NETWORK" "$DESTINATION_NETWORK"; do
+      docker network disconnect --force "$network" "$DRIVER_CONTAINER" >/dev/null 2>&1
+    done
+  fi
   stack source down --volumes --remove-orphans >/dev/null 2>&1
   stack destination down --volumes --remove-orphans >/dev/null 2>&1
   case "$WORKSPACE" in /tmp/immich-rs-migration.*) find "$WORKSPACE" -depth -delete ;; esac
@@ -86,7 +109,7 @@ trap 'exit 130' HUP INT TERM
 start_stack() {
   local role=$1 project=$2 port=$3
   stack "$role" up --detach --pull missing
-  local container host_ip host_port
+  local container host_ip host_port network server_name
   container=$(stack "$role" ps --quiet server)
   read -r host_ip host_port < <(docker inspect --format \
     '{{with (index .HostConfig.PortBindings "2283/tcp")}}{{(index . 0).HostIp}} {{(index . 0).HostPort}}{{end}}' \
@@ -96,6 +119,20 @@ start_stack() {
     exit 1
   }
   [[ $(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$container") == "$project" ]]
+  if [[ -n "$DRIVER_CONTAINER" ]]; then
+    network="${project}_default"
+    [[ $(docker network inspect --format \
+      '{{index .Labels "com.docker.compose.project"}}' "$network") == "$project" ]]
+    docker network connect "$network" "$DRIVER_CONTAINER"
+    server_name=$(docker inspect --format '{{.Name}}' "$container" | sed 's#^/##')
+    python3 "$ROOT/scripts/loopback-forward.py" --listen-port "$port" \
+      --target-container "$server_name" &
+    if [[ "$role" == source ]]; then
+      SOURCE_FORWARD_PID=$!
+    else
+      DESTINATION_FORWARD_PID=$!
+    fi
+  fi
 }
 
 ready() {

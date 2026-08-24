@@ -58,9 +58,25 @@ export DISPOSABLE_DB_PASSWORD DISPOSABLE_HOST_PORT DISPOSABLE_RUN_ID="$RUN_ID"
 IMAGES=$(docker compose --project-name "$PROJECT" --file "$COMPOSE" config --format json | \
   jq -c '{server:.services.server.image,valkey:.services.redis.image,database:.services.database.image}')
 CLEANED=0
+DRIVER_CONTAINER=''
+FORWARD_PID=''
+NETWORK="${PROJECT}_default"
+if [[ -n "${HOSTNAME:-}" ]]; then
+  candidate=$(docker inspect --format '{{.Id}}' "$HOSTNAME" 2>/dev/null || true)
+  if [[ -n "$candidate" && "$candidate" == "$HOSTNAME"* ]]; then
+    DRIVER_CONTAINER=$candidate
+  fi
+fi
 
 cleanup() {
   set +e
+  if [[ -n "$FORWARD_PID" ]]; then
+    kill "$FORWARD_PID" >/dev/null 2>&1
+    wait "$FORWARD_PID" >/dev/null 2>&1
+  fi
+  if [[ -n "$DRIVER_CONTAINER" ]]; then
+    docker network disconnect --force "$NETWORK" "$DRIVER_CONTAINER" >/dev/null 2>&1
+  fi
   docker compose --project-name "$PROJECT" --file "$COMPOSE" down \
     --volumes --remove-orphans >/dev/null 2>&1
   case "$WORKSPACE" in
@@ -86,6 +102,15 @@ read -r HOST_IP HOST_PORT < <(docker inspect --format \
   echo 'disposable server did not bind its reserved loopback port' >&2
   exit 1
 }
+if [[ -n "$DRIVER_CONTAINER" ]]; then
+  [[ $(docker network inspect --format \
+    '{{index .Labels "com.docker.compose.project"}}' "$NETWORK") == "$PROJECT" ]]
+  docker network connect "$NETWORK" "$DRIVER_CONTAINER"
+  SERVER_NAME=$(docker inspect --format '{{.Name}}' "$SERVER_CONTAINER" | sed 's#^/##')
+  python3 "$ROOT/scripts/loopback-forward.py" --listen-port "$HOST_PORT" \
+    --target-container "$SERVER_NAME" &
+  FORWARD_PID=$!
+fi
 ENDPOINT="http://127.0.0.1:$HOST_PORT"
 READY=0
 for _attempt in $(seq 1 120); do

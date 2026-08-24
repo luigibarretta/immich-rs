@@ -16,7 +16,22 @@ class LoopbackForwardTests(unittest.TestCase):
     def test_target_pattern_accepts_only_disposable_server_names(self) -> None:
         pattern = FORWARDER["TARGET_PATTERN"]
         self.assertIsNotNone(pattern.fullmatch("immich-rs-20260815T010203Z-42-deadbeef-server"))
+        self.assertIsNotNone(
+            pattern.fullmatch(
+                "immichrs-applephotos-20260824T180932Z-3094-460c937f-server-1"
+            )
+        )
+        self.assertIsNotNone(
+            pattern.fullmatch(
+                "immichrs-migration-source-20260824T180932Z-3094-460c937f-server-1"
+            )
+        )
         self.assertIsNone(pattern.fullmatch("production-immich"))
+        self.assertIsNone(
+            pattern.fullmatch(
+                "immichrs-production-20260824T180932Z-3094-460c937f-server-1"
+            )
+        )
         self.assertEqual(FORWARDER["TARGET_PORT"], 2283)
         self.assertEqual(FORWARDER["BUFFER_BYTES"], 65_536)
 

@@ -39,7 +39,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0020](ADR-0020-containerized-disposable-transport.md) | Containerized disposable transport | Superseded by ADR-0027 |
 | [0021](ADR-0021-google-takeout-read-only-foundation.md) | Google Takeout read-only foundation | Superseded by ADR-0022 |
 | [0022](ADR-0022-complete-google-takeout-read-only-planning.md) | Complete Google Takeout read-only planning | Superseded by ADR-0028 |
-| [0023](ADR-0023-apple-photos-read-only-planning.md) | Apple Photos export read-only planning | Accepted |
+| [0023](ADR-0023-apple-photos-read-only-planning.md) | Apple Photos export read-only planning | Superseded by ADR-0030 |
 | [0024](ADR-0024-read-only-immich-archive.md) | Read-only Immich archive | Superseded by ADR-0027 |
 | [0025](ADR-0025-native-release-candidate-pipeline.md) | Native release-candidate pipeline | Accepted |
 | [0026](ADR-0026-oci-container-and-layered-configuration.md) | OCI container and layered configuration | Accepted |
@@ -47,6 +47,8 @@ Run `scripts/check-adrs.sh` before committing.
 | [0028](ADR-0028-google-takeout-import.md) | Google Takeout import | Accepted |
 | [0029](ADR-0029-opt-in-production-compose.md) | Opt-in production Compose override | Accepted |
 | [0030](ADR-0030-apple-photos-import.md) | Apple Photos import | Accepted |
+| [0031](ADR-0031-picasa-import.md) | Picasa import | Accepted |
+| [0032](ADR-0032-immich-migration.md) | Immich-to-Immich migration | Accepted |
 
 ## Template
 

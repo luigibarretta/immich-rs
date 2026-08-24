@@ -19,8 +19,10 @@ services:
   server:
     image: ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa
     depends_on:
-      - database
-      - redis
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       DB_HOSTNAME: database
       DB_USERNAME: postgres

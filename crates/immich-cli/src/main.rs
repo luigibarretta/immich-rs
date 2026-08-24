@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod apple_photos;
+mod apple_upload_plan;
 mod apply_args;
 #[cfg(test)]
 mod apply_args_tests;
@@ -111,6 +112,15 @@ async fn run_plan(
             )?)
             .await
         }
+        Some("upload")
+            if arguments.get(1).and_then(|argument| argument.to_str()) == Some("apple-photos") =>
+        {
+            apple_upload_plan::run(import_plan_args::parse_apple_photos_upload(
+                &arguments[2..],
+                configuration,
+            )?)
+            .await
+        }
         Some("archive")
             if arguments.get(1).and_then(|argument| argument.to_str()) == Some("immich") =>
         {
@@ -121,7 +131,7 @@ async fn run_plan(
             .await
         }
         _ => Err(CliFailure::usage(
-            "plan supports folder, google-takeout, apple-photos, upload folder, upload google-takeout and archive immich",
+            "plan supports folder, google-takeout, apple-photos, upload folder, upload google-takeout, upload apple-photos and archive immich",
         )),
     }
 }
@@ -148,6 +158,6 @@ async fn run_apply(
 
 fn print_help() {
     println!(
-        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan upload google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] inspect upload-plan --plan <FILE>\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nRemote upload additionally requires --authorize-production-write, --confirm-plan-sha256,\n--expected-operations and --backup-reference. Production authorization flags are CLI-only.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace, trash or independent metadata-mutation command exists."
+        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan upload google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] inspect upload-plan --plan <FILE>\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nRemote upload additionally requires --authorize-production-write, --confirm-plan-sha256,\n--expected-operations and --backup-reference. Production authorization flags are CLI-only.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace, trash or independent metadata-mutation command exists."
     );
 }

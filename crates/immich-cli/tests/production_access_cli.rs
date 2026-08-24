@@ -81,6 +81,38 @@ fn remote_takeout_planning_requires_cli_acknowledgement_before_secret_loading()
 }
 
 #[test]
+fn remote_apple_planning_requires_cli_acknowledgement_before_secret_loading()
+-> Result<(), Box<dyn std::error::Error>> {
+    let rejected = command()
+        .args([
+            "plan",
+            "upload",
+            "apple-photos",
+            "--server",
+            "https://example.invalid",
+            ".",
+        ])
+        .output()?;
+    assert_eq!(rejected.status.code(), Some(USAGE_EXIT_CODE));
+    assert!(rejected.stdout.is_empty());
+
+    let acknowledged = command()
+        .args([
+            "plan",
+            "upload",
+            "apple-photos",
+            "--server",
+            "https://example.invalid",
+            "--authorize-production-read",
+            ".",
+        ])
+        .output()?;
+    assert_eq!(acknowledged.status.code(), Some(AUTHENTICATION_EXIT_CODE));
+    assert!(acknowledged.stdout.is_empty());
+    Ok(())
+}
+
+#[test]
 fn remote_archive_planning_requires_the_same_cli_acknowledgement()
 -> Result<(), Box<dyn std::error::Error>> {
     let rejected = command()

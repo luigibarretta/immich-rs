@@ -1,7 +1,10 @@
 use immich_rs_core::{
-    CancellationToken, UPLOAD_PLAN_SCHEMA_VERSION, UPLOAD_PLAN_SCHEMA_VERSION_V2,
+    CancellationToken, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UPLOAD_PLAN_SCHEMA_VERSION_V2,
 };
-use immich_rs_executor::{TakeoutImportConfig, dry_run_takeout_import, dry_run_upload};
+use immich_rs_executor::{
+    ApplePhotosImportConfig, TakeoutImportConfig, dry_run_apple_photos_import,
+    dry_run_takeout_import, dry_run_upload,
+};
 
 use crate::args::ApplyRequest;
 use crate::failure::CliFailure;
@@ -29,19 +32,33 @@ pub fn run(request: &ApplyRequest) -> Result<(), CliFailure> {
             output::write_json(&report, "dry-run report")
         }
         UPLOAD_PLAN_SCHEMA_VERSION_V2 => {
-            let config = TakeoutImportConfig {
-                source: request.takeout.clone(),
-                upload: request.config.clone(),
-            };
-            let report = dry_run_takeout_import(
-                &plan,
-                &request.inputs,
-                &request.checkpoint,
-                &config,
-                &cancellation,
-            )
+            let report = match plan.source.kind {
+                SourceKind::GoogleTakeout => dry_run_takeout_import(
+                    &plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &TakeoutImportConfig {
+                        source: request.takeout.clone(),
+                        upload: request.config.clone(),
+                    },
+                    &cancellation,
+                ),
+                SourceKind::ApplePhotos => dry_run_apple_photos_import(
+                    &plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &ApplePhotosImportConfig {
+                        source: request.apple.clone(),
+                        upload: request.config.clone(),
+                    },
+                    &cancellation,
+                ),
+                SourceKind::Folder => {
+                    return Err(CliFailure::usage("unsupported import source kind"));
+                }
+            }
             .map_err(CliFailure::from_executor)?;
-            output::write_json(&report, "Takeout dry-run report")
+            output::write_json(&report, "import dry-run report")
         }
         _ => Err(CliFailure::usage("unsupported upload plan schema")),
     }

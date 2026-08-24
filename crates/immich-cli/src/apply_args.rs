@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::time::Duration;
 
 use immich_rs_executor::UploadExecutionConfig;
-use immich_rs_sources::TakeoutScanConfig;
+use immich_rs_sources::{ApplePhotosScanConfig, TakeoutScanConfig};
 
 use crate::args::{self, ApplyRequest, ArchiveApplyRequest, ProductionWriteRequest};
 use crate::config::EffectiveConfig;
@@ -34,6 +34,7 @@ pub fn parse_upload(
     let mut production = ProductionOptions::default();
     let mut config = args::upload_config(effective);
     let mut takeout = args::takeout_config(effective);
+    let mut apple = args::apple_config(effective)?;
     let mut index = 0;
     while index < arguments.len() {
         if let Some(consumed) = common_scan_option(arguments, index, &mut config.scan)? {
@@ -45,6 +46,10 @@ pub fn parse_upload(
             continue;
         }
         if let Some(consumed) = takeout_option(arguments, index, &mut takeout)? {
+            index += consumed;
+            continue;
+        }
+        if let Some(consumed) = apple_option(arguments, index, &mut apple)? {
             index += consumed;
             continue;
         }
@@ -89,6 +94,11 @@ pub fn parse_upload(
         index += 2;
     }
     takeout.scan.clone_from(&config.scan);
+    apple.scan.clone_from(&config.scan);
+    apple.max_archives = takeout.max_archives;
+    apple.max_archive_entry_bytes = takeout.max_archive_entry_bytes;
+    apple.max_compression_ratio = takeout.max_compression_ratio;
+    apple.compression_ratio_grace_bytes = takeout.compression_ratio_grace_bytes;
     if dry_run && (server_from_cli || ca_from_cli) {
         return Err(CliFailure::usage(
             "dry-run does not accept server transport options",
@@ -106,6 +116,7 @@ pub fn parse_upload(
         dry_run,
         config,
         takeout,
+        apple,
         production,
         ca_certificate: if dry_run { None } else { ca_certificate },
     })
@@ -165,6 +176,24 @@ fn takeout_option(
         Some("--compression-ratio-grace-bytes") => {
             config.compression_ratio_grace_bytes =
                 args::u64_value(arguments, index, "--compression-ratio-grace-bytes")?;
+        }
+        _ => return Ok(None),
+    }
+    Ok(Some(2))
+}
+
+fn apple_option(
+    arguments: &[OsString],
+    index: usize,
+    config: &mut ApplePhotosScanConfig,
+) -> Result<Option<usize>, CliFailure> {
+    match arguments[index].to_str() {
+        Some("--album-mode") => {
+            config.album_mode =
+                args::album_mode(&args::string_value(arguments, index, "--album-mode")?)?;
+        }
+        Some("--album-path-joiner") => {
+            config.album_path_joiner = args::string_value(arguments, index, "--album-path-joiner")?;
         }
         _ => return Ok(None),
     }

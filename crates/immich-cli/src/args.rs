@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use immich_rs_executor::{
-    ArchivePlanningConfig, ArchiveSelection, TakeoutImportConfig, UploadExecutionConfig,
+    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, TakeoutImportConfig,
+    UploadExecutionConfig,
 };
 use immich_rs_sources::{AlbumMode, ApplePhotosScanConfig, FolderScanConfig, TakeoutScanConfig};
 
@@ -44,6 +45,15 @@ pub struct UploadTakeoutRequest {
     pub ca_certificate: Option<PathBuf>,
 }
 
+pub struct UploadApplePhotosRequest {
+    pub inputs: Vec<PathBuf>,
+    pub label: String,
+    pub config: ApplePhotosImportConfig,
+    pub server: String,
+    pub production_read: bool,
+    pub ca_certificate: Option<PathBuf>,
+}
+
 pub struct ApplyRequest {
     pub plan: PathBuf,
     pub inputs: Vec<PathBuf>,
@@ -52,6 +62,7 @@ pub struct ApplyRequest {
     pub dry_run: bool,
     pub config: UploadExecutionConfig,
     pub takeout: TakeoutScanConfig,
+    pub apple: ApplePhotosScanConfig,
     pub production: Option<ProductionWriteRequest>,
     pub ca_certificate: Option<PathBuf>,
 }

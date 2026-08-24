@@ -65,12 +65,14 @@ destination = "/output"
 
 `scan.source` supplies a folder input and is also the one-input fallback for
 Takeout or Apple planning. `scan.inputs` supplies the ordered set for an export
-adapter, including `plan upload google-takeout`. Positional CLI inputs replace
-the complete configured input set. `upload.source` overrides `scan.source`
+adapter, including `plan upload google-takeout` and `plan upload apple-photos`.
+Positional CLI inputs replace the complete configured input set.
+`upload.source` overrides `scan.source`
 only for schema-v1 folder apply. Repeated `--input` values or
 `IMMICH_RS_INPUTS_JSON` select the exact directory or split-ZIP set for
-schema-v2 Takeout apply. Upload execution limits bind both the server-aware
-plan and its source-aware execution.
+schema-v2 Takeout or Apple apply. Apple apply additionally binds
+`apple_photos.album_mode` and `apple_photos.album_path_joiner`. Upload execution
+limits bind both the server-aware plan and its source-aware execution.
 
 ## Environment matrix
 

@@ -290,6 +290,28 @@ The paired benchmark and cleanup gate are green in
 on SHA `4edae0365ac5137a2ee99d216755d8e3693cf9c8`; raw evidence and aggregate
 claims are committed and recalculated by push CI.
 
-Apple Photos apply remains a later vertical. No delete, replace, trash, tag,
-people, stack or independent metadata/album maintenance mutation is
-authorized.
+Apple Photos apply is implemented in the following separately gated vertical.
+No delete, replace, trash, tag, people, stack or independent metadata/album
+maintenance mutation is authorized.
+
+## Phase 9 — Apple Photos import
+
+ADR-0030 authorizes Apple Photos/iCloud import without changing the Phase 4
+preserve-all scan contract. The implementation is complete for synthetic local
+gates:
+
+- directory and bounded split-ZIP scans retain ephemeral native locators;
+- `upload-plan-v2` binds Apple source configuration, transport timestamps,
+  XMP, Live Photo roles and deterministic album effects;
+- dry-run rescans offline without credentials, checkpoints or HTTP capability;
+- apply selects the source adapter from the immutable plan and reuses bounded
+  one-entry staging, capped retries and effect-level `checkpoint-v2` resume;
+- source or configuration drift fails before mutation;
+- no Apple JSON is interpreted as authorization for independent metadata
+  mutation.
+
+The Phase 9 gate is **not yet passed**. It still requires an exact disposable
+Immich apply/resume/duplicate cleanup run, pinned black-box `from-icloud`
+differential evidence, comparable raw benchmarks and an explicitly authorized
+personal Apple export shadow run. No Apple performance or production-readiness
+claim is permitted before those artifacts exist.

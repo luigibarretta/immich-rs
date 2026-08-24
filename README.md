@@ -72,6 +72,14 @@ checksum verification, atomic files and idempotent resume. See the
 [Phase 4 matrix](docs/compatibility/phase4-apple-photos.md) and
 [Phase 5 matrix](docs/compatibility/phase5-archive.md).
 
+The first Apple Photos import implementation now binds that read-only output
+to `upload-plan-v2`, preserves source transport timestamps, verifies directory
+or split-ZIP inputs offline and reuses the bounded effect-level import engine.
+Synthetic unit and CLI gates are green; the disposable-server, black-box
+`from-icloud` and authorized personal-export gates remain pending and no
+performance claim is made. See the
+[Apple import matrix](docs/compatibility/phase9-apple-photos-import.md).
+
 The expanded synthetic image/XMP, video and live-photo matrix and its paired
 raw upload benchmark are verified on implementation SHA
 `3ed13d3293baf197fa5a21e624a828c201d7b763`: Gitea benchmark
@@ -84,9 +92,11 @@ is green and published both reports. Evidence enforcement commit
 
 No supported release is published yet. Phase 7 permits a source-built client
 to use the proven read-only archive and immutable folder uploader against a
-remote Immich v3.1.x HTTPS endpoint. Phase 8 extends that boundary only to
-plan-bound Google Takeout uploads, normalized metadata and albums; Apple apply,
-delete, replace, trash and independent maintenance remain unavailable. The
+remote Immich v3.1.x HTTPS endpoint. Phase 8 extends that boundary to
+plan-bound Google Takeout uploads, normalized metadata and albums. Apple apply
+is implemented but remains pre-release until its disposable and differential
+gates pass; delete, replace, trash and independent maintenance remain
+unavailable. The
 Phase 7 synthetic gate is green in
 Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
 on implementation SHA `db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`;
@@ -144,6 +154,8 @@ five-target rehearsal. No RC is published yet.
   against the pinned black-box oracle;
 - Apple Photos directory or split-ZIP planning with preserve-all variants,
   XMP, Live Photos, known-noise diagnostics and explicit album modes;
+- immutable Apple Photos `upload-plan-v2`, offline source-aware dry-run,
+  one-entry ZIP staging and plan-selected checkpointed import execution;
 - read-only Immich inventory and original-byte archive with immutable
   `archive-manifest-v1`, atomic writes and verified idempotent resume;
 - strict schema-v1 TOML and `IMMICH_RS_*` configuration with deterministic
@@ -237,6 +249,25 @@ cargo run --locked --release -p immich-rs-cli -- \
   plan apple-photos --album-mode folder /path/to/export-or-icloud-part.zip
 ```
 
+Bind the same export to an authorized disposable server, inspect it and verify
+it offline before apply:
+
+```bash
+IMMICH_RS_API_KEY='<disposable-key>' \
+  immich-rs plan upload apple-photos \
+  --server http://127.0.0.1:2283 --album-mode folder \
+  /path/to/export-or-icloud-part.zip > apple-upload-plan.json
+immich-rs inspect upload-plan --plan apple-upload-plan.json
+immich-rs apply upload --dry-run --plan apple-upload-plan.json \
+  --source /path/to/export-or-icloud-part.zip \
+  --album-mode folder --checkpoint apple-checkpoint.sqlite
+```
+
+For split ZIP downloads, repeat `--input` during apply. The immutable plan
+selects the Apple adapter; a caller cannot reinterpret it as folder or Takeout
+input. Filesystem or ZIP timestamps are transport fields only and are never
+promoted to normalized capture metadata.
+
 Archive originals from an isolated loopback Immich instance:
 
 ```bash
@@ -314,8 +345,8 @@ environment variables or Compose. See the
 - Media are never buffered as whole files; configured limits fail closed.
 - Source-only folder, Takeout and Apple planners plus upload dry-run cannot
   construct an HTTP client or mutation capability. Server-bound upload
-  planners can only construct a read/probe capability; Takeout metadata and
-  album methods exist only on the separately authorized import client.
+  planners can only construct a read/probe capability; Takeout and Apple
+  metadata/album methods exist only on the separately authorized import client.
 - Disposable transport accepts only literal loopback origins. Production
   transport accepts only verified remote HTTPS and requires explicit CLI-only
   read authorization; upload also requires the exact write confirmation set.
@@ -347,6 +378,8 @@ operator binding are recorded in the
 [Phase 7 matrix](docs/compatibility/phase7-production-https.md). Source-aware
 Takeout execution is recorded in the
 [Phase 8 matrix](docs/compatibility/phase8-google-takeout-import.md).
+Apple execution status is recorded separately in the
+[Apple import matrix](docs/compatibility/phase9-apple-photos-import.md).
 
 ## Baselines
 
@@ -357,8 +390,8 @@ Takeout execution is recorded in the
 | Rust toolchain | 1.88.0, edition 2024 |
 | License | AGPL-3.0-only |
 | Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for Takeout; `normalized-plan-v3` for Apple Photos |
-| Upload plan | `upload-plan-v1` for folder apply; `upload-plan-v2` for Google Takeout apply |
-| Upload checkpoint | `checkpoint-v1` for folder upload; effect-level `checkpoint-v2` for Takeout import |
+| Upload plan | `upload-plan-v1` for folder apply; `upload-plan-v2` for Google Takeout and Apple Photos apply |
+| Upload checkpoint | `checkpoint-v1` for folder upload; effect-level `checkpoint-v2` for source-aware imports |
 | Read-only archive | `archive-manifest-v1`; `archive-apply-report-v1` |
 | Disposable Immich | exact v3.1.x release, currently v3.1.0 |
 

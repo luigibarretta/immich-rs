@@ -1,10 +1,11 @@
 use immich_rs_client::{ImmichReadClient, NegotiatedServer, upload_plan_sha256};
 use immich_rs_core::{
-    CancellationToken, ProductionWriteConfirmation, UPLOAD_PLAN_SCHEMA_VERSION,
+    CancellationToken, ProductionWriteConfirmation, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION,
     UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadPlan,
 };
 use immich_rs_executor::{
-    TakeoutImportConfig, apply_production_takeout_import, apply_production_upload,
+    ApplePhotosImportConfig, TakeoutImportConfig, apply_apple_photos_import,
+    apply_production_apple_photos_import, apply_production_takeout_import, apply_production_upload,
     apply_takeout_import, apply_upload,
 };
 
@@ -42,7 +43,7 @@ pub async fn run(request: ApplyRequest) -> Result<(), CliFailure> {
         return Err(CliFailure::usage("server does not match upload plan"));
     }
     if plan.schema_version == UPLOAD_PLAN_SCHEMA_VERSION_V2 {
-        return run_takeout(
+        return run_import(
             request,
             &plan,
             read_client,
@@ -128,7 +129,7 @@ fn production_confirmation(
         .ok_or_else(|| CliFailure::usage("production confirmation does not match upload plan"))
 }
 
-async fn run_takeout(
+async fn run_import(
     request: ApplyRequest,
     plan: &UploadPlan,
     read_client: ImmichReadClient,
@@ -136,40 +137,78 @@ async fn run_takeout(
     production: Option<ProductionWriteConfirmation>,
     cancellation: &CancellationToken,
 ) -> Result<(), CliFailure> {
-    let config = TakeoutImportConfig {
-        source: request.takeout,
-        upload: request.config,
-    };
-    let report = if let Some(confirmation) = production {
-        let client = read_client
-            .authorize_production_import(negotiated, plan, &confirmation)
-            .map_err(CliFailure::from_client)?;
-        apply_production_takeout_import(
-            plan,
-            &request.inputs,
-            &request.checkpoint,
-            &config,
-            &client,
-            cancellation,
-        )
-        .await
-    } else {
-        let client = read_client
-            .authorize_import(negotiated)
-            .map_err(CliFailure::from_client)?;
-        apply_takeout_import(
-            plan,
-            &request.inputs,
-            &request.checkpoint,
-            &config,
-            &client,
-            cancellation,
-        )
-        .await
+    let report = match plan.source.kind {
+        SourceKind::GoogleTakeout => {
+            let config = TakeoutImportConfig {
+                source: request.takeout,
+                upload: request.config,
+            };
+            if let Some(confirmation) = production {
+                let client = read_client
+                    .authorize_production_import(negotiated, plan, &confirmation)
+                    .map_err(CliFailure::from_client)?;
+                apply_production_takeout_import(
+                    plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &config,
+                    &client,
+                    cancellation,
+                )
+                .await
+            } else {
+                let client = read_client
+                    .authorize_import(negotiated)
+                    .map_err(CliFailure::from_client)?;
+                apply_takeout_import(
+                    plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &config,
+                    &client,
+                    cancellation,
+                )
+                .await
+            }
+        }
+        SourceKind::ApplePhotos => {
+            let config = ApplePhotosImportConfig {
+                source: request.apple,
+                upload: request.config,
+            };
+            if let Some(confirmation) = production {
+                let client = read_client
+                    .authorize_production_import(negotiated, plan, &confirmation)
+                    .map_err(CliFailure::from_client)?;
+                apply_production_apple_photos_import(
+                    plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &config,
+                    &client,
+                    cancellation,
+                )
+                .await
+            } else {
+                let client = read_client
+                    .authorize_import(negotiated)
+                    .map_err(CliFailure::from_client)?;
+                apply_apple_photos_import(
+                    plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &config,
+                    &client,
+                    cancellation,
+                )
+                .await
+            }
+        }
+        SourceKind::Folder => return Err(CliFailure::usage("unsupported import source kind")),
     }
     .map_err(CliFailure::from_executor)?;
     if report.cancelled {
         return Err(CliFailure::cancelled());
     }
-    output::write_json(&report, "Takeout apply report")
+    output::write_json(&report, "import apply report")
 }

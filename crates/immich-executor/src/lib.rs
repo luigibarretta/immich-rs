@@ -17,7 +17,10 @@ mod import_planner;
 mod import_staging;
 mod import_staging_fs;
 mod journal;
+mod migration_apply;
+mod migration_execution_plan;
 mod migration_plan;
+mod migration_staging;
 mod operation;
 mod picasa_import;
 mod planner;
@@ -36,6 +39,7 @@ pub use import_apply::{
 pub use import_config::{ApplePhotosImportConfig, PicasaImportConfig, TakeoutImportConfig};
 pub use import_dry_run::{dry_run_apple_photos_import, dry_run_takeout_import};
 pub use import_planner::{create_apple_photos_upload_plan, create_takeout_upload_plan};
+pub use migration_apply::{MigrationApplyContext, apply_migration, dry_run_migration};
 pub use migration_plan::{MigrationPlanningConfig, create_migration_plan};
 pub use picasa_import::{
     apply_picasa_import, apply_production_picasa_import, create_picasa_upload_plan,

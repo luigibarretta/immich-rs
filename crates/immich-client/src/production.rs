@@ -1,12 +1,26 @@
 use std::fmt::{self, Debug, Formatter};
 
-use immich_rs_core::{UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadPlan};
+use immich_rs_core::{
+    MIGRATION_PLAN_SCHEMA_VERSION, MigrationPlan, UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadPlan,
+};
 use sha2::{Digest, Sha256};
 
 use crate::{ClientError, ClientErrorClass, ImmichImportClient, ImmichUploadClient};
 
 /// SHA-256 of the canonical compact JSON representation of an upload plan.
 pub fn upload_plan_sha256(plan: &UploadPlan) -> Result<String, ClientError> {
+    plan.validate()
+        .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
+    let bytes =
+        serde_json::to_vec(plan).map_err(|_| ClientError::new(ClientErrorClass::Protocol))?;
+    Ok(format!("{:x}", Sha256::digest(bytes)))
+}
+
+/// SHA-256 of the canonical compact JSON representation of a migration plan.
+pub fn migration_plan_sha256(plan: &MigrationPlan) -> Result<String, ClientError> {
+    if plan.schema_version != MIGRATION_PLAN_SCHEMA_VERSION {
+        return Err(ClientError::new(ClientErrorClass::Compatibility));
+    }
     plan.validate()
         .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
     let bytes =

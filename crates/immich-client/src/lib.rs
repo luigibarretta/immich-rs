@@ -25,7 +25,7 @@ pub use migration::{
 };
 pub use production::{
     ProductionImmichImportClient, ProductionImmichUploadClient, ProductionImportAuthorization,
-    ProductionUploadAuthorization, upload_plan_sha256,
+    ProductionUploadAuthorization, migration_plan_sha256, upload_plan_sha256,
 };
 pub use read::{ClientConfig, ImmichReadClient, NegotiatedServer};
 pub use tls::TlsRootCertificates;

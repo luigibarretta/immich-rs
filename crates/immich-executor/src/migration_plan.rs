@@ -11,10 +11,10 @@ use immich_rs_core::{
 use sha1::{Digest as _, Sha1};
 use sha2::Sha256;
 
-use crate::{ExecutorError, ExecutorErrorClass};
+use crate::{ExecutorError, ExecutorErrorClass, UploadExecutionConfig};
 
 /// Resource limits bound into an Immich-to-Immich migration plan.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MigrationPlanningConfig {
     /// Remote inventory and album limits.
     pub inventory: MigrationListConfig,
@@ -22,6 +22,8 @@ pub struct MigrationPlanningConfig {
     pub max_asset_bytes: u64,
     /// Maximum accepted bytes across the source inventory.
     pub max_total_bytes: u64,
+    /// Destination upload verification, concurrency and retry policy.
+    pub upload: UploadExecutionConfig,
 }
 
 impl Default for MigrationPlanningConfig {
@@ -30,6 +32,7 @@ impl Default for MigrationPlanningConfig {
             inventory: MigrationListConfig::default(),
             max_asset_bytes: 1024_u64.pow(4),
             max_total_bytes: 16 * 1024_u64.pow(4),
+            upload: UploadExecutionConfig::default(),
         }
     }
 }
@@ -37,30 +40,34 @@ impl Default for MigrationPlanningConfig {
 impl MigrationPlanningConfig {
     /// Validate all migration inventory and byte limits.
     pub fn validate(self) -> Result<Self, ExecutorError> {
+        self.upload.validate()?;
         let inventory = self.inventory;
         let valid_inventory = matches!(inventory.page_size, 1..=1_000)
             && inventory.max_assets > 0
             && inventory.max_albums > 0
             && inventory.max_album_memberships > 0;
         (valid_inventory
+            && self.upload.concurrency == 1
             && self.max_asset_bytes > 0
             && self.max_total_bytes >= self.max_asset_bytes)
             .then_some(self)
             .ok_or_else(|| ExecutorError::new(ExecutorErrorClass::InvalidConfiguration))
     }
 
-    fn identity(self) -> String {
+    pub(crate) fn identity(&self) -> Result<String, ExecutorError> {
         let inventory = self.inventory;
+        let upload = self.upload.identity_sha256()?;
         let value = format!(
-            "migration-config-v1\0{}\0{}\0{}\0{}\0{}\0{}",
+            "migration-config-v1\0{}\0{}\0{}\0{}\0{}\0{}\0{}",
             inventory.page_size,
             inventory.max_assets,
             inventory.max_albums,
             inventory.max_album_memberships,
             self.max_asset_bytes,
-            self.max_total_bytes
+            self.max_total_bytes,
+            upload
         );
-        format!("{:x}", Sha256::digest(value.as_bytes()))
+        Ok(format!("{:x}", Sha256::digest(value.as_bytes())))
     }
 }
 
@@ -172,7 +179,7 @@ pub fn assemble_migration_plan(
         source_server,
         destination_server,
         source_fingerprint_sha256,
-        configuration_sha256: config.identity(),
+        configuration_sha256: config.identity()?,
         assets,
         albums,
         summary,

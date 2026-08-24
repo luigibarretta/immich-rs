@@ -4,10 +4,12 @@ use immich_rs_client::{
     MigrationListConfig, RemoteMigrationAsset, RemoteMigrationInventory, RemoteOwnedAlbum,
 };
 use immich_rs_core::{
-    GeoCoordinates, MediaKind, MigrationServer, NormalizedMetadata, ServerCompatibility,
-    ServerVersion, UploadRole,
+    CancellationToken, GeoCoordinates, MediaKind, MigrationServer, NormalizedMetadata,
+    ServerCompatibility, ServerVersion, SourceKind, UploadRole,
 };
 
+use crate::migration_apply::dry_run_migration;
+use crate::migration_execution_plan::execution_plan;
 use crate::migration_plan::{MigrationPlanningConfig, assemble_migration_plan};
 
 fn server(seed: char) -> MigrationServer {
@@ -90,6 +92,23 @@ fn migration_plan_binds_bytes_live_photo_and_owned_album() -> Result<(), Box<dyn
         plan.assets[1].role,
         UploadRole::LivePhotoVideo { .. }
     ));
+    let execution = execution_plan(&plan)?;
+    assert_eq!(execution.source.kind, SourceKind::Immich);
+    assert_eq!(
+        execution.operations[0]
+            .normalized_metadata
+            .as_ref()
+            .map(|value| value.albums.len()),
+        Some(1)
+    );
+    let dry_run = dry_run_migration(
+        &plan,
+        &MigrationPlanningConfig::default(),
+        &CancellationToken::default(),
+    )?;
+    assert!(dry_run.dry_run);
+    assert_eq!(dry_run.would_upload, 2);
+    assert_eq!(dry_run.would_create_albums, 1);
     plan.validate()?;
     Ok(())
 }
@@ -117,6 +136,7 @@ fn migration_plan_rejects_ambiguous_live_photos_and_limits() {
         inventory: MigrationListConfig::default(),
         max_asset_bytes: 2,
         max_total_bytes: 1,
+        upload: crate::UploadExecutionConfig::default(),
     };
     assert!(invalid.validate().is_err());
 }

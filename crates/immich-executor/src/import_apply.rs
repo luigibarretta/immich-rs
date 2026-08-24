@@ -231,7 +231,7 @@ fn rescan(
     Ok(resolved)
 }
 
-fn ordered_operations(plan: &UploadPlan) -> Result<Vec<&UploadOperation>, ExecutorError> {
+pub fn ordered_operations(plan: &UploadPlan) -> Result<Vec<&UploadOperation>, ExecutorError> {
     let mut groups = Vec::<Vec<&UploadOperation>>::new();
     for operation in &plan.operations {
         match &operation.role {
@@ -256,7 +256,7 @@ fn ordered_operations(plan: &UploadPlan) -> Result<Vec<&UploadOperation>, Execut
     Ok(groups.into_iter().flatten().collect())
 }
 
-fn initial_asset_ids(plan: &UploadPlan, state: &ImportState) -> BTreeMap<String, String> {
+pub fn initial_asset_ids(plan: &UploadPlan, state: &ImportState) -> BTreeMap<String, String> {
     plan.operations
         .iter()
         .filter_map(|operation| {
@@ -267,7 +267,7 @@ fn initial_asset_ids(plan: &UploadPlan, state: &ImportState) -> BTreeMap<String,
         .collect()
 }
 
-fn live_video_id<'a>(
+pub fn live_video_id<'a>(
     operation: &UploadOperation,
     asset_ids: &'a BTreeMap<String, String>,
 ) -> Option<&'a str> {
@@ -279,7 +279,7 @@ fn live_video_id<'a>(
     }
 }
 
-fn record_asset(
+pub fn record_asset(
     journal: &mut ImportJournal,
     operation: &UploadOperation,
     result: OperationResult,
@@ -333,7 +333,7 @@ fn record_completed_asset(
     Ok(outcome.asset_id)
 }
 
-fn append_asset_failure(
+pub fn append_asset_failure(
     journal: &mut ImportJournal,
     operation: &UploadOperation,
     report: &mut ImportApplyReport,
@@ -348,7 +348,7 @@ fn append_asset_failure(
     Ok(())
 }
 
-fn apply_report(plan: &UploadPlan) -> ImportApplyReport {
+pub fn apply_report(plan: &UploadPlan) -> ImportApplyReport {
     ImportApplyReport {
         schema_version: IMPORT_APPLY_REPORT_SCHEMA_VERSION,
         dry_run: false,

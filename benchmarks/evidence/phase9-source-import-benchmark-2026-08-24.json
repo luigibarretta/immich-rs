@@ -1,0 +1,389 @@
+{
+  "adapter": "apple-photos",
+  "aggregate": {
+    "immich_go": {
+      "characters_read": {
+        "max": 134231699,
+        "median": 134230629.5,
+        "min": 134230568,
+        "p95": 134231699
+      },
+      "characters_written": {
+        "max": 67159266,
+        "median": 67150980.5,
+        "min": 67149843,
+        "p95": 67159266
+      },
+      "peak_open_file_descriptors": {
+        "max": 20,
+        "median": 19,
+        "min": 19,
+        "p95": 20
+      },
+      "peak_rss_bytes": {
+        "max": 16592896,
+        "median": 16535552,
+        "min": 15134720,
+        "p95": 16592896
+      },
+      "storage_bytes_read": {
+        "max": 0,
+        "median": 0,
+        "min": 0,
+        "p95": 0
+      },
+      "storage_bytes_written": {
+        "max": 90112,
+        "median": 36864,
+        "min": 24576,
+        "p95": 90112
+      },
+      "system_cpu_seconds": {
+        "max": 0.11332999999999993,
+        "median": 0.10579600000000017,
+        "min": 0.08373800000000009,
+        "p95": 0.11332999999999993
+      },
+      "user_cpu_seconds": {
+        "max": 0.12408999999999992,
+        "median": 0.11621800000000004,
+        "min": 0.09248199999999995,
+        "p95": 0.12408999999999992
+      },
+      "wall_time_seconds": {
+        "max": 93.021255989,
+        "median": 33.7883571095,
+        "min": 24.704815277,
+        "p95": 93.021255989
+      }
+    },
+    "immich_rs": {
+      "characters_read": {
+        "max": 201378811,
+        "median": 201378807,
+        "min": 201378807,
+        "p95": 201378811
+      },
+      "characters_written": {
+        "max": 67312651,
+        "median": 67312335,
+        "min": 67311319,
+        "p95": 67312651
+      },
+      "peak_open_file_descriptors": {
+        "max": 11,
+        "median": 11,
+        "min": 11,
+        "p95": 11
+      },
+      "peak_rss_bytes": {
+        "max": 11403264,
+        "median": 11094016,
+        "min": 10723328,
+        "p95": 11403264
+      },
+      "storage_bytes_read": {
+        "max": 8192,
+        "median": 0,
+        "min": 0,
+        "p95": 8192
+      },
+      "storage_bytes_written": {
+        "max": 303104,
+        "median": 290816,
+        "min": 290816,
+        "p95": 303104
+      },
+      "system_cpu_seconds": {
+        "max": 0.11280899999999994,
+        "median": 0.09347300000000003,
+        "min": 0.06440600000000002,
+        "p95": 0.11280899999999994
+      },
+      "user_cpu_seconds": {
+        "max": 0.20360299999999998,
+        "median": 0.1761165,
+        "min": 0.1506400000000001,
+        "p95": 0.20360299999999998
+      },
+      "wall_time_seconds": {
+        "max": 0.769765198,
+        "median": 0.7290862645,
+        "min": 0.6938126330000001,
+        "p95": 0.769765198
+      }
+    }
+  },
+  "claims": [
+    "On this exact 67,108,864-byte eight-asset synthetic apple-photos import, immich-rs median wall time was 97.8% lower than immich-go v0.32.0; this is not a large-library, WAN or production claim."
+  ],
+  "manifest": {
+    "environment": {
+      "architecture": "x86_64",
+      "hostname": "<REDACTED_HOST>",
+      "kernel": "6.12.101+deb13-cloud-amd64",
+      "locale": "C.UTF-8",
+      "logical_cpus": 10,
+      "system": "Linux",
+      "timezone": "UTC"
+    },
+    "fixture": {
+      "album_mutations": 0,
+      "concurrency": 1,
+      "corpus_sha256": "d0c52a6f70ea3bd58f1f5d5fe013ae74d4fee6199c4544b18a7d8b152ea00cb0",
+      "id": "synthetic-source-import-64m",
+      "kind": "synthetic",
+      "license": "CC0-1.0",
+      "manifest_sha256": "20f7ba19792221abf76034e44efb69fdac676bdf33700c947f05db8aaf3394ce",
+      "media_assets": 8,
+      "media_bytes": 67108864,
+      "metadata_updates": 0
+    },
+    "methodology": {
+      "compatibility_intersection": "uploads only; albums and metadata disabled",
+      "concurrency": 1,
+      "order": "alternating within pairs",
+      "pairing": "fresh isolated owner per tool on one disposable server and one corpus",
+      "percentiles": "nearest-rank p95 over retained samples",
+      "samples": 6,
+      "scope": "complete plan plus import; setup and probes excluded",
+      "warmups": 2
+    },
+    "source_revision": "f8c13eb4d9c7cfab968b1355004ae403a146d0f9",
+    "tools": {
+      "immich_go": {
+        "archive": "immich-go_Linux_x86_64.tar.gz",
+        "archive_sha256": "6e2ad86bafdadb9466d6515de7cb882726c0aea1a21d51164dff361d7d480a97",
+        "binary_sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "license": "AGPL-3.0",
+        "name": "immich-go",
+        "sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "upstream_commit": "f7d19fce34acd4884ea2c02fc3025706a060afdf",
+        "version": "0.32.0"
+      },
+      "immich_rs": {
+        "sha256": "9160b0b05d50419a1aa30adc33fa887955033bbfdc9b501ffe3b8feb127f584b",
+        "version": "immich-rs 0.0.0"
+      }
+    }
+  },
+  "raw_samples": [
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 134230611,
+        "characters_written": 67149869,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 19,
+        "peak_rss_bytes": 16551936,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 24576,
+        "system_cpu_seconds": 0.11332999999999993,
+        "user_cpu_seconds": 0.096835,
+        "wall_time_seconds": 24.825660617
+      },
+      "immich_rs": {
+        "characters_read": 201378807,
+        "characters_written": 67311319,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 10723328,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 303104,
+        "system_cpu_seconds": 0.06440600000000002,
+        "user_cpu_seconds": 0.20360299999999998,
+        "wall_time_seconds": 0.7371020180000001
+      },
+      "sample": 0
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 134231699,
+        "characters_written": 67159266,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 19,
+        "peak_rss_bytes": 15134720,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 90112,
+        "system_cpu_seconds": 0.11168,
+        "user_cpu_seconds": 0.12408999999999992,
+        "wall_time_seconds": 93.021255989
+      },
+      "immich_rs": {
+        "characters_read": 201378807,
+        "characters_written": 67312471,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11001856,
+        "storage_bytes_read": 8192,
+        "storage_bytes_written": 290816,
+        "system_cpu_seconds": 0.08950100000000005,
+        "user_cpu_seconds": 0.17391200000000007,
+        "wall_time_seconds": 0.6938126330000001
+      },
+      "sample": 1
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 134231486,
+        "characters_written": 67158470,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 20,
+        "peak_rss_bytes": 16592896,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 86016,
+        "system_cpu_seconds": 0.10590300000000019,
+        "user_cpu_seconds": 0.12257400000000018,
+        "wall_time_seconds": 88.084147707
+      },
+      "immich_rs": {
+        "characters_read": 201378811,
+        "characters_written": 67312579,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11403264,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 290816,
+        "system_cpu_seconds": 0.11280899999999994,
+        "user_cpu_seconds": 0.17832099999999995,
+        "wall_time_seconds": 0.769765198
+      },
+      "sample": 2
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 134230637,
+        "characters_written": 67149843,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 19,
+        "peak_rss_bytes": 16531456,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 24576,
+        "system_cpu_seconds": 0.09127299999999994,
+        "user_cpu_seconds": 0.1098619999999999,
+        "wall_time_seconds": 24.704815277
+      },
+      "immich_rs": {
+        "characters_read": 201378807,
+        "characters_written": 67312651,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 10911744,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 290816,
+        "system_cpu_seconds": 0.10059399999999985,
+        "user_cpu_seconds": 0.15444999999999998,
+        "wall_time_seconds": 0.7657637310000001
+      },
+      "sample": 3
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 134230622,
+        "characters_written": 67149848,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 19,
+        "peak_rss_bytes": 15241216,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 28672,
+        "system_cpu_seconds": 0.10568900000000014,
+        "user_cpu_seconds": 0.09248199999999995,
+        "wall_time_seconds": 24.706410145
+      },
+      "immich_rs": {
+        "characters_read": 201378807,
+        "characters_written": 67311331,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11186176,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 290816,
+        "system_cpu_seconds": 0.097445,
+        "user_cpu_seconds": 0.1506400000000001,
+        "wall_time_seconds": 0.7176626229999999
+      },
+      "sample": 4
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 134230568,
+        "characters_written": 67152092,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 20,
+        "peak_rss_bytes": 16539648,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 45056,
+        "system_cpu_seconds": 0.08373800000000009,
+        "user_cpu_seconds": 0.12383699999999997,
+        "wall_time_seconds": 42.751053602
+      },
+      "immich_rs": {
+        "characters_read": 201378807,
+        "characters_written": 67312199,
+        "operations": {
+          "assets": 8,
+          "media_bytes": 67108864,
+          "retries": 0
+        },
+        "peak_open_file_descriptors": 11,
+        "peak_rss_bytes": 11280384,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 290816,
+        "system_cpu_seconds": 0.07553599999999983,
+        "user_cpu_seconds": 0.1919080000000002,
+        "wall_time_seconds": 0.7210705110000001
+      },
+      "sample": 5
+    }
+  ],
+  "schema": "source-import-benchmark-v1"
+}

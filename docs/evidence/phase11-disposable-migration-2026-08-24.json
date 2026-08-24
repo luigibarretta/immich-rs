@@ -1,0 +1,181 @@
+{
+  "schema": "immich-migration-disposable-v1",
+  "commit_sha": "88d9a59d1ca1d0cd92b3ef28349ff4b95a5f8095",
+  "binary_sha256": "9160b0b05d50419a1aa30adc33fa887955033bbfdc9b501ffe3b8feb127f584b",
+  "fixture": {
+    "kind": "synthetic",
+    "license": "CC0-1.0",
+    "manifest_sha256": "ba1e5a34490aff9e6b29f673731503f4f86857b97c80ec3d8f32d098efbf672c"
+  },
+  "environment": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "docker": "29.7.2",
+    "compose": "5.4.0-2"
+  },
+  "images": {
+    "server": "ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa",
+    "valkey": "docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411",
+    "database": "ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23"
+  },
+  "server_version": {
+    "major": 3,
+    "minor": 1,
+    "patch": 0,
+    "prerelease": null
+  },
+  "isolation": {
+    "instances": 2,
+    "published_loopback": true,
+    "production_endpoint": false,
+    "production_credentials": false
+  },
+  "plan": {
+    "sha256": "ac4fe58e4622eae0f8db8eac00aa77f709d68d880941c2632c50c91c302803f8",
+    "summary": {
+      "assets": 3,
+      "media_bytes": 214,
+      "metadata_updates": 3,
+      "album_creates": 1,
+      "album_memberships": 1,
+      "max_mutations": 8
+    },
+    "source_byte_identical_after_apply": true
+  },
+  "reports": {
+    "dry_run": {
+      "schema_version": 1,
+      "dry_run": true,
+      "planned": {
+        "operations": 3,
+        "media_bytes": 214,
+        "xmp_sidecars": 0,
+        "live_photo_pairs": 0,
+        "metadata_updates": 3,
+        "album_creates": 1,
+        "album_memberships": 1,
+        "max_mutations": 8
+      },
+      "would_upload": 3,
+      "would_update_metadata": 3,
+      "would_create_albums": 1,
+      "would_add_album_memberships": 1,
+      "created": 0,
+      "duplicate": 0,
+      "metadata_updated": 0,
+      "albums_created": 0,
+      "albums_reused": 0,
+      "album_memberships_updated": 0,
+      "resumed_effects": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "first": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": {
+        "operations": 3,
+        "media_bytes": 214,
+        "xmp_sidecars": 0,
+        "live_photo_pairs": 0,
+        "metadata_updates": 3,
+        "album_creates": 1,
+        "album_memberships": 1,
+        "max_mutations": 8
+      },
+      "would_upload": 0,
+      "would_update_metadata": 0,
+      "would_create_albums": 0,
+      "would_add_album_memberships": 0,
+      "created": 3,
+      "duplicate": 0,
+      "metadata_updated": 3,
+      "albums_created": 1,
+      "albums_reused": 0,
+      "album_memberships_updated": 1,
+      "resumed_effects": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "resume": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": {
+        "operations": 3,
+        "media_bytes": 214,
+        "xmp_sidecars": 0,
+        "live_photo_pairs": 0,
+        "metadata_updates": 3,
+        "album_creates": 1,
+        "album_memberships": 1,
+        "max_mutations": 8
+      },
+      "would_upload": 0,
+      "would_update_metadata": 0,
+      "would_create_albums": 0,
+      "would_add_album_memberships": 0,
+      "created": 0,
+      "duplicate": 0,
+      "metadata_updated": 0,
+      "albums_created": 0,
+      "albums_reused": 0,
+      "album_memberships_updated": 0,
+      "resumed_effects": 8,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    },
+    "fresh_checkpoint_duplicate": {
+      "schema_version": 1,
+      "dry_run": false,
+      "planned": {
+        "operations": 3,
+        "media_bytes": 214,
+        "xmp_sidecars": 0,
+        "live_photo_pairs": 0,
+        "metadata_updates": 3,
+        "album_creates": 1,
+        "album_memberships": 1,
+        "max_mutations": 8
+      },
+      "would_upload": 0,
+      "would_update_metadata": 0,
+      "would_create_albums": 0,
+      "would_add_album_memberships": 0,
+      "created": 0,
+      "duplicate": 3,
+      "metadata_updated": 3,
+      "albums_created": 0,
+      "albums_reused": 1,
+      "album_memberships_updated": 1,
+      "resumed_effects": 0,
+      "retried": 0,
+      "failed": 0,
+      "indeterminate": 0,
+      "cancelled": false
+    }
+  },
+  "postconditions": {
+    "source_assets": 3,
+    "source_owned_albums": 1,
+    "destination_assets": 3,
+    "destination_owned_albums": 1,
+    "destination_album_members": 1,
+    "descriptions": 3,
+    "locations": 1
+  },
+  "cleanup": {
+    "verified": true,
+    "labelled_containers": 0,
+    "labelled_volumes": 0,
+    "labelled_networks": 0,
+    "staging_files": 0,
+    "credentials_removed": true,
+    "seed_key_revoked": true
+  }
+}

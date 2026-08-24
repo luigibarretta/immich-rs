@@ -44,8 +44,8 @@ fi
 
 SUFFIX="$(date -u +%Y%m%dT%H%M%SZ)-$$-$(openssl rand -hex 4)"
 RUN_ID="immich-migration-$SUFFIX"
-SOURCE_PROJECT="immichrs-migration-source-${SUFFIX,,}"
-DESTINATION_PROJECT="immichrs-migration-destination-${SUFFIX,,}"
+SOURCE_PROJECT="immichrs-mig-src-${SUFFIX,,}"
+DESTINATION_PROJECT="immichrs-mig-dst-${SUFFIX,,}"
 COMPOSE="$ROOT/tests/disposable/compose.import.yml"
 WORKSPACE=$(mktemp -d "/tmp/immich-rs-migration.XXXXXX")
 SOURCE_PASSWORD="synthetic-source-db-$SUFFIX"

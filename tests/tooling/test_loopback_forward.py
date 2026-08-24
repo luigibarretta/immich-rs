@@ -21,9 +21,12 @@ class LoopbackForwardTests(unittest.TestCase):
                 "immichrs-applephotos-20260824t180932z-3094-460c937f-server-1"
             )
         )
+        migration = "immichrs-mig-src-20260824t180932z-3094-460c937f-server-1"
+        self.assertLessEqual(len(migration), 63)
+        self.assertIsNotNone(pattern.fullmatch(migration))
         self.assertIsNotNone(
             pattern.fullmatch(
-                "immichrs-migration-source-20260824t180932z-3094-460c937f-server-1"
+                "immichrs-mig-dst-20260824t180932z-3094-460c937f-server-1"
             )
         )
         self.assertIsNone(pattern.fullmatch("production-immich"))
@@ -35,6 +38,11 @@ class LoopbackForwardTests(unittest.TestCase):
         self.assertIsNone(
             pattern.fullmatch(
                 "immichrs-production-20260824t180932z-3094-460c937f-server-1"
+            )
+        )
+        self.assertIsNone(
+            pattern.fullmatch(
+                "immichrs-migration-source-20260824t180932z-3094-460c937f-server-1"
             )
         )
         self.assertEqual(FORWARDER["TARGET_PORT"], 2283)

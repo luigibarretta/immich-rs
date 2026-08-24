@@ -1,0 +1,60 @@
+{
+  "schema": "oracle-case-v1",
+  "case_id": "picasa-directory-v4",
+  "fixture": "../../fixtures/v4/synthetic-picasa/manifest.json",
+  "arguments": [
+    "upload",
+    "from-picasa",
+    "--server",
+    "{server_url}",
+    "--api-key",
+    "{synthetic_api_key}",
+    "--device-uuid",
+    "synthetic-picasa-directory-device",
+    "--dry-run",
+    "--no-ui",
+    "--log-level",
+    "DEBUG",
+    "--pause-immich-jobs=false",
+    "--concurrent-tasks",
+    "1",
+    "--album-picasa=true",
+    "--folder-as-album",
+    "NONE",
+    "--date-from-name=true",
+    "{fixture_root}"
+  ],
+  "timeout_seconds": 60,
+  "expected_oracle_mutations": [
+    {
+      "method": "PUT",
+      "path": "/api/jobs/faceDetection",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/metadataExtraction",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/smartSearch",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/thumbnailGeneration",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/jobs/videoConversion",
+      "json_body": { "command": "resume", "force": true },
+      "classification": "oracle_defect"
+    }
+  ]
+}

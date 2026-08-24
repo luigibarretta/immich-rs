@@ -3,7 +3,7 @@
   "source": {
     "kind": "picasa",
     "label": "synthetic-picasa",
-    "fingerprint_sha256": "077729c55c558c96e74795878f29afe92118a735a5d8dd2892f1d7bfccf78fc1",
+    "fingerprint_sha256": "638fb912810a7167018785aa6fd999abea5bb071ec7539aad97538640fa31951",
     "case_sensitive": true,
     "unicode_normalization": "nfc"
   },
@@ -16,8 +16,39 @@
       "content_sha256": "82ea26b98483108e97abd3efe54c140b9aaa76e9df76f22262fe574d07468c8d",
       "metadata": [],
       "normalized_metadata": {
-        "description": "Synthetic caption",
+        "description": null,
         "taken_at_utc": "2024-01-02T03:04:05Z",
+        "location": null,
+        "albums": [
+          "Synthetic Picasa Album"
+        ]
+      },
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_PICASA_ALBUM_V1",
+          "outcome": "picasa_album_selected"
+        },
+        {
+          "rule_id": "META_PICASA_FILENAME_DATE_V1",
+          "outcome": "filename_date_selected"
+        }
+      ]
+    },
+    {
+      "operation_id": "487c02d245d6646d1b562e24050afefd2fd17d1c6b6a4283f7601c29a4acc911",
+      "relative_path": "Albums/Synthetic/captioned.png",
+      "media_kind": "image",
+      "byte_len": 69,
+      "content_sha256": "a3d81b8f11847aaff2db3a7bcc177fa4a85d748dc3771154000f9f9ddeeea285",
+      "metadata": [],
+      "normalized_metadata": {
+        "description": "Synthetic caption",
+        "taken_at_utc": null,
         "location": null,
         "albums": [
           "Synthetic Picasa Album"
@@ -36,10 +67,6 @@
         {
           "rule_id": "META_PICASA_CAPTION_V1",
           "outcome": "picasa_caption_selected"
-        },
-        {
-          "rule_id": "META_PICASA_FILENAME_DATE_V1",
-          "outcome": "filename_date_selected"
         }
       ]
     },
@@ -125,8 +152,8 @@
   "warnings": [],
   "errors": [],
   "summary": {
-    "assets": 3,
+    "assets": 4,
     "sidecars": 1,
-    "bytes_read": 271
+    "bytes_read": 340
   }
 }

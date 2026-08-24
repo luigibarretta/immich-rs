@@ -195,6 +195,19 @@ jobs:
             tests/oracle/compatibility/apple-photos-v3.json \
             .artifacts/oracle/apple-photos-observation.json \
             --output .artifacts/oracle/apple-photos-report.json
+          python3 scripts/run-oracle.py \
+            tests/oracle/cases/picasa-directory-v4.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --output .artifacts/oracle/picasa-directory-observation.json
+          python3 scripts/run-oracle.py \
+            tests/oracle/cases/picasa-v4.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --output .artifacts/oracle/picasa-zip-observation.json
+          python3 scripts/compare-picasa-oracle.py \
+            tests/oracle/compatibility/picasa-v4.json \
+            .artifacts/oracle/picasa-directory-observation.json \
+            .artifacts/oracle/picasa-zip-observation.json \
+            --output .artifacts/oracle/picasa-report.json
       - name: Preserve normalized evidence without redistributing the oracle
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

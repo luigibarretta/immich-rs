@@ -11,7 +11,7 @@
     {
       "path": "Albums/Synthetic/.picasa.ini",
       "recipe": "text",
-      "content": "[Picasa]\nname=Synthetic Picasa Album\n[20240102-030405-image.png]\ncaption=Synthetic caption\n[pair.png]\nstar=yes\n"
+      "content": "[Picasa]\nname=Synthetic Picasa Album\n[captioned.png]\ncaption=Synthetic caption\n[pair.png]\nstar=yes\n"
     },
     {
       "path": "Albums/Synthetic/20240102-030405-image.png",
@@ -19,6 +19,13 @@
       "width": 1,
       "height": 1,
       "rgb": [24, 48, 72]
+    },
+    {
+      "path": "Albums/Synthetic/captioned.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [36, 60, 84]
     },
     {
       "path": "Albums/Synthetic/pair.mov",
@@ -47,6 +54,7 @@
           "files": [
             "Albums/Synthetic/.picasa.ini",
             "Albums/Synthetic/20240102-030405-image.png",
+            "Albums/Synthetic/captioned.png",
             "Albums/Synthetic/pair.mov"
           ]
         },
@@ -63,6 +71,6 @@
   "expected_plan": {
     "schema": "normalized-plan-v4",
     "path": "expected-plan.json",
-    "sha256": "35cf8b6fb9aa5f36ab3fcfd2beb96ac33c872c4509802bff3b842bfd78a20c6d"
+    "sha256": "ab11d72be9913f5a1300500b8267b4588ab041bd6601dd47a36ef20917c9900a"
   }
 }

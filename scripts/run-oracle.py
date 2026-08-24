@@ -127,6 +127,7 @@ def load_case(path: Path) -> dict[str, Any]:
         ["upload", "from-folder"],
         ["upload", "from-google-photos"],
         ["upload", "from-icloud"],
+        ["upload", "from-picasa"],
     )
     if arguments[:2] not in supported_sources or "--dry-run" not in arguments:
         raise OracleError("oracle case must use a supported dry-run upload source")

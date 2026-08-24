@@ -1,0 +1,15 @@
+{
+  "schema": "picasa-differential-expectation-v1",
+  "case_ids": ["picasa-directory-v4", "picasa-v4"],
+  "expected_plan": "../../fixtures/v4/synthetic-picasa/expected-plan.json",
+  "matrix": [
+    { "id": "directory_asset_discovery", "outcome": "parity" },
+    { "id": "zip_asset_discovery", "outcome": "parity" },
+    { "id": "xmp_sidecar", "outcome": "parity_after_duplicate_log_normalization" },
+    { "id": "filename_date", "outcome": "parity" },
+    { "id": "picasa_caption", "outcome": "immich_rs_extension" },
+    { "id": "picasa_album", "outcome": "immich_rs_extension_oracle_dry_run_unobservable" },
+    { "id": "live_photo_pair", "outcome": "directory_parity_zip_immich_rs_extension" },
+    { "id": "dry_run_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

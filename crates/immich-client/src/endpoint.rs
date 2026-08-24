@@ -87,6 +87,12 @@ impl ImmichEndpoint {
         self.loopback
     }
 
+    /// Return whether two validated endpoints resolve to the same canonical origin.
+    #[must_use]
+    pub fn same_origin(&self, other: &Self) -> bool {
+        self.origin == other.origin
+    }
+
     pub(crate) fn api_url(&self, path: &str) -> Result<Url, EndpointError> {
         self.origin
             .join(path)

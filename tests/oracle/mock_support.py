@@ -20,7 +20,7 @@ class MockState:
         self.requests: list[dict[str, Any]] = []
         self.committed_mutations: list[dict[str, Any]] = []
         self._assets: dict[str, str] = {}
-        self.imports = MockImportState()
+        self.imports = MockImportState(scenario)
         self._lock = Lock()
         fault = scenario.get("fault", {})
         self._fault_remaining = int(fault.get("times", 0)) if isinstance(fault, dict) else 0

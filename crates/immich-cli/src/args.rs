@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use immich_rs_executor::{
-    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, PicasaImportConfig,
-    TakeoutImportConfig, UploadExecutionConfig,
+    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, MigrationPlanningConfig,
+    PicasaImportConfig, TakeoutImportConfig, UploadExecutionConfig,
 };
 use immich_rs_sources::{
     AlbumMode, ApplePhotosScanConfig, FolderScanConfig, PicasaScanConfig, TakeoutScanConfig,
@@ -104,6 +104,12 @@ pub struct ArchiveApplyRequest {
     pub server: String,
     pub production_read: bool,
     pub ca_certificate: Option<PathBuf>,
+}
+
+pub struct MigrationPlanRequest {
+    pub source_server: String,
+    pub destination_server: String,
+    pub config: MigrationPlanningConfig,
 }
 
 pub fn folder_config(config: &EffectiveConfig) -> FolderScanConfig {

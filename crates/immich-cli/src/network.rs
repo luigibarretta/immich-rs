@@ -6,6 +6,10 @@ use crate::failure::CliFailure;
 
 const API_KEY_ENVIRONMENT: &str = "IMMICH_RS_API_KEY";
 const API_KEY_FILE_ENVIRONMENT: &str = "IMMICH_RS_API_KEY_FILE";
+const SOURCE_API_KEY_ENVIRONMENT: &str = "IMMICH_RS_SOURCE_API_KEY";
+const SOURCE_API_KEY_FILE_ENVIRONMENT: &str = "IMMICH_RS_SOURCE_API_KEY_FILE";
+const DESTINATION_API_KEY_ENVIRONMENT: &str = "IMMICH_RS_DESTINATION_API_KEY";
+const DESTINATION_API_KEY_FILE_ENVIRONMENT: &str = "IMMICH_RS_DESTINATION_API_KEY_FILE";
 const MAX_API_KEY_FILE_BYTES: u64 = 4_097;
 const MAX_CA_CERTIFICATE_BYTES: u64 = 1024 * 1024;
 
@@ -54,7 +58,7 @@ fn read_client_with_config(
         ));
     }
     let roots = ca_certificate.map(read_ca_certificate).transpose()?;
-    let key_value = api_key_value()?;
+    let key_value = api_key_value(API_KEY_ENVIRONMENT, API_KEY_FILE_ENVIRONMENT)?;
     let api_key = ApiKey::new(&key_value).map_err(|_| CliFailure::authentication())?;
     let client = if let Some(roots) = roots {
         ImmichReadClient::new_production_read_with_roots(endpoint, api_key, config, true, roots)
@@ -83,9 +87,53 @@ fn read_ca_certificate(path: &std::path::Path) -> Result<TlsRootCertificates, Cl
         .map_err(|_| CliFailure::usage("invalid CA certificate bundle"))
 }
 
-fn api_key_value() -> Result<String, CliFailure> {
-    let direct = std::env::var_os(API_KEY_ENVIRONMENT);
-    let file = std::env::var_os(API_KEY_FILE_ENVIRONMENT);
+pub fn migration_read_clients(
+    source_server: &str,
+    destination_server: &str,
+) -> Result<(ImmichReadClient, ImmichReadClient), CliFailure> {
+    let source_endpoint = ImmichEndpoint::parse(source_server)
+        .map_err(|_| CliFailure::usage("invalid source origin"))?;
+    let destination_endpoint = ImmichEndpoint::parse(destination_server)
+        .map_err(|_| CliFailure::usage("invalid destination origin"))?;
+    EndpointAccess::disposable(&source_endpoint)
+        .map_err(|_| CliFailure::usage("migration source must be disposable loopback"))?;
+    EndpointAccess::disposable(&destination_endpoint)
+        .map_err(|_| CliFailure::usage("migration destination must be disposable loopback"))?;
+    if source_endpoint.same_origin(&destination_endpoint) {
+        return Err(CliFailure::usage(
+            "migration source and destination origins must differ",
+        ));
+    }
+    let source_value = api_key_value(SOURCE_API_KEY_ENVIRONMENT, SOURCE_API_KEY_FILE_ENVIRONMENT)?;
+    let destination_value = api_key_value(
+        DESTINATION_API_KEY_ENVIRONMENT,
+        DESTINATION_API_KEY_FILE_ENVIRONMENT,
+    )?;
+    if source_value.as_bytes() == destination_value.as_bytes() {
+        return Err(CliFailure::authentication());
+    }
+    let config = ClientConfig {
+        max_response_bytes: 1024 * 1024,
+        ..ClientConfig::default()
+    };
+    let source = ImmichReadClient::new(
+        source_endpoint,
+        ApiKey::new(&source_value).map_err(|_| CliFailure::authentication())?,
+        config,
+    )
+    .map_err(CliFailure::from_client)?;
+    let destination = ImmichReadClient::new(
+        destination_endpoint,
+        ApiKey::new(&destination_value).map_err(|_| CliFailure::authentication())?,
+        config,
+    )
+    .map_err(CliFailure::from_client)?;
+    Ok((source, destination))
+}
+
+fn api_key_value(direct_name: &str, file_name: &str) -> Result<String, CliFailure> {
+    let direct = std::env::var_os(direct_name);
+    let file = std::env::var_os(file_name);
     match (direct, file) {
         (Some(_), Some(_)) | (None, None) => Err(CliFailure::authentication()),
         (Some(value), None) => value

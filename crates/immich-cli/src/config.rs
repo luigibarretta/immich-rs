@@ -46,6 +46,14 @@ pub struct EffectiveConfig {
     pub archive_max_assets: Option<usize>,
     pub archive_manifest: Option<PathBuf>,
     pub archive_destination: Option<PathBuf>,
+    pub migration_source_server: Option<String>,
+    pub migration_destination_server: Option<String>,
+    pub migration_page_size: Option<usize>,
+    pub migration_max_assets: Option<usize>,
+    pub migration_max_albums: Option<usize>,
+    pub migration_max_album_memberships: Option<usize>,
+    pub migration_max_asset_bytes: Option<u64>,
+    pub migration_max_total_bytes: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -64,6 +72,8 @@ struct FileConfig {
     upload: UploadConfig,
     #[serde(default)]
     archive: ArchiveConfig,
+    #[serde(default)]
+    migration: MigrationConfig,
 }
 
 #[derive(Default, Deserialize)]
@@ -128,6 +138,19 @@ struct ArchiveConfig {
     max_assets: Option<usize>,
     manifest: Option<PathBuf>,
     destination: Option<PathBuf>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MigrationConfig {
+    source_server: Option<String>,
+    destination_server: Option<String>,
+    page_size: Option<usize>,
+    max_assets: Option<usize>,
+    max_albums: Option<usize>,
+    max_album_memberships: Option<usize>,
+    max_asset_bytes: Option<u64>,
+    max_total_bytes: Option<u64>,
 }
 
 pub fn load(arguments: &[OsString]) -> Result<(EffectiveConfig, Vec<OsString>), CliFailure> {
@@ -225,5 +248,13 @@ fn load_file(path: &Path) -> Result<EffectiveConfig, CliFailure> {
         archive_max_assets: file.archive.max_assets,
         archive_manifest: file.archive.manifest,
         archive_destination: file.archive.destination,
+        migration_source_server: file.migration.source_server,
+        migration_destination_server: file.migration.destination_server,
+        migration_page_size: file.migration.page_size,
+        migration_max_assets: file.migration.max_assets,
+        migration_max_albums: file.migration.max_albums,
+        migration_max_album_memberships: file.migration.max_album_memberships,
+        migration_max_asset_bytes: file.migration.max_asset_bytes,
+        migration_max_total_bytes: file.migration.max_total_bytes,
     })
 }

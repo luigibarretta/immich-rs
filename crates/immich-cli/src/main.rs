@@ -13,8 +13,10 @@ mod environment;
 mod failure;
 mod folder;
 mod google_takeout;
+mod immich_migration_plan;
 mod import_plan_args;
 mod inspect;
+mod migration_plan_args;
 mod network;
 mod output;
 mod picasa;
@@ -143,8 +145,14 @@ async fn run_plan(
             )?)
             .await
         }
+        Some("migration")
+            if arguments.get(1).and_then(|argument| argument.to_str()) == Some("immich") =>
+        {
+            immich_migration_plan::run(migration_plan_args::parse(&arguments[2..], configuration)?)
+                .await
+        }
         _ => Err(CliFailure::usage(
-            "plan supports folder, google-takeout, apple-photos, picasa, source-aware upload and archive immich",
+            "plan supports local sources, source-aware upload, archive immich and migration immich",
         )),
     }
 }
@@ -171,6 +179,6 @@ async fn run_apply(
 
 fn print_help() {
     println!(
-        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan picasa [PICASA_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan upload google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload picasa [PICASA_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] inspect upload-plan --plan <FILE>\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nRemote upload additionally requires --authorize-production-write, --confirm-plan-sha256,\n--expected-operations and --backup-reference. Production authorization flags are CLI-only.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace, trash or independent metadata-mutation command exists."
+        "immich-rs {VERSION}\n\nBounded planning, disposable folder upload and verified local archive\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan picasa [PICASA_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan upload google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload picasa [PICASA_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] plan migration immich [MIGRATION_OPTIONS]\n  immich-rs [--config <FILE>] inspect upload-plan --plan <FILE>\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nRemote upload additionally requires --authorize-production-write, --confirm-plan-sha256,\n--expected-operations and --backup-reference. Production authorization flags are CLI-only.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace, trash or independent metadata-mutation command exists."
     );
 }

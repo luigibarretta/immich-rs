@@ -16,6 +16,7 @@ def archive_search_response(
     page = request.get("page")
     size = request.get("size")
     visibility = request.get("visibility")
+    album_ids = request.get("albumIds")
     include_trashed = request.get("withDeleted") is True
     if (
         not isinstance(page, int)
@@ -23,6 +24,14 @@ def archive_search_response(
         or not isinstance(size, int)
         or not 1 <= size <= 1_000
         or visibility not in {"timeline", "archive", "hidden"}
+        or (
+            album_ids is not None
+            and (
+                not isinstance(album_ids, list)
+                or not album_ids
+                or any(not isinstance(album_id, str) for album_id in album_ids)
+            )
+        )
     ):
         return {"assets": {"items": [], "count": 0, "total": 0}}
     selected = [
@@ -30,6 +39,10 @@ def archive_search_response(
         for asset in _assets(scenario)
         if asset["visibility"] == visibility
         and (include_trashed or not asset.get("trashed", False))
+        and (
+            album_ids is None
+            or any(album_id in asset.get("album_ids", []) for album_id in album_ids)
+        )
     ]
     selected.sort(key=lambda asset: asset["id"])
     start = (page - 1) * size
@@ -98,8 +111,21 @@ def _response_asset(asset: dict[str, Any]) -> dict[str, object]:
         "originalFileName": asset["filename"],
         "checksum": base64.b64encode(hashlib.sha1(body).digest()).decode("ascii"),
         "type": asset["type"],
+        "fileCreatedAt": asset.get("file_created_at", "2024-01-01T00:00:00Z"),
+        "fileModifiedAt": asset.get("file_modified_at", "2024-01-01T00:00:01Z"),
         "exifInfo": {"fileSizeInByte": len(body)},
     }
+    exif = response["exifInfo"]
+    if isinstance(exif, dict):
+        for source, target in (
+            ("date_time_original", "dateTimeOriginal"),
+            ("description", "description"),
+            ("latitude", "latitude"),
+            ("longitude", "longitude"),
+        ):
+            value = asset.get(source)
+            if value is not None:
+                exif[target] = value
     related = asset.get("live_photo_video_id")
     if isinstance(related, str):
         response["livePhotoVideoId"] = related

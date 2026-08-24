@@ -10,9 +10,11 @@ from urllib.parse import parse_qsl
 class MockImportState:
     """Thread-safe observable import state containing only synthetic values."""
 
-    def __init__(self) -> None:
+    def __init__(self, scenario: dict[str, Any] | None = None) -> None:
         self._metadata: dict[str, dict[str, Any]] = {}
         self._albums: dict[str, dict[str, Any]] = {}
+        source_albums = scenario.get("archive_albums", []) if isinstance(scenario, dict) else []
+        self._source_albums = [dict(album) for album in source_albums if isinstance(album, dict)]
         self._next_album = 100
         self._lock = Lock()
 
@@ -29,7 +31,19 @@ class MockImportState:
     def list_albums(self, query: str) -> tuple[int, object, bool]:
         values = dict(parse_qsl(query, keep_blank_values=True))
         name = values.get("name")
-        if not isinstance(name, str) or values.get("isOwned") != "true":
+        if values.get("isOwned") != "true":
+            return 400, {"message": "invalid synthetic album query"}, False
+        if name is None:
+            albums = [
+                {
+                    "id": album.get("id"),
+                    "albumName": album.get("name"),
+                    "assetCount": len(album.get("asset_ids", [])),
+                }
+                for album in self._source_albums
+            ]
+            return 200, albums, False
+        if not isinstance(name, str):
             return 400, {"message": "invalid synthetic album query"}, False
         with self._lock:
             albums = [self._album_response(album) for album in self._albums.values() if album["name"] == name]

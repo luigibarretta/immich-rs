@@ -10,6 +10,8 @@ const KNOWN_NAMES: &[&str] = &[
     "IMMICH_RS_ALBUM_PATH_JOINER",
     "IMMICH_RS_API_KEY",
     "IMMICH_RS_API_KEY_FILE",
+    "IMMICH_RS_DESTINATION_API_KEY",
+    "IMMICH_RS_DESTINATION_API_KEY_FILE",
     "IMMICH_RS_ARCHIVE_DESTINATION",
     "IMMICH_RS_ARCHIVE_INCLUDE_TRASHED",
     "IMMICH_RS_ARCHIVE_MANIFEST",
@@ -32,12 +34,22 @@ const KNOWN_NAMES: &[&str] = &[
     "IMMICH_RS_MAX_ENTRIES",
     "IMMICH_RS_MAX_PATH_BYTES",
     "IMMICH_RS_MAX_RETRIES_PER_RUN",
+    "IMMICH_RS_MIGRATION_DESTINATION_SERVER",
+    "IMMICH_RS_MIGRATION_MAX_ALBUMS",
+    "IMMICH_RS_MIGRATION_MAX_ALBUM_MEMBERSHIPS",
+    "IMMICH_RS_MIGRATION_MAX_ASSETS",
+    "IMMICH_RS_MIGRATION_MAX_ASSET_BYTES",
+    "IMMICH_RS_MIGRATION_MAX_TOTAL_BYTES",
+    "IMMICH_RS_MIGRATION_PAGE_SIZE",
+    "IMMICH_RS_MIGRATION_SOURCE_SERVER",
     "IMMICH_RS_PICASA_ALBUMS",
     "IMMICH_RS_PICASA_FILENAME_DATE",
     "IMMICH_RS_RETRY_BASE_DELAY_MS",
     "IMMICH_RS_RETRY_DELAY_CAP_MS",
     "IMMICH_RS_SERVER",
     "IMMICH_RS_SOURCE",
+    "IMMICH_RS_SOURCE_API_KEY",
+    "IMMICH_RS_SOURCE_API_KEY_FILE",
     "IMMICH_RS_UPLOAD_CHECKPOINT",
     "IMMICH_RS_UPLOAD_DRY_RUN",
     "IMMICH_RS_UPLOAD_PLAN",
@@ -142,7 +154,43 @@ pub fn overlay(config: &mut EffectiveConfig) -> Result<(), CliFailure> {
         &mut config.archive_destination,
         "IMMICH_RS_ARCHIVE_DESTINATION",
     )?;
+    overlay_migration(config)?;
     Ok(())
+}
+
+fn overlay_migration(config: &mut EffectiveConfig) -> Result<(), CliFailure> {
+    set_string(
+        &mut config.migration_source_server,
+        "IMMICH_RS_MIGRATION_SOURCE_SERVER",
+    )?;
+    set_string(
+        &mut config.migration_destination_server,
+        "IMMICH_RS_MIGRATION_DESTINATION_SERVER",
+    )?;
+    set_parsed(
+        &mut config.migration_page_size,
+        "IMMICH_RS_MIGRATION_PAGE_SIZE",
+    )?;
+    set_parsed(
+        &mut config.migration_max_assets,
+        "IMMICH_RS_MIGRATION_MAX_ASSETS",
+    )?;
+    set_parsed(
+        &mut config.migration_max_albums,
+        "IMMICH_RS_MIGRATION_MAX_ALBUMS",
+    )?;
+    set_parsed(
+        &mut config.migration_max_album_memberships,
+        "IMMICH_RS_MIGRATION_MAX_ALBUM_MEMBERSHIPS",
+    )?;
+    set_parsed(
+        &mut config.migration_max_asset_bytes,
+        "IMMICH_RS_MIGRATION_MAX_ASSET_BYTES",
+    )?;
+    set_parsed(
+        &mut config.migration_max_total_bytes,
+        "IMMICH_RS_MIGRATION_MAX_TOTAL_BYTES",
+    )
 }
 
 fn value(name: &str) -> Result<Option<String>, CliFailure> {

@@ -19,6 +19,8 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 MOCK_SCHEMA = "mock-immich-v1"
 SYNTHETIC_API_KEY = "synthetic-oracle-key"
+SYNTHETIC_MIGRATION_SOURCE_KEY = "synthetic-migration-source-key"
+SYNTHETIC_MIGRATION_DESTINATION_KEY = "synthetic-migration-destination-key"
 MAX_REQUEST_BODY_BYTES = 1_048_576
 RESPONSE_FIXTURE_PATH = Path(__file__).resolve().parent / "server-fixtures" / "immich-v3.1.json"
 SUPPORT = runpy.run_path(str(Path(__file__).resolve().with_name("mock_support.py")))
@@ -40,8 +42,10 @@ class MockConfigurationError(ValueError):
 def _validate_scenario(scenario: dict[str, Any]) -> None:
     if scenario.get("schema") != MOCK_SCHEMA:
         raise MockConfigurationError(f"mock schema must be {MOCK_SCHEMA}")
-    if scenario.get("api_key") != SYNTHETIC_API_KEY:
-        raise MockConfigurationError("mock API key must use the synthetic constant")
+    if scenario.get("api_key") not in {
+        SYNTHETIC_API_KEY, SYNTHETIC_MIGRATION_SOURCE_KEY, SYNTHETIC_MIGRATION_DESTINATION_KEY
+    }:
+        raise MockConfigurationError("mock API key must use a synthetic constant")
     version = scenario.get("version")
     if not isinstance(version, dict) or any(not isinstance(version.get(key), int) for key in ("major", "minor", "patch")):
         raise MockConfigurationError("mock version must contain integer major, minor and patch values")
@@ -197,19 +201,19 @@ class _Handler(BaseHTTPRequestHandler):
                 json_body = json.loads(body)
             except (UnicodeError, json.JSONDecodeError):
                 json_body = "<invalid-json>"
+        scenario = self.state.scenario
         request = {
             "method": self.command,
             "path": path,
             "query": query,
             "body_sha256": hashlib.sha256(body).hexdigest(),
             "body_bytes": len(body),
-            "authenticated": self.headers.get("x-api-key") == SYNTHETIC_API_KEY,
+            "authenticated": self.headers.get("x-api-key") == scenario.get("api_key"),
             "mutating": mutating,
             "json_body": json_body,
         }
         self.state.record(request)
 
-        scenario = self.state.scenario
         if not request["authenticated"]:
             self._json_response(401, {"message": "synthetic authentication rejected"})
             return

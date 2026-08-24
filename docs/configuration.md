@@ -42,6 +42,10 @@ compression_ratio_grace_bytes = 1048576
 album_mode = "none"
 album_path_joiner = " - "
 
+[picasa]
+albums = false
+filename_date = false
+
 [upload]
 plan = "/state/upload-plan.json"
 source = "/source"
@@ -61,6 +65,19 @@ page_size = 100
 max_assets = 100000
 manifest = "/state/archive-manifest.json"
 destination = "/output"
+
+[migration]
+source_server = "http://127.0.0.1:2284"
+destination_server = "http://127.0.0.1:2285"
+page_size = 100
+max_assets = 100000
+max_albums = 10000
+max_album_memberships = 1000000
+max_asset_bytes = 1099511627776
+max_total_bytes = 1099511627776
+plan = "/state/migration-plan.json"
+checkpoint = "/state/migration-checkpoint.sqlite"
+dry_run = true
 ```
 
 `scan.source` supplies a folder input and is also the one-input fallback for
@@ -71,8 +88,14 @@ Positional CLI inputs replace the complete configured input set.
 only for schema-v1 folder apply. Repeated `--input` values or
 `IMMICH_RS_INPUTS_JSON` select the exact directory or split-ZIP set for
 schema-v2 Takeout or Apple apply. Apple apply additionally binds
-`apple_photos.album_mode` and `apple_photos.album_path_joiner`. Upload execution
-limits bind both the server-aware plan and its source-aware execution.
+`apple_photos.album_mode` and `apple_photos.album_path_joiner`. Picasa planning
+and apply similarly bind `picasa.albums` and `picasa.filename_date`. Upload
+execution limits bind both the server-aware plan and its source-aware execution.
+
+The migration section binds two distinct servers, inventory/byte ceilings,
+the immutable `migration-plan-v1` and its `checkpoint-v2` journal. The current
+migration capability accepts distinct disposable loopback origins only. Its
+dry-run discards both server origins and reads neither migration credential.
 
 ## Environment matrix
 
@@ -94,6 +117,8 @@ limits bind both the server-aware plan and its source-aware execution.
 | `scan.compression_ratio_grace_bytes` | `IMMICH_RS_COMPRESSION_RATIO_GRACE_BYTES` | `--compression-ratio-grace-bytes` |
 | `apple_photos.album_mode` | `IMMICH_RS_ALBUM_MODE` | `--album-mode` |
 | `apple_photos.album_path_joiner` | `IMMICH_RS_ALBUM_PATH_JOINER` | `--album-path-joiner` |
+| `picasa.albums` | `IMMICH_RS_PICASA_ALBUMS` | `--picasa-albums` / `--no-picasa-albums` |
+| `picasa.filename_date` | `IMMICH_RS_PICASA_FILENAME_DATE` | `--filename-date` / `--no-filename-date` |
 | `upload.plan` | `IMMICH_RS_UPLOAD_PLAN` | `--plan` |
 | `upload.source` | `IMMICH_RS_UPLOAD_SOURCE` | `--source` |
 | `upload.checkpoint` | `IMMICH_RS_UPLOAD_CHECKPOINT` | `--checkpoint` |
@@ -110,6 +135,17 @@ limits bind both the server-aware plan and its source-aware execution.
 | `archive.max_assets` | `IMMICH_RS_ARCHIVE_MAX_ASSETS` | `--max-assets` |
 | `archive.manifest` | `IMMICH_RS_ARCHIVE_MANIFEST` | `--manifest` |
 | `archive.destination` | `IMMICH_RS_ARCHIVE_DESTINATION` | `--destination` |
+| `migration.source_server` | `IMMICH_RS_MIGRATION_SOURCE_SERVER` | `--source-server` |
+| `migration.destination_server` | `IMMICH_RS_MIGRATION_DESTINATION_SERVER` | `--destination-server` |
+| `migration.page_size` | `IMMICH_RS_MIGRATION_PAGE_SIZE` | `--page-size` |
+| `migration.max_assets` | `IMMICH_RS_MIGRATION_MAX_ASSETS` | `--max-assets` |
+| `migration.max_albums` | `IMMICH_RS_MIGRATION_MAX_ALBUMS` | `--max-albums` |
+| `migration.max_album_memberships` | `IMMICH_RS_MIGRATION_MAX_ALBUM_MEMBERSHIPS` | `--max-album-memberships` |
+| `migration.max_asset_bytes` | `IMMICH_RS_MIGRATION_MAX_ASSET_BYTES` | `--max-asset-bytes` |
+| `migration.max_total_bytes` | `IMMICH_RS_MIGRATION_MAX_TOTAL_BYTES` | `--max-total-bytes` |
+| `migration.plan` | `IMMICH_RS_MIGRATION_PLAN` | `--plan` |
+| `migration.checkpoint` | `IMMICH_RS_MIGRATION_CHECKPOINT` | `--checkpoint` |
+| `migration.dry_run` | `IMMICH_RS_MIGRATION_DRY_RUN` | `--dry-run` / `--no-dry-run` |
 
 `IMMICH_RS_INPUTS_JSON` is a JSON string array, which avoids ambiguous path
 delimiters across Linux, macOS and Windows. Boolean environment values are
@@ -129,6 +165,16 @@ Configuring both fails with the authentication exit class. The file contents,
 path and key are never rendered. Compose deployments should prefer a mounted
 secret file. Dry-run does not read either secret source and discards inherited
 server configuration before constructing its execution request.
+
+Immich-to-Immich migration uses two separate secret pairs instead:
+
+- `IMMICH_RS_SOURCE_API_KEY` or `IMMICH_RS_SOURCE_API_KEY_FILE`;
+- `IMMICH_RS_DESTINATION_API_KEY` or `IMMICH_RS_DESTINATION_API_KEY_FILE`.
+
+Exactly one member of each pair is required for migration planning and live
+apply. The two key values must differ. Migration dry-run reads none of them;
+the source client type exposes no mutation method, while only the destination
+client can be upgraded to the plan-bound import capability.
 
 `immich.ca_certificate` adds a bounded PEM trust bundle for a private HTTPS
 deployment. It never disables certificate or hostname verification, accepts at

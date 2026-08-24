@@ -17,6 +17,10 @@ compression_ratio_grace_bytes = 1048576
 album_mode = "none"
 album_path_joiner = " - "
 
+[picasa]
+albums = false
+filename_date = false
+
 [upload]
 source = "/source"
 plan = "/state/upload-plan.json"
@@ -36,3 +40,16 @@ page_size = 100
 max_assets = 100000
 manifest = "/state/archive-manifest.json"
 destination = "/output"
+
+[migration]
+source_server = "http://127.0.0.1:2284"
+destination_server = "http://127.0.0.1:2285"
+page_size = 100
+max_assets = 100000
+max_albums = 10000
+max_album_memberships = 1000000
+max_asset_bytes = 1099511627776
+max_total_bytes = 1099511627776
+plan = "/state/migration-plan.json"
+checkpoint = "/state/migration-checkpoint.sqlite"
+dry_run = true

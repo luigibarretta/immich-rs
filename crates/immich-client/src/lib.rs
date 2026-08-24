@@ -7,6 +7,7 @@ mod endpoint;
 mod error;
 mod import;
 mod import_models;
+mod migration;
 mod models;
 mod production;
 mod read;
@@ -19,6 +20,9 @@ pub use auth::{ApiKey, ApiKeyError};
 pub use endpoint::{EndpointAccess, EndpointError, ImmichEndpoint};
 pub use error::{ClientError, ClientErrorClass};
 pub use import::{ImmichImportClient, RemoteAlbum};
+pub use migration::{
+    MigrationListConfig, RemoteMigrationAsset, RemoteMigrationInventory, RemoteOwnedAlbum,
+};
 pub use production::{
     ProductionImmichImportClient, ProductionImmichUploadClient, ProductionImportAuthorization,
     ProductionUploadAuthorization, upload_plan_sha256,
@@ -32,5 +36,7 @@ pub const COMPONENT: &str = "immich-rs-client";
 
 #[cfg(test)]
 mod import_tests;
+#[cfg(test)]
+mod migration_tests;
 #[cfg(test)]
 mod tests;

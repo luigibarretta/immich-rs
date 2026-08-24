@@ -101,6 +101,7 @@ impl ImmichReadClient {
                 size: config.page_size,
                 order: "asc",
                 with_exif: true,
+                album_ids: None,
                 visibility: config.visibility.api_value(),
                 with_deleted: config.include_trashed.then_some(true),
             };
@@ -197,7 +198,7 @@ impl ImmichReadClient {
             .ok_or_else(|| ClientError::new(ClientErrorClass::Compatibility))
     }
 
-    async fn post_json<T: serde::de::DeserializeOwned>(
+    pub(crate) async fn post_json<T: serde::de::DeserializeOwned>(
         &self,
         path: &str,
         body: &(impl serde::Serialize + Sync),
@@ -289,7 +290,7 @@ fn convert_asset(
     ))
 }
 
-fn lowercase_hex(bytes: &[u8]) -> String {
+pub fn lowercase_hex(bytes: &[u8]) -> String {
     const DIGITS: &[u8; 16] = b"0123456789abcdef";
     let mut output = String::with_capacity(bytes.len().saturating_mul(2));
     for byte in bytes {

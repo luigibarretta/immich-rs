@@ -58,6 +58,8 @@ pub struct ArchiveSearchRequest<'a> {
     pub size: usize,
     pub order: &'static str,
     pub with_exif: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub album_ids: Option<&'a [String]>,
     pub visibility: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub with_deleted: Option<bool>,
@@ -88,6 +90,10 @@ pub struct ArchiveAssetResponse {
     pub r#type: AssetTypeResponse,
     pub exif_info: Option<ArchiveExifResponse>,
     #[serde(default)]
+    pub file_created_at: Option<String>,
+    #[serde(default)]
+    pub file_modified_at: Option<String>,
+    #[serde(default)]
     pub live_photo_video_id: Option<String>,
 }
 
@@ -95,6 +101,22 @@ pub struct ArchiveAssetResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ArchiveExifResponse {
     pub file_size_in_byte: Option<u64>,
+    #[serde(default)]
+    pub date_time_original: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub latitude: Option<f64>,
+    #[serde(default)]
+    pub longitude: Option<f64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MigrationAlbumResponse {
+    pub id: String,
+    pub album_name: String,
+    pub asset_count: u64,
 }
 
 #[derive(Clone, Copy, Deserialize)]

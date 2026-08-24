@@ -2,7 +2,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::time::Duration;
 
 use immich_rs_core::{
-    Cancellation, ProductionWriteConfirmation, ServerCompatibility, ServerVersion, UploadPlan,
+    Cancellation, MigrationServer, ProductionWriteConfirmation, ServerCompatibility, ServerVersion,
+    UploadPlan,
 };
 use reqwest::header::{ACCEPT, HeaderMap, HeaderValue};
 use sha2::{Digest, Sha256};
@@ -77,6 +78,15 @@ impl NegotiatedServer {
     #[must_use]
     pub const fn compatibility(&self) -> &ServerCompatibility {
         &self.compatibility
+    }
+
+    /// Return the privacy-safe endpoint binding used by a migration plan.
+    #[must_use]
+    pub fn migration_server(&self) -> MigrationServer {
+        MigrationServer {
+            compatibility: self.compatibility.clone(),
+            origin_sha256: self.origin_sha256.clone(),
+        }
     }
 
     #[cfg(test)]

@@ -15,6 +15,7 @@ __pycache__/
 # redistributable. Never commit real Immich exports or user media.
 /fixtures/private/
 /benchmarks/results/
+/.artifacts/
 
 # Local container configuration and plans may contain authorized private paths
 # or credentials. Only the synthetic `.example` files are commit-safe.

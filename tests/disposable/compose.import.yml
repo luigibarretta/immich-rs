@@ -1,0 +1,48 @@
+---
+services:
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: ${DISPOSABLE_DB_PASSWORD:?required}
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: --data-checksums
+    shm_size: 128m
+    volumes:
+      - database:/var/lib/postgresql/data
+    labels:
+      io.immich-rs.disposable.run: ${DISPOSABLE_RUN_ID:?required}
+  redis:
+    image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    labels:
+      io.immich-rs.disposable.run: ${DISPOSABLE_RUN_ID:?required}
+  server:
+    image: ghcr.io/immich-app/immich-server@sha256:079cc990b26a88d71f96027341c67329cb11829d4c341ce33b3718fe0f84cbfa
+    depends_on:
+      - database
+      - redis
+    environment:
+      DB_HOSTNAME: database
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DISPOSABLE_DB_PASSWORD:?required}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      IMMICH_LOG_LEVEL: warn
+    ports:
+      - 127.0.0.1:${DISPOSABLE_HOST_PORT:?required}:2283
+    volumes:
+      - upload:/data
+    labels:
+      io.immich-rs.disposable.run: ${DISPOSABLE_RUN_ID:?required}
+volumes:
+  database:
+    labels:
+      io.immich-rs.disposable.run: ${DISPOSABLE_RUN_ID:?required}
+  upload:
+    labels:
+      io.immich-rs.disposable.run: ${DISPOSABLE_RUN_ID:?required}
+networks:
+  default:
+    driver: bridge
+    labels:
+      io.immich-rs.disposable.run: ${DISPOSABLE_RUN_ID:?required}

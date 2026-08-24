@@ -1,0 +1,52 @@
+---
+name: source-import-disposable
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - source-import-disposable-*
+
+concurrency:
+  group: immich-rs-source-import-disposable
+  cancel-in-progress: false
+
+jobs:
+  disposable-import:
+    runs-on: docker
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [apple-photos, picasa]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore the pinned Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/1.88.0-x86_64-unknown-linux-gnu
+            ~/.rustup/update-hashes/1.88.0-x86_64-unknown-linux-gnu
+          key: rustup-linux-x86-64-1.88.0
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Build the exact release binary
+        run: cargo build --locked --release -p immich-rs-cli
+      - name: Import into and remove an isolated synthetic Immich
+        run: |
+          mkdir -p .artifacts
+          scripts/run-disposable-source-import.sh \
+            --adapter "${{ matrix.adapter }}" \
+            --binary target/release/immich-rs \
+            --commit-sha "${{ github.sha }}" \
+            --output ".artifacts/${{ matrix.adapter }}-${{ github.sha }}.json"
+          python3 scripts/check-source-import-evidence.py \
+            --input ".artifacts/${{ matrix.adapter }}-${{ github.sha }}.json"
+      - name: Preserve aggregate source evidence
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
+        with:
+          name: source-import-${{ matrix.adapter }}-${{ github.sha }}
+          path: .artifacts/${{ matrix.adapter }}-${{ github.sha }}.json
+          retention-days: 14

@@ -2,10 +2,11 @@ use super::{
     ARCHIVE_APPLY_REPORT_SCHEMA_VERSION, ARCHIVE_MANIFEST_SCHEMA_VERSION, ArchiveApplyReport,
     ArchiveAsset, ArchiveManifest, ArchiveManifestSummary, Cancellation, CancellationToken,
     CandidateAsset, GeoCoordinates, MediaKind, NORMALIZED_PLAN_SCHEMA_VERSION,
-    NORMALIZED_PLAN_SCHEMA_VERSION_V2, NORMALIZED_PLAN_SCHEMA_VERSION_V3, NeverCancel,
-    NormalizedMetadata, NormalizedPlan, PlanSummary, ServerCompatibility, ServerVersion,
-    SourceDescriptor, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UPLOAD_PLAN_SCHEMA_VERSION_V2,
-    UnicodeNormalization, UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V2, NORMALIZED_PLAN_SCHEMA_VERSION_V3,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V4, NeverCancel, NormalizedMetadata, NormalizedPlan,
+    PlanSummary, ServerCompatibility, ServerVersion, SourceDescriptor, SourceKind,
+    UPLOAD_PLAN_SCHEMA_VERSION, UPLOAD_PLAN_SCHEMA_VERSION_V2, UnicodeNormalization,
+    UploadOperation, UploadPlan, UploadPlanSummary, UploadRole,
 };
 
 fn valid_archive_manifest() -> ArchiveManifest {
@@ -121,6 +122,21 @@ fn normalized_plan_v3_is_apple_photos_only() {
     });
     assert!(plan.validate().is_ok());
     plan.schema_version = NORMALIZED_PLAN_SCHEMA_VERSION_V2;
+    assert!(plan.validate().is_err());
+}
+
+#[test]
+fn normalized_plan_v4_is_picasa_only() {
+    let mut plan = valid_plan();
+    plan.schema_version = NORMALIZED_PLAN_SCHEMA_VERSION_V4;
+    assert!(plan.validate().is_err());
+    plan.source.kind = SourceKind::Picasa;
+    plan.assets[0].normalized_metadata = Some(NormalizedMetadata {
+        albums: vec!["Albums / Synthetic".to_owned()],
+        ..NormalizedMetadata::default()
+    });
+    assert!(plan.validate().is_ok());
+    plan.source.kind = SourceKind::ApplePhotos;
     assert!(plan.validate().is_err());
 }
 

@@ -32,6 +32,8 @@ const KNOWN_NAMES: &[&str] = &[
     "IMMICH_RS_MAX_ENTRIES",
     "IMMICH_RS_MAX_PATH_BYTES",
     "IMMICH_RS_MAX_RETRIES_PER_RUN",
+    "IMMICH_RS_PICASA_ALBUMS",
+    "IMMICH_RS_PICASA_FILENAME_DATE",
     "IMMICH_RS_RETRY_BASE_DELAY_MS",
     "IMMICH_RS_RETRY_DELAY_CAP_MS",
     "IMMICH_RS_SERVER",
@@ -95,6 +97,11 @@ pub fn overlay(config: &mut EffectiveConfig) -> Result<(), CliFailure> {
     )?;
     set_string(&mut config.album_mode, "IMMICH_RS_ALBUM_MODE")?;
     set_string(&mut config.album_path_joiner, "IMMICH_RS_ALBUM_PATH_JOINER")?;
+    set_bool(&mut config.picasa_albums, "IMMICH_RS_PICASA_ALBUMS")?;
+    set_bool(
+        &mut config.picasa_filename_date,
+        "IMMICH_RS_PICASA_FILENAME_DATE",
+    )?;
     set_path(&mut config.upload_plan, "IMMICH_RS_UPLOAD_PLAN")?;
     set_path(&mut config.upload_source, "IMMICH_RS_UPLOAD_SOURCE")?;
     set_path(&mut config.upload_checkpoint, "IMMICH_RS_UPLOAD_CHECKPOINT")?;

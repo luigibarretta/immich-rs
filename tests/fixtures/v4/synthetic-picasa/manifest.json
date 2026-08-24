@@ -1,0 +1,68 @@
+{
+  "schema": "fixture-manifest-v4",
+  "fixture_id": "synthetic-picasa",
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "scripts/materialize-fixture.py",
+    "generator_version": "4",
+    "license": "CC0-1.0"
+  },
+  "files": [
+    {
+      "path": "Albums/Synthetic/.picasa.ini",
+      "recipe": "text",
+      "content": "[Picasa]\nname=Synthetic Picasa Album\n[20240102-030405-image.png]\ncaption=Synthetic caption\n[pair.png]\nstar=yes\n"
+    },
+    {
+      "path": "Albums/Synthetic/20240102-030405-image.png",
+      "recipe": "synthetic_png",
+      "width": 1,
+      "height": 1,
+      "rgb": [24, 48, 72]
+    },
+    {
+      "path": "Albums/Synthetic/pair.mov",
+      "recipe": "synthetic_isobmff",
+      "marker": "synthetic-picasa-motion-v1"
+    },
+    {
+      "path": "Albums/Synthetic/pair.png",
+      "recipe": "synthetic_png",
+      "width": 2,
+      "height": 1,
+      "rgb": [48, 72, 96]
+    },
+    {
+      "path": "Albums/Synthetic/pair.xmp",
+      "recipe": "text",
+      "content": "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"><synthetic>picasa</synthetic></x:xmpmeta>\n"
+    }
+  ],
+  "archive_views": [
+    {
+      "name": "picasa-split",
+      "parts": [
+        {
+          "path": "picasa-001.zip",
+          "files": [
+            "Albums/Synthetic/.picasa.ini",
+            "Albums/Synthetic/20240102-030405-image.png",
+            "Albums/Synthetic/pair.mov"
+          ]
+        },
+        {
+          "path": "picasa-002.zip",
+          "files": [
+            "Albums/Synthetic/pair.png",
+            "Albums/Synthetic/pair.xmp"
+          ]
+        }
+      ]
+    }
+  ],
+  "expected_plan": {
+    "schema": "normalized-plan-v4",
+    "path": "expected-plan.json",
+    "sha256": "35cf8b6fb9aa5f36ab3fcfd2beb96ac33c872c4509802bff3b842bfd78a20c6d"
+  }
+}

@@ -19,6 +19,7 @@ SCHEMAS = {
     "fixture-manifest-v1": "1",
     "fixture-manifest-v2": "2",
     "fixture-manifest-v3": "3",
+    "fixture-manifest-v4": "4",
 }
 
 
@@ -60,7 +61,7 @@ def load_manifest(path: Path) -> dict[str, object]:
     path_strings = [path.as_posix() for path in paths]
     if path_strings != sorted(path_strings) or len(path_strings) != len(set(path_strings)):
         raise FixtureError("fixture paths must be unique and strictly sorted")
-    if schema in {"fixture-manifest-v2", "fixture-manifest-v3"}:
+    if schema in {"fixture-manifest-v2", "fixture-manifest-v3", "fixture-manifest-v4"}:
         _validate_archive_views(manifest, set(path_strings))
     return manifest
 

@@ -13,9 +13,12 @@ use immich_rs_core::{
 
 mod apple_archive;
 mod apple_photos;
+mod archive_support;
 mod discovery;
 mod google_takeout;
 mod identity;
+mod picasa;
+mod picasa_ini;
 mod reconcile;
 mod scan;
 mod takeout_archive;
@@ -28,6 +31,7 @@ pub use apple_photos::{
 pub use google_takeout::{
     scan_google_takeout, scan_google_takeout_inputs, scan_google_takeout_inputs_resolved,
 };
+pub use picasa::{PicasaScanConfig, scan_picasa_inputs, scan_picasa_inputs_resolved};
 pub use scan::{FolderScanConfig, NoProgress, ProgressObserver, ScanError, TakeoutScanConfig};
 
 const MAX_DIAGNOSTIC_PATHS: usize = 8;
@@ -360,6 +364,8 @@ mod apple_archive_tests;
 mod apple_tests;
 #[cfg(test)]
 mod filesystem_tests;
+#[cfg(test)]
+mod picasa_tests;
 #[cfg(test)]
 mod resolved_tests;
 #[cfg(test)]

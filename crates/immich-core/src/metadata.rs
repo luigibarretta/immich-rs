@@ -45,12 +45,16 @@ impl NormalizedMetadata {
                     .is_some_and(|canonical| canonical == *value && value.ends_with('Z'))
             })
             && self.location.as_ref().is_none_or(GeoCoordinates::is_valid)
-            && self
-                .albums
-                .iter()
-                .all(|album| valid_text(album, 4_096, false))
+            && self.albums.iter().all(|album| valid_album(album))
             && self.albums.windows(2).all(|pair| pair[0] < pair[1])
     }
+}
+
+fn valid_album(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 4_096
+        && !value.contains('\\')
+        && !value.chars().any(char::is_control)
 }
 
 fn decimal_in_range(value: &str, minimum: f64, maximum: f64) -> bool {

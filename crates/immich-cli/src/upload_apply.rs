@@ -4,9 +4,9 @@ use immich_rs_core::{
     UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadPlan,
 };
 use immich_rs_executor::{
-    ApplePhotosImportConfig, TakeoutImportConfig, apply_apple_photos_import,
-    apply_production_apple_photos_import, apply_production_takeout_import, apply_production_upload,
-    apply_takeout_import, apply_upload,
+    ApplePhotosImportConfig, PicasaImportConfig, TakeoutImportConfig, apply_apple_photos_import,
+    apply_picasa_import, apply_production_apple_photos_import, apply_production_picasa_import,
+    apply_production_takeout_import, apply_production_upload, apply_takeout_import, apply_upload,
 };
 
 use crate::args::ApplyRequest;
@@ -204,11 +204,69 @@ async fn run_import(
                 .await
             }
         }
+        SourceKind::Picasa => {
+            let report = run_picasa_import(
+                request,
+                plan,
+                read_client,
+                negotiated,
+                production,
+                cancellation,
+            )
+            .await?;
+            return write_import_report(report);
+        }
         SourceKind::Folder => return Err(CliFailure::usage("unsupported import source kind")),
     }
     .map_err(CliFailure::from_executor)?;
+    write_import_report(report)
+}
+
+fn write_import_report(report: immich_rs_core::ImportApplyReport) -> Result<(), CliFailure> {
     if report.cancelled {
         return Err(CliFailure::cancelled());
     }
     output::write_json(&report, "import apply report")
+}
+
+async fn run_picasa_import(
+    request: ApplyRequest,
+    plan: &UploadPlan,
+    read_client: ImmichReadClient,
+    negotiated: NegotiatedServer,
+    production: Option<ProductionWriteConfirmation>,
+    cancellation: &CancellationToken,
+) -> Result<immich_rs_core::ImportApplyReport, CliFailure> {
+    let config = PicasaImportConfig {
+        source: request.picasa,
+        upload: request.config,
+    };
+    let report = if let Some(confirmation) = production {
+        let client = read_client
+            .authorize_production_import(negotiated, plan, &confirmation)
+            .map_err(CliFailure::from_client)?;
+        apply_production_picasa_import(
+            plan,
+            &request.inputs,
+            &request.checkpoint,
+            &config,
+            &client,
+            cancellation,
+        )
+        .await
+    } else {
+        let client = read_client
+            .authorize_import(negotiated)
+            .map_err(CliFailure::from_client)?;
+        apply_picasa_import(
+            plan,
+            &request.inputs,
+            &request.checkpoint,
+            &config,
+            &client,
+            cancellation,
+        )
+        .await
+    };
+    report.map_err(CliFailure::from_executor)
 }

@@ -1,22 +1,15 @@
 use std::collections::BTreeMap;
 use std::fs::{File, Metadata};
-use std::io::Read;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD;
 use immich_rs_core::{
-    Cancellation, MediaKind, MetadataKind, NORMALIZED_PLAN_SCHEMA_VERSION_V3, ProgressStage,
-    RuleEvidence, SourceKind, rule_id,
+    Cancellation, MediaKind, MetadataKind, NORMALIZED_PLAN_SCHEMA_VERSION_V3,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V4, ProgressStage, RuleEvidence, SourceKind, rule_id,
 };
-use sha1::Sha1;
-use sha2::{Digest, Sha256};
-use time::{Date, Month, PrimitiveDateTime, Time};
-use unicode_normalization::UnicodeNormalization as _;
-use zip::read::ZipFile;
-use zip::{CompressionMethod, ZipArchive};
+use zip::ZipArchive;
 
 use crate::apple_photos::{ApplePhotosScanConfig, export_noise_path, finish_plan};
+use crate::archive_support::{portable_entry_path, stream_entry, validate_entry, zip_unix_ms};
 use crate::discovery::{media_kind, metadata_kind, validate_source_label};
 use crate::reconcile::{diagnostic, finalize_plan};
 use crate::{
@@ -27,6 +20,34 @@ use crate::{
 enum EntryKind {
     Media(MediaKind),
     Sidecar(MetadataKind),
+}
+
+#[derive(Clone, Copy)]
+enum ArchiveFlavor {
+    Apple,
+    Picasa,
+}
+
+impl ArchiveFlavor {
+    const fn source(self) -> (u32, SourceKind) {
+        match self {
+            Self::Apple => (NORMALIZED_PLAN_SCHEMA_VERSION_V3, SourceKind::ApplePhotos),
+            Self::Picasa => (NORMALIZED_PLAN_SCHEMA_VERSION_V4, SourceKind::Picasa),
+        }
+    }
+
+    const fn rules(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Apple => (
+                rule_id::APPLE_ARCHIVE_DUPLICATE,
+                rule_id::APPLE_ARCHIVE_CONFLICT,
+            ),
+            Self::Picasa => (
+                rule_id::PICASA_ARCHIVE_DUPLICATE,
+                rule_id::PICASA_ARCHIVE_CONFLICT,
+            ),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -45,26 +66,73 @@ pub fn scan_archives_resolved(
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
 ) -> Result<ResolvedFolderPlan, ScanError> {
+    scan_archives(
+        inputs,
+        source_label,
+        config,
+        cancellation,
+        observer,
+        ArchiveFlavor::Apple,
+    )
+}
+
+pub fn scan_picasa_archives_resolved(
+    inputs: &[PathBuf],
+    source_label: &str,
+    config: &ApplePhotosScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+) -> Result<ResolvedFolderPlan, ScanError> {
+    scan_archives(
+        inputs,
+        source_label,
+        config,
+        cancellation,
+        observer,
+        ArchiveFlavor::Picasa,
+    )
+}
+
+fn scan_archives(
+    inputs: &[PathBuf],
+    source_label: &str,
+    config: &ApplePhotosScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+    flavor: ArchiveFlavor,
+) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
     validate_source_label(source_label)?;
     validate_inputs(inputs, config.max_archives)?;
     let mut state = ScanState::new();
     let mut seen = BTreeMap::<String, Option<EntryIdentity>>::new();
     for input in inputs {
-        scan_archive(input, config, cancellation, observer, &mut state, &mut seen)?;
+        scan_archive(
+            input,
+            config,
+            cancellation,
+            observer,
+            &mut state,
+            &mut seen,
+            flavor,
+        )?;
     }
     crate::reconcile::reconcile(&mut state);
     state.progress(ProgressStage::Reconciliation, observer);
     let sequence = state.event_sequence.saturating_add(1);
     let files = crate::resolved_files(&state);
+    let (schema_version, source_kind) = flavor.source();
     let plan = finalize_plan(
-        NORMALIZED_PLAN_SCHEMA_VERSION_V3,
-        SourceKind::ApplePhotos,
+        schema_version,
+        source_kind,
         source_label,
         &config.scan,
         state,
     );
-    let plan = finish_plan(plan, config)?;
+    let plan = match flavor {
+        ArchiveFlavor::Apple => finish_plan(plan, config)?,
+        ArchiveFlavor::Picasa => plan,
+    };
     crate::finish_resolved(plan, files, sequence, observer)
 }
 
@@ -97,6 +165,7 @@ fn scan_archive(
     observer: &mut impl ProgressObserver,
     state: &mut ScanState,
     seen: &mut BTreeMap<String, Option<EntryIdentity>>,
+    flavor: ArchiveFlavor,
 ) -> Result<(), ScanError> {
     check_cancelled(cancellation)?;
     let file = File::open(path).map_err(|_| ScanError::InvalidArchive("cannot open archive"))?;
@@ -115,7 +184,9 @@ fn scan_archive(
             .by_index(index)
             .map_err(|_| ScanError::InvalidArchive("cannot open ZIP entry"))?;
         let relative_path = portable_entry_path(&entry, config.scan.max_path_bytes)?;
-        if let Some(diagnostic_path) = export_noise_path(&relative_path) {
+        if matches!(flavor, ArchiveFlavor::Apple)
+            && let Some(diagnostic_path) = export_noise_path(&relative_path)
+        {
             state.warnings.push(diagnostic(
                 rule_id::APPLE_EXPORT_NOISE,
                 "known_apple_export_noise",
@@ -131,7 +202,12 @@ fn scan_archive(
             (_, Some(kind)) => EntryKind::Sidecar(kind),
             _ => continue,
         };
-        validate_entry(&entry, config)?;
+        validate_entry(
+            &entry,
+            config.max_archive_entry_bytes,
+            config.max_compression_ratio,
+            config.compression_ratio_grace_bytes,
+        )?;
         let modified_at_unix_ms = zip_unix_ms(entry.last_modified());
         let (byte_len, content_sha256, content_sha1_base64) =
             stream_entry(&mut entry, config.scan.buffer_bytes, cancellation)?;
@@ -149,6 +225,7 @@ fn scan_archive(
             },
             state,
             seen,
+            flavor,
         );
         state.progress(ProgressStage::ContentIdentity, observer);
     }
@@ -162,100 +239,6 @@ fn scan_archive(
     Ok(())
 }
 
-fn portable_entry_path<R: Read>(
-    entry: &ZipFile<'_, R>,
-    max_path_bytes: usize,
-) -> Result<String, ScanError> {
-    if entry.name().contains(['\\', '\0'])
-        || entry
-            .name()
-            .split('/')
-            .any(|component| matches!(component, "." | ".."))
-    {
-        return Err(ScanError::InvalidArchive("unsafe ZIP entry path"));
-    }
-    let enclosed = entry
-        .enclosed_name()
-        .ok_or(ScanError::InvalidArchive("unsafe ZIP entry path"))?;
-    let mut components = Vec::new();
-    for component in enclosed.components() {
-        let Component::Normal(value) = component else {
-            return Err(ScanError::InvalidArchive("unsafe ZIP entry path"));
-        };
-        let value = value
-            .to_str()
-            .ok_or(ScanError::InvalidArchive("non-Unicode ZIP entry path"))?;
-        components.push(value.nfc().collect::<String>());
-    }
-    let path = components.join("/");
-    if path.is_empty() || path.len() > max_path_bytes {
-        return Err(ScanError::LimitExceeded("max_path_bytes"));
-    }
-    Ok(path)
-}
-
-fn validate_entry<R: Read>(
-    entry: &ZipFile<'_, R>,
-    config: &ApplePhotosScanConfig,
-) -> Result<(), ScanError> {
-    if entry.encrypted() || entry.is_symlink() || !entry.is_file() {
-        return Err(ScanError::InvalidArchive(
-            "encrypted or non-regular ZIP entry",
-        ));
-    }
-    if !matches!(
-        entry.compression(),
-        CompressionMethod::Stored | CompressionMethod::Deflated
-    ) {
-        return Err(ScanError::InvalidArchive(
-            "unsupported ZIP compression method",
-        ));
-    }
-    if entry.size() > config.max_archive_entry_bytes {
-        return Err(ScanError::LimitExceeded("max_archive_entry_bytes"));
-    }
-    if entry.size() > config.compression_ratio_grace_bytes
-        && (entry.compressed_size() == 0
-            || entry.size() / entry.compressed_size() > config.max_compression_ratio)
-    {
-        return Err(ScanError::InvalidArchive(
-            "ZIP entry compression ratio exceeded",
-        ));
-    }
-    Ok(())
-}
-
-fn stream_entry<R: Read>(
-    entry: &mut ZipFile<'_, R>,
-    buffer_bytes: usize,
-    cancellation: &impl Cancellation,
-) -> Result<(u64, String, String), ScanError> {
-    let mut buffer = vec![0_u8; buffer_bytes];
-    let mut digest = Sha256::new();
-    let mut sha1 = Sha1::new();
-    let mut byte_len = 0_u64;
-    loop {
-        check_cancelled(cancellation)?;
-        let count = entry
-            .read(&mut buffer)
-            .map_err(|_| ScanError::InvalidArchive("cannot read or verify ZIP entry"))?;
-        if count == 0 {
-            break;
-        }
-        digest.update(&buffer[..count]);
-        sha1.update(&buffer[..count]);
-        byte_len = byte_len.saturating_add(count as u64);
-    }
-    if byte_len != entry.size() {
-        return Err(ScanError::InvalidArchive("ZIP entry size mismatch"));
-    }
-    Ok((
-        byte_len,
-        format!("{:x}", digest.finalize()),
-        STANDARD.encode(sha1.finalize()),
-    ))
-}
-
 fn merge_entry(
     archive_path: &Path,
     archive_index: usize,
@@ -263,12 +246,14 @@ fn merge_entry(
     identity: EntryIdentity,
     state: &mut ScanState,
     seen: &mut BTreeMap<String, Option<EntryIdentity>>,
+    flavor: ArchiveFlavor,
 ) {
+    let (duplicate_rule, conflict_rule) = flavor.rules();
     if let Some(previous) = seen.get_mut(&relative_path) {
         if previous.as_ref() == Some(&identity) {
             state.warnings.push(diagnostic(
-                rule_id::APPLE_ARCHIVE_DUPLICATE,
-                "identical_apple_archive_entry",
+                duplicate_rule,
+                "identical_archive_entry",
                 vec![relative_path],
             ));
         } else {
@@ -280,8 +265,8 @@ fn merge_entry(
                 .sidecars
                 .retain(|item| item.relative_path != relative_path);
             state.errors.push(diagnostic(
-                rule_id::APPLE_ARCHIVE_CONFLICT,
-                "conflicting_apple_archive_entry",
+                conflict_rule,
+                "conflicting_archive_entry",
                 vec![relative_path],
             ));
         }
@@ -321,17 +306,6 @@ fn merge_entry(
             takeout_parse_error: None,
         }),
     }
-}
-
-fn zip_unix_ms(value: Option<zip::DateTime>) -> Option<i64> {
-    let value = value?;
-    let month = Month::try_from(value.month()).ok()?;
-    let date = Date::from_calendar_date(i32::from(value.year()), month, value.day()).ok()?;
-    let time = Time::from_hms(value.hour(), value.minute(), value.second()).ok()?;
-    let nanos = PrimitiveDateTime::new(date, time)
-        .assume_utc()
-        .unix_timestamp_nanos();
-    i64::try_from(nanos / 1_000_000).ok()
 }
 
 fn metadata_changed(before: &Metadata, after: &Metadata) -> bool {

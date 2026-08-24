@@ -28,6 +28,8 @@ pub struct EffectiveConfig {
     pub compression_ratio_grace_bytes: Option<u64>,
     pub album_mode: Option<String>,
     pub album_path_joiner: Option<String>,
+    pub picasa_albums: Option<bool>,
+    pub picasa_filename_date: Option<bool>,
     pub upload_plan: Option<PathBuf>,
     pub upload_source: Option<PathBuf>,
     pub upload_checkpoint: Option<PathBuf>,
@@ -56,6 +58,8 @@ struct FileConfig {
     scan: ScanConfig,
     #[serde(default)]
     apple_photos: ApplePhotosConfig,
+    #[serde(default)]
+    picasa: PicasaConfig,
     #[serde(default)]
     upload: UploadConfig,
     #[serde(default)]
@@ -91,6 +95,13 @@ struct ScanConfig {
 struct ApplePhotosConfig {
     album_mode: Option<String>,
     album_path_joiner: Option<String>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PicasaConfig {
+    albums: Option<bool>,
+    filename_date: Option<bool>,
 }
 
 #[derive(Default, Deserialize)]
@@ -196,6 +207,8 @@ fn load_file(path: &Path) -> Result<EffectiveConfig, CliFailure> {
         compression_ratio_grace_bytes: file.scan.compression_ratio_grace_bytes,
         album_mode: file.apple_photos.album_mode,
         album_path_joiner: file.apple_photos.album_path_joiner,
+        picasa_albums: file.picasa.albums,
+        picasa_filename_date: file.picasa.filename_date,
         upload_plan: file.upload.plan,
         upload_source: file.upload.source,
         upload_checkpoint: file.upload.checkpoint,

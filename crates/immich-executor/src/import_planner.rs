@@ -10,7 +10,10 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use crate::import_config::ImportConfig;
-use crate::{ApplePhotosImportConfig, ExecutorError, ExecutorErrorClass, TakeoutImportConfig};
+use crate::{
+    ApplePhotosImportConfig, ExecutorError, ExecutorErrorClass, PicasaImportConfig,
+    TakeoutImportConfig,
+};
 
 const FALLBACK_TIMESTAMP_UNIX_MS: i64 = 0;
 
@@ -28,6 +31,15 @@ pub fn create_apple_photos_upload_plan(
     resolved: &ResolvedFolderPlan,
     server: ServerCompatibility,
     config: &ApplePhotosImportConfig,
+) -> Result<UploadPlan, ExecutorError> {
+    create_import_upload_plan(resolved, server, config)
+}
+
+/// Convert one resolved Picasa scan into a server-bound immutable import plan.
+pub fn create_picasa_upload_plan(
+    resolved: &ResolvedFolderPlan,
+    server: ServerCompatibility,
+    config: &PicasaImportConfig,
 ) -> Result<UploadPlan, ExecutorError> {
     create_import_upload_plan(resolved, server, config)
 }
@@ -117,7 +129,10 @@ fn import_timestamps(
             .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidPlan))?;
         return Ok((millis, millis));
     }
-    if source_kind == immich_rs_core::SourceKind::ApplePhotos {
+    if matches!(
+        source_kind,
+        immich_rs_core::SourceKind::ApplePhotos | immich_rs_core::SourceKind::Picasa
+    ) {
         let created = source
             .created_at_unix_ms()
             .or_else(|| source.modified_at_unix_ms())

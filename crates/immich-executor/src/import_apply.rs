@@ -91,7 +91,7 @@ pub async fn apply_production_apple_photos_import(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn apply_import_inner(
+pub async fn apply_import_inner(
     plan: &UploadPlan,
     inputs: &[PathBuf],
     checkpoint: &Path,

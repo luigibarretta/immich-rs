@@ -260,7 +260,7 @@ pub fn parse_archive_plan(
     })
 }
 
-fn configured_inputs(
+pub fn configured_inputs(
     cli_inputs: Vec<PathBuf>,
     config: &EffectiveConfig,
 ) -> Result<Vec<PathBuf>, CliFailure> {

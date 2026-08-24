@@ -29,7 +29,7 @@ pub fn dry_run_apple_photos_import(
     dry_run_import(plan, inputs, checkpoint, config, cancellation)
 }
 
-fn dry_run_import(
+pub fn dry_run_import(
     plan: &UploadPlan,
     inputs: &[PathBuf],
     checkpoint: &Path,

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://immich-rs.invalid/schema/fixture-manifest-v4.json",
+  "title": "immich-rs synthetic Picasa fixture manifest v4",
+  "type": "object",
+  "required": ["schema", "fixture_id", "provenance", "files", "archive_views", "expected_plan"],
+  "properties": {
+    "schema": { "const": "fixture-manifest-v4" },
+    "fixture_id": { "type": "string", "minLength": 1 },
+    "provenance": {
+      "type": "object",
+      "required": ["kind", "generator", "generator_version", "license"],
+      "properties": {
+        "kind": { "const": "synthetic" },
+        "generator": { "const": "scripts/materialize-fixture.py" },
+        "generator_version": { "const": "4" },
+        "license": { "const": "CC0-1.0" }
+      },
+      "additionalProperties": false
+    },
+    "files": { "type": "array", "minItems": 1 },
+    "archive_views": { "type": "array", "minItems": 1 },
+    "expected_plan": {
+      "type": "object",
+      "required": ["schema", "path", "sha256"],
+      "properties": {
+        "schema": { "const": "normalized-plan-v4" },
+        "path": { "const": "expected-plan.json" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

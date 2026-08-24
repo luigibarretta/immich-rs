@@ -38,6 +38,20 @@ pub const APPLE_FOLDER_ALBUM: &str = "META_APPLE_FOLDER_ALBUM_V1";
 pub const APPLE_ARCHIVE_DUPLICATE: &str = "ARCHIVE_APPLE_DUPLICATE_IDENTICAL_V1";
 /// Apple ZIP parts contain conflicting bytes at one logical path.
 pub const APPLE_ARCHIVE_CONFLICT: &str = "ARCHIVE_APPLE_PATH_CONFLICT_V1";
+/// A bounded Picasa INI caption contributed normalized metadata.
+pub const PICASA_CAPTION: &str = "META_PICASA_CAPTION_V1";
+/// A bounded Picasa INI album contributed membership.
+pub const PICASA_ALBUM: &str = "META_PICASA_ALBUM_V1";
+/// Folder placement explicitly contributed Picasa album membership.
+pub const PICASA_FOLDER_ALBUM: &str = "META_PICASA_FOLDER_ALBUM_V1";
+/// A deterministic timestamp was parsed from a supported Picasa filename prefix.
+pub const PICASA_FILENAME_DATE: &str = "META_PICASA_FILENAME_DATE_V1";
+/// A Picasa INI document was malformed, conflicting or outside its limits.
+pub const PICASA_INI_INVALID: &str = "META_PICASA_INI_INVALID_V1";
+/// Identical Picasa ZIP entries at one logical path were coalesced.
+pub const PICASA_ARCHIVE_DUPLICATE: &str = "ARCHIVE_PICASA_DUPLICATE_IDENTICAL_V1";
+/// Picasa ZIP parts contain conflicting bytes at one logical path.
+pub const PICASA_ARCHIVE_CONFLICT: &str = "ARCHIVE_PICASA_PATH_CONFLICT_V1";
 /// A still image and video were associated as a live-photo pair.
 pub const LIVE_PHOTO_BASENAME: &str = "PAIR_LIVE_PHOTO_BASENAME_V1";
 /// A symbolic link was deliberately not followed.

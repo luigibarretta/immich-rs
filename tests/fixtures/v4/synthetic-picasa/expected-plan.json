@@ -1,0 +1,132 @@
+{
+  "schema_version": 4,
+  "source": {
+    "kind": "picasa",
+    "label": "synthetic-picasa",
+    "fingerprint_sha256": "077729c55c558c96e74795878f29afe92118a735a5d8dd2892f1d7bfccf78fc1",
+    "case_sensitive": true,
+    "unicode_normalization": "nfc"
+  },
+  "assets": [
+    {
+      "operation_id": "1a722dc1acff0069e876747396f1742a72794f4c13d7454a965ae4e74bda022b",
+      "relative_path": "Albums/Synthetic/20240102-030405-image.png",
+      "media_kind": "image",
+      "byte_len": 69,
+      "content_sha256": "82ea26b98483108e97abd3efe54c140b9aaa76e9df76f22262fe574d07468c8d",
+      "metadata": [],
+      "normalized_metadata": {
+        "description": "Synthetic caption",
+        "taken_at_utc": "2024-01-02T03:04:05Z",
+        "location": null,
+        "albums": [
+          "Synthetic Picasa Album"
+        ]
+      },
+      "live_photo": null,
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_PICASA_ALBUM_V1",
+          "outcome": "picasa_album_selected"
+        },
+        {
+          "rule_id": "META_PICASA_CAPTION_V1",
+          "outcome": "picasa_caption_selected"
+        },
+        {
+          "rule_id": "META_PICASA_FILENAME_DATE_V1",
+          "outcome": "filename_date_selected"
+        }
+      ]
+    },
+    {
+      "operation_id": "fa4e9d57251cd9b05ce20a59dec75792e3dbf1298a1ca143a319ae9e5d073e04",
+      "relative_path": "Albums/Synthetic/pair.mov",
+      "media_kind": "video",
+      "byte_len": 54,
+      "content_sha256": "fff51d63cbe5f7468f77cd021fbf4aa163a571ea326b109b95883a0b887be51f",
+      "metadata": [],
+      "normalized_metadata": {
+        "description": null,
+        "taken_at_utc": null,
+        "location": null,
+        "albums": [
+          "Synthetic Picasa Album"
+        ]
+      },
+      "live_photo": {
+        "pair_id": "ee569112a906129275460c9145eac43e9c162e94095c78f8ea2561a5e3c9312f",
+        "role": "video"
+      },
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_PICASA_ALBUM_V1",
+          "outcome": "picasa_album_selected"
+        },
+        {
+          "rule_id": "PAIR_LIVE_PHOTO_BASENAME_V1",
+          "outcome": "live_photo_member"
+        }
+      ]
+    },
+    {
+      "operation_id": "525aa3bbe67e36a21ad08f6cd10ce649858c93c7f698a71323cc25f220f0f072",
+      "relative_path": "Albums/Synthetic/pair.png",
+      "media_kind": "image",
+      "byte_len": 70,
+      "content_sha256": "08d84f8def566dabb601183fd5ac1b4272bb82c966369331aafeb4a3a6898afd",
+      "metadata": [
+        {
+          "relative_path": "Albums/Synthetic/pair.xmp",
+          "kind": "xmp",
+          "rule_id": "META_SIDECAR_BASENAME_V1"
+        }
+      ],
+      "normalized_metadata": {
+        "description": null,
+        "taken_at_utc": null,
+        "location": null,
+        "albums": [
+          "Synthetic Picasa Album"
+        ]
+      },
+      "live_photo": {
+        "pair_id": "ee569112a906129275460c9145eac43e9c162e94095c78f8ea2561a5e3c9312f",
+        "role": "image"
+      },
+      "evidence": [
+        {
+          "rule_id": "FS_REGULAR_MEDIA_V1",
+          "outcome": "streamed_content_identity"
+        },
+        {
+          "rule_id": "META_PICASA_ALBUM_V1",
+          "outcome": "picasa_album_selected"
+        },
+        {
+          "rule_id": "META_SIDECAR_BASENAME_V1",
+          "outcome": "metadata_candidate_associated"
+        },
+        {
+          "rule_id": "PAIR_LIVE_PHOTO_BASENAME_V1",
+          "outcome": "live_photo_member"
+        }
+      ]
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "summary": {
+    "assets": 3,
+    "sidecars": 1,
+    "bytes_read": 271
+  }
+}

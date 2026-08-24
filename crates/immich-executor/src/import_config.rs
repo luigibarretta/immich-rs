@@ -2,8 +2,9 @@ use std::path::PathBuf;
 
 use immich_rs_core::{Cancellation, SourceKind};
 use immich_rs_sources::{
-    AlbumMode, ApplePhotosScanConfig, NoProgress, ResolvedFolderPlan, ScanError, TakeoutScanConfig,
-    scan_apple_photos_inputs_resolved, scan_google_takeout_inputs_resolved,
+    AlbumMode, ApplePhotosScanConfig, NoProgress, PicasaScanConfig, ResolvedFolderPlan, ScanError,
+    TakeoutScanConfig, scan_apple_photos_inputs_resolved, scan_google_takeout_inputs_resolved,
+    scan_picasa_inputs_resolved,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -107,6 +108,59 @@ impl ApplePhotosImportConfig {
                 AlbumMode::Path => "path",
             },
             album_path_joiner: &self.source.album_path_joiner,
+        };
+        let bytes = serde_json::to_vec(&identity)
+            .map_err(|_| ExecutorError::new(ExecutorErrorClass::Invariant))?;
+        Ok(format!("{:x}", Sha256::digest(bytes)))
+    }
+}
+
+/// Complete scan and execution identity for one Picasa import.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PicasaImportConfig {
+    /// Directory or split-ZIP Picasa metadata and resource limits.
+    pub source: PicasaScanConfig,
+    /// Upload verification, concurrency and retry limits.
+    pub upload: UploadExecutionConfig,
+}
+
+impl Default for PicasaImportConfig {
+    fn default() -> Self {
+        let upload = UploadExecutionConfig::default();
+        Self {
+            source: PicasaScanConfig {
+                scan: upload.scan.clone(),
+                ..PicasaScanConfig::default()
+            },
+            upload,
+        }
+    }
+}
+
+impl PicasaImportConfig {
+    fn validate(&self) -> Result<(), ExecutorError> {
+        self.upload.validate()?;
+        self.source
+            .validate()
+            .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidConfiguration))?;
+        if self.source.scan != self.upload.scan {
+            return Err(ExecutorError::new(ExecutorErrorClass::InvalidConfiguration));
+        }
+        Ok(())
+    }
+
+    fn identity_sha256(&self) -> Result<String, ExecutorError> {
+        self.validate()?;
+        let identity = PicasaConfigurationIdentity {
+            upload_sha256: self.upload.identity_sha256()?,
+            max_archives: self.source.max_archives,
+            max_archive_entry_bytes: self.source.max_archive_entry_bytes,
+            max_compression_ratio: self.source.max_compression_ratio,
+            compression_ratio_grace_bytes: self.source.compression_ratio_grace_bytes,
+            album_mode: album_mode_name(self.source.album_mode),
+            album_path_joiner: &self.source.album_path_joiner,
+            picasa_albums: self.source.picasa_albums,
+            filename_date: self.source.filename_date,
         };
         let bytes = serde_json::to_vec(&identity)
             .map_err(|_| ExecutorError::new(ExecutorErrorClass::Invariant))?;
@@ -218,6 +272,47 @@ impl ImportConfig for ApplePhotosImportConfig {
     }
 }
 
+impl ImportConfig for PicasaImportConfig {
+    fn validate_import(&self) -> Result<(), ExecutorError> {
+        self.validate()
+    }
+
+    fn identity(&self) -> Result<String, ExecutorError> {
+        self.identity_sha256()
+    }
+
+    fn source_kind(&self) -> SourceKind {
+        SourceKind::Picasa
+    }
+
+    fn upload(&self) -> &UploadExecutionConfig {
+        &self.upload
+    }
+
+    fn archive_limits(&self) -> ArchiveLimits {
+        ArchiveLimits {
+            max_entry_bytes: self.source.max_archive_entry_bytes,
+            max_compression_ratio: self.source.max_compression_ratio,
+            compression_ratio_grace_bytes: self.source.compression_ratio_grace_bytes,
+        }
+    }
+
+    fn scan_resolved(
+        &self,
+        inputs: &[PathBuf],
+        source_label: &str,
+        cancellation: &impl Cancellation,
+    ) -> Result<ResolvedFolderPlan, ScanError> {
+        scan_picasa_inputs_resolved(
+            inputs,
+            source_label,
+            &self.source,
+            cancellation,
+            &mut NoProgress,
+        )
+    }
+}
+
 #[derive(Serialize)]
 struct TakeoutConfigurationIdentity {
     upload_sha256: String,
@@ -236,4 +331,25 @@ struct AppleConfigurationIdentity<'a> {
     compression_ratio_grace_bytes: u64,
     album_mode: &'a str,
     album_path_joiner: &'a str,
+}
+
+#[derive(Serialize)]
+struct PicasaConfigurationIdentity<'a> {
+    upload_sha256: String,
+    max_archives: usize,
+    max_archive_entry_bytes: u64,
+    max_compression_ratio: u64,
+    compression_ratio_grace_bytes: u64,
+    album_mode: &'a str,
+    album_path_joiner: &'a str,
+    picasa_albums: bool,
+    filename_date: bool,
+}
+
+const fn album_mode_name(mode: AlbumMode) -> &'static str {
+    match mode {
+        AlbumMode::None => "none",
+        AlbumMode::Folder => "folder",
+        AlbumMode::Path => "path",
+    }
 }

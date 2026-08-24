@@ -3,10 +3,12 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use immich_rs_executor::{
-    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, TakeoutImportConfig,
-    UploadExecutionConfig,
+    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, PicasaImportConfig,
+    TakeoutImportConfig, UploadExecutionConfig,
 };
-use immich_rs_sources::{AlbumMode, ApplePhotosScanConfig, FolderScanConfig, TakeoutScanConfig};
+use immich_rs_sources::{
+    AlbumMode, ApplePhotosScanConfig, FolderScanConfig, PicasaScanConfig, TakeoutScanConfig,
+};
 
 use crate::config::EffectiveConfig;
 use crate::failure::CliFailure;
@@ -27,6 +29,12 @@ pub struct ApplePhotosRequest {
     pub inputs: Vec<PathBuf>,
     pub label: String,
     pub config: ApplePhotosScanConfig,
+}
+
+pub struct PicasaRequest {
+    pub inputs: Vec<PathBuf>,
+    pub label: String,
+    pub config: PicasaScanConfig,
 }
 
 pub struct UploadFolderRequest {
@@ -54,6 +62,15 @@ pub struct UploadApplePhotosRequest {
     pub ca_certificate: Option<PathBuf>,
 }
 
+pub struct UploadPicasaRequest {
+    pub inputs: Vec<PathBuf>,
+    pub label: String,
+    pub config: PicasaImportConfig,
+    pub server: String,
+    pub production_read: bool,
+    pub ca_certificate: Option<PathBuf>,
+}
+
 pub struct ApplyRequest {
     pub plan: PathBuf,
     pub inputs: Vec<PathBuf>,
@@ -63,6 +80,7 @@ pub struct ApplyRequest {
     pub config: UploadExecutionConfig,
     pub takeout: TakeoutScanConfig,
     pub apple: ApplePhotosScanConfig,
+    pub picasa: PicasaScanConfig,
     pub production: Option<ProductionWriteRequest>,
     pub ca_certificate: Option<PathBuf>,
 }
@@ -139,6 +157,27 @@ pub fn apple_config(config: &EffectiveConfig) -> Result<ApplePhotosScanConfig, C
     if let Some(value) = &config.album_path_joiner {
         scan.album_path_joiner.clone_from(value);
     }
+    Ok(scan)
+}
+
+pub fn picasa_config(config: &EffectiveConfig) -> Result<PicasaScanConfig, CliFailure> {
+    let apple = apple_config(config)?;
+    let mut scan = PicasaScanConfig {
+        scan: apple.scan,
+        max_archives: apple.max_archives,
+        max_archive_entry_bytes: apple.max_archive_entry_bytes,
+        max_compression_ratio: apple.max_compression_ratio,
+        compression_ratio_grace_bytes: apple.compression_ratio_grace_bytes,
+        album_mode: apple.album_mode,
+        album_path_joiner: apple.album_path_joiner,
+        ..PicasaScanConfig::default()
+    };
+    scan.picasa_albums = config
+        .picasa_albums
+        .map_or(scan.picasa_albums, |value| value);
+    scan.filename_date = config
+        .picasa_filename_date
+        .map_or(scan.filename_date, |value| value);
     Ok(scan)
 }
 

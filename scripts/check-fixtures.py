@@ -16,6 +16,7 @@ FIXTURE_ROOTS = [
     REPOSITORY_ROOT / "tests" / "fixtures" / "v1",
     REPOSITORY_ROOT / "tests" / "fixtures" / "v2",
     REPOSITORY_ROOT / "tests" / "fixtures" / "v3",
+    REPOSITORY_ROOT / "tests" / "fixtures" / "v4",
 ]
 SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
 SKIPPED_PARTS = {".git", "target", ".cargo"}
@@ -126,6 +127,7 @@ def check_manifests() -> None:
             "fixture-manifest-v1": 1,
             "fixture-manifest-v2": 2,
             "fixture-manifest-v3": 3,
+            "fixture-manifest-v4": 4,
         }
         schema_version = schema_versions.get(manifest.get("schema"))
         if (

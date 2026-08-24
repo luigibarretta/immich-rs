@@ -2,8 +2,8 @@ use immich_rs_core::{
     CancellationToken, SourceKind, UPLOAD_PLAN_SCHEMA_VERSION, UPLOAD_PLAN_SCHEMA_VERSION_V2,
 };
 use immich_rs_executor::{
-    ApplePhotosImportConfig, TakeoutImportConfig, dry_run_apple_photos_import,
-    dry_run_takeout_import, dry_run_upload,
+    ApplePhotosImportConfig, PicasaImportConfig, TakeoutImportConfig, dry_run_apple_photos_import,
+    dry_run_picasa_import, dry_run_takeout_import, dry_run_upload,
 };
 
 use crate::args::ApplyRequest;
@@ -49,6 +49,16 @@ pub fn run(request: &ApplyRequest) -> Result<(), CliFailure> {
                     &request.checkpoint,
                     &ApplePhotosImportConfig {
                         source: request.apple.clone(),
+                        upload: request.config.clone(),
+                    },
+                    &cancellation,
+                ),
+                SourceKind::Picasa => dry_run_picasa_import(
+                    &plan,
+                    &request.inputs,
+                    &request.checkpoint,
+                    &PicasaImportConfig {
+                        source: request.picasa.clone(),
                         upload: request.config.clone(),
                     },
                     &cancellation,

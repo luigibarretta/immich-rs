@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     NORMALIZED_PLAN_SCHEMA_VERSION, NORMALIZED_PLAN_SCHEMA_VERSION_V2,
-    NORMALIZED_PLAN_SCHEMA_VERSION_V3, NormalizedMetadata,
+    NORMALIZED_PLAN_SCHEMA_VERSION_V3, NORMALIZED_PLAN_SCHEMA_VERSION_V4, NormalizedMetadata,
 };
 
 /// Kind of input adapter that produced a plan.
@@ -19,6 +19,8 @@ pub enum SourceKind {
     GoogleTakeout,
     /// An Apple Photos or iCloud Photos export.
     ApplePhotos,
+    /// A Picasa folder or archive export.
+    Picasa,
 }
 
 /// Explicit Unicode normalization policy applied to portable relative paths.
@@ -182,6 +184,7 @@ impl NormalizedPlan {
             NORMALIZED_PLAN_SCHEMA_VERSION
                 | NORMALIZED_PLAN_SCHEMA_VERSION_V2
                 | NORMALIZED_PLAN_SCHEMA_VERSION_V3
+                | NORMALIZED_PLAN_SCHEMA_VERSION_V4
         ) {
             return Err(PlanValidationError::UnsupportedSchema(self.schema_version));
         }
@@ -195,8 +198,18 @@ impl NormalizedPlan {
         {
             return Err(PlanValidationError::InvalidSchemaSource);
         }
+        if self.schema_version == NORMALIZED_PLAN_SCHEMA_VERSION_V4
+            && self.source.kind != SourceKind::Picasa
+        {
+            return Err(PlanValidationError::InvalidSchemaSource);
+        }
         if self.source.kind == SourceKind::ApplePhotos
             && self.schema_version != NORMALIZED_PLAN_SCHEMA_VERSION_V3
+        {
+            return Err(PlanValidationError::InvalidSchemaSource);
+        }
+        if self.source.kind == SourceKind::Picasa
+            && self.schema_version != NORMALIZED_PLAN_SCHEMA_VERSION_V4
         {
             return Err(PlanValidationError::InvalidSchemaSource);
         }

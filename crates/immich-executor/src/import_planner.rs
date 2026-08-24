@@ -9,7 +9,8 @@ use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use crate::{ExecutorError, ExecutorErrorClass, TakeoutImportConfig};
+use crate::import_config::ImportConfig;
+use crate::{ApplePhotosImportConfig, ExecutorError, ExecutorErrorClass, TakeoutImportConfig};
 
 const FALLBACK_TIMESTAMP_UNIX_MS: i64 = 0;
 
@@ -19,13 +20,30 @@ pub fn create_takeout_upload_plan(
     server: ServerCompatibility,
     config: &TakeoutImportConfig,
 ) -> Result<UploadPlan, ExecutorError> {
-    config.validate()?;
+    create_import_upload_plan(resolved, server, config)
+}
+
+/// Convert one resolved Apple Photos scan into a server-bound immutable import plan.
+pub fn create_apple_photos_upload_plan(
+    resolved: &ResolvedFolderPlan,
+    server: ServerCompatibility,
+    config: &ApplePhotosImportConfig,
+) -> Result<UploadPlan, ExecutorError> {
+    create_import_upload_plan(resolved, server, config)
+}
+
+pub fn create_import_upload_plan(
+    resolved: &ResolvedFolderPlan,
+    server: ServerCompatibility,
+    config: &impl ImportConfig,
+) -> Result<UploadPlan, ExecutorError> {
+    config.validate_import()?;
     resolved
         .plan
         .validate()
         .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidPlan))?;
     if !resolved.plan.errors.is_empty()
-        || resolved.plan.source.kind != immich_rs_core::SourceKind::GoogleTakeout
+        || resolved.plan.source.kind != config.source_kind()
         || server.version.major != 3
         || server.version.minor != 1
     {
@@ -34,13 +52,13 @@ pub fn create_takeout_upload_plan(
     let videos = live_video_operations(resolved);
     let mut operations = Vec::with_capacity(resolved.plan.assets.len());
     for asset in &resolved.plan.assets {
-        source_for(
+        let source = source_for(
             resolved,
             &asset.relative_path,
             asset.byte_len,
             &asset.content_sha256,
         )?;
-        let timestamps = import_timestamps(asset)?;
+        let timestamps = import_timestamps(asset, source, config.source_kind())?;
         operations.push(UploadOperation {
             operation_id: asset.operation_id.clone(),
             relative_path: asset.relative_path.clone(),
@@ -58,7 +76,7 @@ pub fn create_takeout_upload_plan(
         schema_version: UPLOAD_PLAN_SCHEMA_VERSION_V2,
         normalized_plan_sha256: compact_sha256(&resolved.plan)?,
         source: resolved.plan.source.clone(),
-        configuration_sha256: config.identity_sha256()?,
+        configuration_sha256: config.identity()?,
         server,
         summary: UploadPlanSummary::from_operations(UPLOAD_PLAN_SCHEMA_VERSION_V2, &operations),
         operations,
@@ -83,7 +101,11 @@ fn source_for<'a>(
     Ok(source)
 }
 
-fn import_timestamps(asset: &immich_rs_core::CandidateAsset) -> Result<(i64, i64), ExecutorError> {
+fn import_timestamps(
+    asset: &immich_rs_core::CandidateAsset,
+    source: &immich_rs_sources::ResolvedSourceFile,
+    source_kind: immich_rs_core::SourceKind,
+) -> Result<(i64, i64), ExecutorError> {
     if let Some(value) = asset
         .normalized_metadata
         .as_ref()
@@ -94,6 +116,14 @@ fn import_timestamps(asset: &immich_rs_core::CandidateAsset) -> Result<(i64, i64
         let millis = i64::try_from(instant.unix_timestamp_nanos() / 1_000_000)
             .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidPlan))?;
         return Ok((millis, millis));
+    }
+    if source_kind == immich_rs_core::SourceKind::ApplePhotos {
+        let created = source
+            .created_at_unix_ms()
+            .or_else(|| source.modified_at_unix_ms())
+            .unwrap_or(FALLBACK_TIMESTAMP_UNIX_MS);
+        let modified = source.modified_at_unix_ms().unwrap_or(created);
+        return Ok((created, modified));
     }
     Ok((FALLBACK_TIMESTAMP_UNIX_MS, FALLBACK_TIMESTAMP_UNIX_MS))
 }

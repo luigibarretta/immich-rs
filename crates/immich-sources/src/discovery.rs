@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use immich_rs_core::{Cancellation, MediaKind, MetadataKind, ProgressStage, RuleEvidence, rule_id};
 use unicode_normalization::UnicodeNormalization as _;
@@ -204,6 +205,8 @@ fn process_regular_file(
     before_read(path);
     match stream_identity(path, metadata, config.buffer_bytes, cancellation) {
         Ok((byte_len, content_sha256, content_sha1_base64, changed)) => {
+            let created_at_unix_ms = metadata.created().ok().and_then(unix_millis);
+            let modified_at_unix_ms = metadata.modified().ok().and_then(unix_millis);
             state.bytes_read = state.bytes_read.saturating_add(byte_len);
             if changed {
                 state.errors.push(diagnostic(
@@ -221,6 +224,8 @@ fn process_regular_file(
                     byte_len,
                     content_sha256,
                     content_sha1_base64,
+                    created_at_unix_ms,
+                    modified_at_unix_ms,
                     metadata: Vec::new(),
                     normalized_metadata: None,
                     live_photo: None,
@@ -238,6 +243,8 @@ fn process_regular_file(
                     byte_len,
                     content_sha256,
                     content_sha1_base64,
+                    created_at_unix_ms,
+                    modified_at_unix_ms,
                     takeout_document: None,
                     takeout_parse_error: None,
                 });
@@ -255,6 +262,11 @@ fn process_regular_file(
             Ok(())
         }
     }
+}
+
+fn unix_millis(value: SystemTime) -> Option<i64> {
+    let millis = value.duration_since(UNIX_EPOCH).ok()?.as_millis();
+    i64::try_from(millis).ok()
 }
 
 pub fn check_cancelled(cancellation: &impl Cancellation) -> Result<(), ScanError> {

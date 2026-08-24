@@ -4,10 +4,11 @@ use std::path::{Path, PathBuf};
 use immich_rs_client::{ImmichImportClient, ProductionImmichImportClient};
 use immich_rs_core::{
     Cancellation, CancellationToken, IMPORT_APPLY_REPORT_SCHEMA_VERSION, ImportApplyReport,
-    SourceKind, UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadOperation, UploadPlan, UploadRole,
+    UPLOAD_PLAN_SCHEMA_VERSION_V2, UploadOperation, UploadPlan, UploadRole,
 };
-use immich_rs_sources::{NoProgress, ResolvedFolderPlan, scan_google_takeout_inputs_resolved};
+use immich_rs_sources::ResolvedFolderPlan;
 
+use crate::import_config::ImportConfig;
 use crate::import_effects::{apply_albums, apply_metadata};
 use crate::import_journal::{ImportEvent, ImportJournal, ImportOutcome, ImportState, asset_key};
 use crate::import_staging::ImportStaging;
@@ -15,7 +16,7 @@ use crate::journal::OutcomeKind;
 use crate::operation::{OperationOutcome, OperationResult};
 use crate::retry::RetryBudget;
 use crate::verify::VerifiedAsset;
-use crate::{ExecutorError, ExecutorErrorClass, TakeoutImportConfig};
+use crate::{ApplePhotosImportConfig, ExecutorError, ExecutorErrorClass, TakeoutImportConfig};
 
 /// Apply one immutable Google Takeout plan to an authorized disposable Immich instance.
 pub async fn apply_takeout_import(
@@ -26,7 +27,7 @@ pub async fn apply_takeout_import(
     client: &ImmichImportClient,
     cancellation: &CancellationToken,
 ) -> Result<ImportApplyReport, ExecutorError> {
-    apply_takeout_inner(plan, inputs, checkpoint, config, client, None, cancellation).await
+    apply_import_inner(plan, inputs, checkpoint, config, client, None, cancellation).await
 }
 
 /// Apply one exactly authorized production Takeout plan.
@@ -41,7 +42,43 @@ pub async fn apply_production_takeout_import(
     if !client.authorization().matches_plan(plan) || !client.import().upload().is_production() {
         return Err(ExecutorError::new(ExecutorErrorClass::InvalidPlan));
     }
-    apply_takeout_inner(
+    apply_import_inner(
+        plan,
+        inputs,
+        checkpoint,
+        config,
+        client.import(),
+        Some(client.authorization().backup_reference_sha256()),
+        cancellation,
+    )
+    .await
+}
+
+/// Apply one immutable Apple Photos plan to an authorized disposable Immich instance.
+pub async fn apply_apple_photos_import(
+    plan: &UploadPlan,
+    inputs: &[PathBuf],
+    checkpoint: &Path,
+    config: &ApplePhotosImportConfig,
+    client: &ImmichImportClient,
+    cancellation: &CancellationToken,
+) -> Result<ImportApplyReport, ExecutorError> {
+    apply_import_inner(plan, inputs, checkpoint, config, client, None, cancellation).await
+}
+
+/// Apply one exactly authorized production Apple Photos plan.
+pub async fn apply_production_apple_photos_import(
+    plan: &UploadPlan,
+    inputs: &[PathBuf],
+    checkpoint: &Path,
+    config: &ApplePhotosImportConfig,
+    client: &ProductionImmichImportClient,
+    cancellation: &CancellationToken,
+) -> Result<ImportApplyReport, ExecutorError> {
+    if !client.authorization().matches_plan(plan) || !client.import().upload().is_production() {
+        return Err(ExecutorError::new(ExecutorErrorClass::InvalidPlan));
+    }
+    apply_import_inner(
         plan,
         inputs,
         checkpoint,
@@ -54,11 +91,11 @@ pub async fn apply_production_takeout_import(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn apply_takeout_inner(
+async fn apply_import_inner(
     plan: &UploadPlan,
     inputs: &[PathBuf],
     checkpoint: &Path,
-    config: &TakeoutImportConfig,
+    config: &impl ImportConfig,
     client: &ImmichImportClient,
     backup_reference_sha256: Option<&str>,
     cancellation: &CancellationToken,
@@ -72,7 +109,7 @@ async fn apply_takeout_inner(
     let state = journal.state()?;
     state.validate_for_plan(plan)?;
     let staging = ImportStaging::open(checkpoint, plan, config)?;
-    let retry_budget = RetryBudget::new(config.upload.max_retries_per_run);
+    let retry_budget = RetryBudget::new(config.upload().max_retries_per_run);
     let mut report = apply_report(plan);
     let mut asset_ids = initial_asset_ids(plan, &state);
 
@@ -104,7 +141,7 @@ async fn apply_takeout_inner(
                 &source,
                 live_video_id,
                 client.upload(),
-                &config.upload,
+                config.upload(),
                 &retry_budget,
                 cancellation,
             )
@@ -127,7 +164,7 @@ async fn apply_takeout_inner(
             &mut journal,
             &mut report,
             client,
-            config,
+            config.upload(),
             &retry_budget,
             cancellation,
         )
@@ -144,7 +181,7 @@ async fn apply_takeout_inner(
             &mut journal,
             &mut report,
             client,
-            config,
+            config.upload(),
             &retry_budget,
             cancellation,
         )
@@ -155,16 +192,16 @@ async fn apply_takeout_inner(
 
 fn validate_context(
     plan: &UploadPlan,
-    config: &TakeoutImportConfig,
+    config: &impl ImportConfig,
     client: &ImmichImportClient,
     production: bool,
 ) -> Result<(), ExecutorError> {
-    config.validate()?;
+    config.validate_import()?;
     plan.validate()
         .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidPlan))?;
     let valid = plan.schema_version == UPLOAD_PLAN_SCHEMA_VERSION_V2
-        && plan.source.kind == SourceKind::GoogleTakeout
-        && plan.configuration_sha256 == config.identity_sha256()?
+        && plan.source.kind == config.source_kind()
+        && plan.configuration_sha256 == config.identity()?
         && client.upload().compatibility() == &plan.server
         && client.upload().is_production() == production;
     valid
@@ -175,23 +212,19 @@ fn validate_context(
 fn rescan(
     plan: &UploadPlan,
     inputs: &[PathBuf],
-    config: &TakeoutImportConfig,
+    config: &impl ImportConfig,
     cancellation: &CancellationToken,
 ) -> Result<ResolvedFolderPlan, ExecutorError> {
-    let resolved = scan_google_takeout_inputs_resolved(
-        inputs,
-        &plan.source.label,
-        &config.source,
-        cancellation,
-        &mut NoProgress,
-    )
-    .map_err(|error| match error {
-        immich_rs_sources::ScanError::Cancelled => {
-            ExecutorError::new(ExecutorErrorClass::Cancelled)
-        }
-        _ => ExecutorError::new(ExecutorErrorClass::SourceChanged),
-    })?;
-    let observed = crate::create_takeout_upload_plan(&resolved, plan.server.clone(), config)?;
+    let resolved = config
+        .scan_resolved(inputs, &plan.source.label, cancellation)
+        .map_err(|error| match error {
+            immich_rs_sources::ScanError::Cancelled => {
+                ExecutorError::new(ExecutorErrorClass::Cancelled)
+            }
+            _ => ExecutorError::new(ExecutorErrorClass::SourceChanged),
+        })?;
+    let observed =
+        crate::import_planner::create_import_upload_plan(&resolved, plan.server.clone(), config)?;
     if &observed != plan {
         return Err(ExecutorError::new(ExecutorErrorClass::SourceChanged));
     }

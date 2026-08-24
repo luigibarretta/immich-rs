@@ -11,11 +11,12 @@ use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization as _;
 use zip::{CompressionMethod, ZipArchive};
 
+use crate::import_config::ImportConfig;
 use crate::import_staging_fs::{
     cleanup_exact_root, create_private_directory, private_file, validate_real_directory,
     validate_real_file,
 };
-use crate::{ExecutorError, ExecutorErrorClass, TakeoutImportConfig};
+use crate::{ExecutorError, ExecutorErrorClass};
 
 const STAGING_PREFIX: &str = ".immich-rs-stage-";
 
@@ -40,9 +41,9 @@ impl ImportStaging {
     pub(crate) fn open(
         checkpoint: &Path,
         plan: &UploadPlan,
-        config: &TakeoutImportConfig,
+        config: &impl ImportConfig,
     ) -> Result<Self, ExecutorError> {
-        config.validate()?;
+        config.validate_import()?;
         plan.validate()
             .map_err(|_| ExecutorError::new(ExecutorErrorClass::InvalidPlan))?;
         let parent = checkpoint
@@ -56,12 +57,13 @@ impl ImportStaging {
         let root = parent.join(format!("{STAGING_PREFIX}{digest}"));
         cleanup_exact_root(&root)?;
         create_private_directory(&root)?;
+        let limits = config.archive_limits();
         Ok(Self {
             root,
-            buffer_bytes: config.upload.verification_buffer_bytes,
-            max_entry_bytes: config.source.max_archive_entry_bytes,
-            max_compression_ratio: config.source.max_compression_ratio,
-            compression_ratio_grace_bytes: config.source.compression_ratio_grace_bytes,
+            buffer_bytes: config.upload().verification_buffer_bytes,
+            max_entry_bytes: limits.max_entry_bytes,
+            max_compression_ratio: limits.max_compression_ratio,
+            compression_ratio_grace_bytes: limits.compression_ratio_grace_bytes,
         })
     }
 

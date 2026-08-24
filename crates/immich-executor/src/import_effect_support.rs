@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use immich_rs_client::{ClientError, ClientErrorClass};
 use immich_rs_core::{CancellationToken, NormalizedMetadata, UploadPlan};
 
-use crate::TakeoutImportConfig;
+use crate::UploadExecutionConfig;
 use crate::retry::{self, RetryBudget};
 
 pub fn album_members(
@@ -34,11 +34,11 @@ pub const fn has_assignment(metadata: &NormalizedMetadata) -> bool {
 pub fn retry_allowed(
     error: ClientError,
     retries: u32,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     budget: &RetryBudget,
 ) -> bool {
     error.is_retryable()
-        && retries.saturating_add(1) < config.upload.max_attempts_per_operation
+        && retries.saturating_add(1) < config.max_attempts_per_operation
         && budget.claim()
 }
 
@@ -46,10 +46,10 @@ pub async fn wait_retry(
     key: &str,
     retries: u32,
     error: ClientError,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     cancellation: &CancellationToken,
 ) -> bool {
-    let delay = retry::delay(key, retries.saturating_add(1), error, &config.upload);
+    let delay = retry::delay(key, retries.saturating_add(1), error, config);
     retry::wait(delay, cancellation).await
 }
 

@@ -12,7 +12,7 @@ use crate::import_journal::{
     ImportEvent, ImportJournal, ImportOutcome, ImportState, album_identity, metadata_key,
 };
 use crate::retry::RetryBudget;
-use crate::{ExecutorError, TakeoutImportConfig};
+use crate::{ExecutorError, UploadExecutionConfig};
 
 #[allow(clippy::too_many_arguments)]
 pub async fn apply_metadata(
@@ -22,7 +22,7 @@ pub async fn apply_metadata(
     journal: &mut ImportJournal,
     report: &mut ImportApplyReport,
     client: &ImmichImportClient,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     budget: &RetryBudget,
     cancellation: &CancellationToken,
 ) -> Result<bool, ExecutorError> {
@@ -91,7 +91,7 @@ pub async fn apply_albums(
     journal: &mut ImportJournal,
     report: &mut ImportApplyReport,
     client: &ImmichImportClient,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     budget: &RetryBudget,
     cancellation: &CancellationToken,
 ) -> Result<(), ExecutorError> {
@@ -149,7 +149,7 @@ enum EffectResult<T> {
 async fn converge_album(
     name: &str,
     client: &ImmichImportClient,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     budget: &RetryBudget,
     cancellation: &CancellationToken,
 ) -> EffectResult<RemoteAlbumReference> {
@@ -224,7 +224,7 @@ async fn converge_album(
 async fn lookup_albums(
     name: &str,
     client: &ImmichImportClient,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     budget: &RetryBudget,
     cancellation: &CancellationToken,
     retries: &mut u32,
@@ -286,7 +286,7 @@ async fn apply_membership(
     album_id: &str,
     member_ids: &[&str],
     client: &ImmichImportClient,
-    config: &TakeoutImportConfig,
+    config: &UploadExecutionConfig,
     budget: &RetryBudget,
     cancellation: &CancellationToken,
     journal: &mut ImportJournal,

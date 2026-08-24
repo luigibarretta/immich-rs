@@ -315,6 +315,8 @@ fn merge_entry(
             byte_len: identity.byte_len,
             content_sha256: identity.content_sha256,
             content_sha1_base64: identity.content_sha1_base64,
+            created_at_unix_ms: None,
+            modified_at_unix_ms: None,
             metadata: Vec::new(),
             normalized_metadata: None,
             live_photo: None,
@@ -342,6 +344,8 @@ fn merge_entry(
                 byte_len: identity.byte_len,
                 content_sha256: identity.content_sha256,
                 content_sha1_base64: identity.content_sha1_base64,
+                created_at_unix_ms: None,
+                modified_at_unix_ms: None,
                 takeout_document,
                 takeout_parse_error,
             });

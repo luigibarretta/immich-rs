@@ -82,7 +82,8 @@ impl Default for TakeoutScanConfig {
 }
 
 impl TakeoutScanConfig {
-    pub(crate) fn validate(&self) -> Result<(), ScanError> {
+    /// Validate all directory and archive limits without touching source input.
+    pub fn validate(&self) -> Result<(), ScanError> {
         self.scan.validate()?;
         if !(1..=64).contains(&self.max_archives) {
             return Err(ScanError::InvalidConfiguration(

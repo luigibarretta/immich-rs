@@ -6,11 +6,12 @@ use std::path::{Component, Path, PathBuf};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use immich_rs_core::{
-    Cancellation, MediaKind, MetadataKind, NORMALIZED_PLAN_SCHEMA_VERSION_V3, NormalizedPlan,
-    PROGRESS_EVENT_SCHEMA_VERSION, ProgressEvent, ProgressStage, RuleEvidence, SourceKind, rule_id,
+    Cancellation, MediaKind, MetadataKind, NORMALIZED_PLAN_SCHEMA_VERSION_V3, ProgressStage,
+    RuleEvidence, SourceKind, rule_id,
 };
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
+use time::{Date, Month, PrimitiveDateTime, Time};
 use unicode_normalization::UnicodeNormalization as _;
 use zip::read::ZipFile;
 use zip::{CompressionMethod, ZipArchive};
@@ -18,7 +19,9 @@ use zip::{CompressionMethod, ZipArchive};
 use crate::apple_photos::{ApplePhotosScanConfig, export_noise_path, finish_plan};
 use crate::discovery::{media_kind, metadata_kind, validate_source_label};
 use crate::reconcile::{diagnostic, finalize_plan};
-use crate::{DiscoveredMedia, DiscoveredSidecar, ProgressObserver, ScanError, ScanState};
+use crate::{
+    DiscoveredMedia, DiscoveredSidecar, ProgressObserver, ResolvedFolderPlan, ScanError, ScanState,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum EntryKind {
@@ -32,15 +35,16 @@ struct EntryIdentity {
     byte_len: u64,
     content_sha256: String,
     content_sha1_base64: String,
+    modified_at_unix_ms: Option<i64>,
 }
 
-pub fn scan_archives(
+pub fn scan_archives_resolved(
     inputs: &[PathBuf],
     source_label: &str,
     config: &ApplePhotosScanConfig,
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
-) -> Result<NormalizedPlan, ScanError> {
+) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
     validate_source_label(source_label)?;
     validate_inputs(inputs, config.max_archives)?;
@@ -52,6 +56,7 @@ pub fn scan_archives(
     crate::reconcile::reconcile(&mut state);
     state.progress(ProgressStage::Reconciliation, observer);
     let sequence = state.event_sequence.saturating_add(1);
+    let files = crate::resolved_files(&state);
     let plan = finalize_plan(
         NORMALIZED_PLAN_SCHEMA_VERSION_V3,
         SourceKind::ApplePhotos,
@@ -60,14 +65,7 @@ pub fn scan_archives(
         state,
     );
     let plan = finish_plan(plan, config)?;
-    observer.observe(ProgressEvent {
-        schema_version: PROGRESS_EVENT_SCHEMA_VERSION,
-        sequence,
-        stage: ProgressStage::Complete,
-        assets_observed: plan.summary.assets,
-        bytes_read: plan.summary.bytes_read,
-    });
-    Ok(plan)
+    crate::finish_resolved(plan, files, sequence, observer)
 }
 
 fn validate_inputs(inputs: &[PathBuf], max_archives: usize) -> Result<(), ScanError> {
@@ -134,6 +132,7 @@ fn scan_archive(
             _ => continue,
         };
         validate_entry(&entry, config)?;
+        let modified_at_unix_ms = zip_unix_ms(entry.last_modified());
         let (byte_len, content_sha256, content_sha1_base64) =
             stream_entry(&mut entry, config.scan.buffer_bytes, cancellation)?;
         state.bytes_read = state.bytes_read.saturating_add(byte_len);
@@ -146,6 +145,7 @@ fn scan_archive(
                 byte_len,
                 content_sha256,
                 content_sha1_base64,
+                modified_at_unix_ms,
             },
             state,
             seen,
@@ -297,6 +297,8 @@ fn merge_entry(
             byte_len: identity.byte_len,
             content_sha256: identity.content_sha256,
             content_sha1_base64: identity.content_sha1_base64,
+            created_at_unix_ms: identity.modified_at_unix_ms,
+            modified_at_unix_ms: identity.modified_at_unix_ms,
             metadata: Vec::new(),
             normalized_metadata: None,
             live_photo: None,
@@ -313,10 +315,23 @@ fn merge_entry(
             byte_len: identity.byte_len,
             content_sha256: identity.content_sha256,
             content_sha1_base64: identity.content_sha1_base64,
+            created_at_unix_ms: identity.modified_at_unix_ms,
+            modified_at_unix_ms: identity.modified_at_unix_ms,
             takeout_document: None,
             takeout_parse_error: None,
         }),
     }
+}
+
+fn zip_unix_ms(value: Option<zip::DateTime>) -> Option<i64> {
+    let value = value?;
+    let month = Month::try_from(value.month()).ok()?;
+    let date = Date::from_calendar_date(i32::from(value.year()), month, value.day()).ok()?;
+    let time = Time::from_hms(value.hour(), value.minute(), value.second()).ok()?;
+    let nanos = PrimitiveDateTime::new(date, time)
+        .assume_utc()
+        .unix_timestamp_nanos();
+    i64::try_from(nanos / 1_000_000).ok()
 }
 
 fn metadata_changed(before: &Metadata, after: &Metadata) -> bool {

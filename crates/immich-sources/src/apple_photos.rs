@@ -6,7 +6,10 @@ use immich_rs_core::{
 };
 use sha2::{Digest, Sha256};
 
-use crate::{FolderScanConfig, ProgressObserver, ScanError, ScanStrategy, scan_resolved_internal};
+use crate::{
+    FolderScanConfig, ProgressObserver, ResolvedFolderPlan, ScanError, ScanStrategy,
+    scan_resolved_internal,
+};
 
 /// Explicit folder-to-album mapping for an Apple Photos export.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -54,7 +57,8 @@ impl Default for ApplePhotosScanConfig {
 }
 
 impl ApplePhotosScanConfig {
-    pub(crate) fn validate(&self) -> Result<(), ScanError> {
+    /// Validate all Apple directory, archive and album limits without reading input.
+    pub fn validate(&self) -> Result<(), ScanError> {
         self.scan.validate()?;
         if !(1..=64).contains(&self.max_archives) {
             return Err(ScanError::InvalidConfiguration(
@@ -89,6 +93,18 @@ pub fn scan_apple_photos_inputs(
     cancellation: &impl Cancellation,
     observer: &mut impl ProgressObserver,
 ) -> Result<NormalizedPlan, ScanError> {
+    scan_apple_photos_inputs_resolved(inputs, source_label, config, cancellation, observer)
+        .map(|resolved| resolved.plan)
+}
+
+/// Scan Apple Photos inputs and retain bounded native source resolution for apply.
+pub fn scan_apple_photos_inputs_resolved(
+    inputs: &[PathBuf],
+    source_label: &str,
+    config: &ApplePhotosScanConfig,
+    cancellation: &impl Cancellation,
+    observer: &mut impl ProgressObserver,
+) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
     if let [input] = inputs {
         if std::fs::symlink_metadata(input).is_ok_and(|metadata| {
@@ -108,7 +124,7 @@ pub fn scan_apple_photos_inputs(
                     skip_path: export_noise_path,
                 },
             )?;
-            return finish_plan(resolved.plan, config);
+            return finish_resolved_plan(resolved, config);
         }
     }
     if inputs.iter().any(|input| {
@@ -118,7 +134,21 @@ pub fn scan_apple_photos_inputs(
             "directory and ZIP inputs cannot be mixed",
         ));
     }
-    crate::apple_archive::scan_archives(inputs, source_label, config, cancellation, observer)
+    crate::apple_archive::scan_archives_resolved(
+        inputs,
+        source_label,
+        config,
+        cancellation,
+        observer,
+    )
+}
+
+fn finish_resolved_plan(
+    mut resolved: ResolvedFolderPlan,
+    config: &ApplePhotosScanConfig,
+) -> Result<ResolvedFolderPlan, ScanError> {
+    resolved.plan = finish_plan(resolved.plan, config)?;
+    Ok(resolved)
 }
 
 pub fn finish_plan(

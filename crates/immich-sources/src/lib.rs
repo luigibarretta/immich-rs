@@ -22,7 +22,9 @@ mod takeout_archive;
 mod takeout_metadata;
 mod takeout_reconcile;
 
-pub use apple_photos::{AlbumMode, ApplePhotosScanConfig, scan_apple_photos_inputs};
+pub use apple_photos::{
+    AlbumMode, ApplePhotosScanConfig, scan_apple_photos_inputs, scan_apple_photos_inputs_resolved,
+};
 pub use google_takeout::{
     scan_google_takeout, scan_google_takeout_inputs, scan_google_takeout_inputs_resolved,
 };
@@ -39,6 +41,8 @@ struct DiscoveredMedia {
     byte_len: u64,
     content_sha256: String,
     content_sha1_base64: String,
+    created_at_unix_ms: Option<i64>,
+    modified_at_unix_ms: Option<i64>,
     metadata: Vec<MetadataCandidate>,
     normalized_metadata: Option<NormalizedMetadata>,
     live_photo: Option<LivePhotoMember>,
@@ -54,6 +58,8 @@ struct DiscoveredSidecar {
     byte_len: u64,
     content_sha256: String,
     content_sha1_base64: String,
+    created_at_unix_ms: Option<i64>,
+    modified_at_unix_ms: Option<i64>,
     takeout_document: Option<takeout_metadata::TakeoutDocument>,
     takeout_parse_error: Option<takeout_metadata::ParseError>,
 }
@@ -90,6 +96,8 @@ pub struct ResolvedSourceFile {
     byte_len: u64,
     content_sha256: String,
     content_sha1_base64: String,
+    created_at_unix_ms: Option<i64>,
+    modified_at_unix_ms: Option<i64>,
 }
 
 impl ResolvedSourceFile {
@@ -121,6 +129,18 @@ impl ResolvedSourceFile {
     #[must_use]
     pub fn content_sha1_base64(&self) -> &str {
         &self.content_sha1_base64
+    }
+
+    /// Creation timestamp observed from source transport facts, when available.
+    #[must_use]
+    pub const fn created_at_unix_ms(&self) -> Option<i64> {
+        self.created_at_unix_ms
+    }
+
+    /// Modification timestamp observed from source transport facts, when available.
+    #[must_use]
+    pub const fn modified_at_unix_ms(&self) -> Option<i64> {
+        self.modified_at_unix_ms
     }
 }
 
@@ -295,6 +315,8 @@ pub(crate) fn resolved_files(state: &ScanState) -> BTreeMap<String, ResolvedSour
                     byte_len: media.byte_len,
                     content_sha256: media.content_sha256.clone(),
                     content_sha1_base64: media.content_sha1_base64.clone(),
+                    created_at_unix_ms: media.created_at_unix_ms,
+                    modified_at_unix_ms: media.modified_at_unix_ms,
                 },
             )
         })
@@ -307,6 +329,8 @@ pub(crate) fn resolved_files(state: &ScanState) -> BTreeMap<String, ResolvedSour
                     byte_len: sidecar.byte_len,
                     content_sha256: sidecar.content_sha256.clone(),
                     content_sha1_base64: sidecar.content_sha1_base64.clone(),
+                    created_at_unix_ms: sidecar.created_at_unix_ms,
+                    modified_at_unix_ms: sidecar.modified_at_unix_ms,
                 },
             )
         }))

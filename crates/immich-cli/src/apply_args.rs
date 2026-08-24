@@ -146,7 +146,7 @@ fn sync_source_configs(
         .clone_from(&apple.album_path_joiner);
 }
 
-fn execution_option(
+pub fn execution_option(
     arguments: &[OsString],
     index: usize,
     config: &mut UploadExecutionConfig,

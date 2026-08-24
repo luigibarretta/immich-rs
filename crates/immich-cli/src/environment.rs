@@ -41,6 +41,9 @@ const KNOWN_NAMES: &[&str] = &[
     "IMMICH_RS_MIGRATION_MAX_ASSET_BYTES",
     "IMMICH_RS_MIGRATION_MAX_TOTAL_BYTES",
     "IMMICH_RS_MIGRATION_PAGE_SIZE",
+    "IMMICH_RS_MIGRATION_PLAN",
+    "IMMICH_RS_MIGRATION_CHECKPOINT",
+    "IMMICH_RS_MIGRATION_DRY_RUN",
     "IMMICH_RS_MIGRATION_SOURCE_SERVER",
     "IMMICH_RS_PICASA_ALBUMS",
     "IMMICH_RS_PICASA_FILENAME_DATE",
@@ -190,7 +193,13 @@ fn overlay_migration(config: &mut EffectiveConfig) -> Result<(), CliFailure> {
     set_parsed(
         &mut config.migration_max_total_bytes,
         "IMMICH_RS_MIGRATION_MAX_TOTAL_BYTES",
-    )
+    )?;
+    set_path(&mut config.migration_plan, "IMMICH_RS_MIGRATION_PLAN")?;
+    set_path(
+        &mut config.migration_checkpoint,
+        "IMMICH_RS_MIGRATION_CHECKPOINT",
+    )?;
+    set_bool(&mut config.migration_dry_run, "IMMICH_RS_MIGRATION_DRY_RUN")
 }
 
 fn value(name: &str) -> Result<Option<String>, CliFailure> {

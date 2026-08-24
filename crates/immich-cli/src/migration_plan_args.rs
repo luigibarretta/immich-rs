@@ -15,6 +15,10 @@ pub fn parse(
     let mut config = configured(effective);
     let mut index = 0;
     while index < arguments.len() {
+        if let Some(consumed) = config_option(arguments, index, &mut config)? {
+            index += consumed;
+            continue;
+        }
         match arguments[index].to_str() {
             Some("--source-server") => {
                 source_server = Some(args::string_value(arguments, index, "--source-server")?);
@@ -26,30 +30,11 @@ pub fn parse(
                     "--destination-server",
                 )?);
             }
-            Some("--page-size") => {
-                config.inventory.page_size = args::usize_value(arguments, index, "--page-size")?;
-            }
-            Some("--max-assets") => {
-                config.inventory.max_assets = args::usize_value(arguments, index, "--max-assets")?;
-            }
-            Some("--max-albums") => {
-                config.inventory.max_albums = args::usize_value(arguments, index, "--max-albums")?;
-            }
-            Some("--max-album-memberships") => {
-                config.inventory.max_album_memberships =
-                    args::usize_value(arguments, index, "--max-album-memberships")?;
-            }
-            Some("--max-asset-bytes") => {
-                config.max_asset_bytes = args::u64_value(arguments, index, "--max-asset-bytes")?;
-            }
-            Some("--max-total-bytes") => {
-                config.max_total_bytes = args::u64_value(arguments, index, "--max-total-bytes")?;
-            }
             _ => return Err(CliFailure::usage("unsupported migration plan option")),
         }
         index += 2;
     }
-    config
+    config = config
         .validate()
         .map_err(|_| CliFailure::usage("invalid migration resource limits"))?;
     Ok(MigrationPlanRequest {
@@ -61,8 +46,11 @@ pub fn parse(
     })
 }
 
-fn configured(effective: &EffectiveConfig) -> MigrationPlanningConfig {
-    let mut config = MigrationPlanningConfig::default();
+pub fn configured(effective: &EffectiveConfig) -> MigrationPlanningConfig {
+    let mut config = MigrationPlanningConfig {
+        upload: args::upload_config(effective),
+        ..MigrationPlanningConfig::default()
+    };
     config.inventory.page_size = effective
         .migration_page_size
         .unwrap_or(config.inventory.page_size);
@@ -82,6 +70,41 @@ fn configured(effective: &EffectiveConfig) -> MigrationPlanningConfig {
         .migration_max_total_bytes
         .unwrap_or(config.max_total_bytes);
     config
+}
+
+pub fn config_option(
+    arguments: &[OsString],
+    index: usize,
+    config: &mut MigrationPlanningConfig,
+) -> Result<Option<usize>, CliFailure> {
+    if let Some(consumed) =
+        crate::apply_args::execution_option(arguments, index, &mut config.upload)?
+    {
+        return Ok(Some(consumed));
+    }
+    match arguments[index].to_str() {
+        Some("--page-size") => {
+            config.inventory.page_size = args::usize_value(arguments, index, "--page-size")?;
+        }
+        Some("--max-assets") => {
+            config.inventory.max_assets = args::usize_value(arguments, index, "--max-assets")?;
+        }
+        Some("--max-albums") => {
+            config.inventory.max_albums = args::usize_value(arguments, index, "--max-albums")?;
+        }
+        Some("--max-album-memberships") => {
+            config.inventory.max_album_memberships =
+                args::usize_value(arguments, index, "--max-album-memberships")?;
+        }
+        Some("--max-asset-bytes") => {
+            config.max_asset_bytes = args::u64_value(arguments, index, "--max-asset-bytes")?;
+        }
+        Some("--max-total-bytes") => {
+            config.max_total_bytes = args::u64_value(arguments, index, "--max-total-bytes")?;
+        }
+        _ => return Ok(None),
+    }
+    Ok(Some(2))
 }
 
 #[cfg(test)]

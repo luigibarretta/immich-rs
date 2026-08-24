@@ -54,6 +54,9 @@ pub struct EffectiveConfig {
     pub migration_max_album_memberships: Option<usize>,
     pub migration_max_asset_bytes: Option<u64>,
     pub migration_max_total_bytes: Option<u64>,
+    pub migration_plan: Option<PathBuf>,
+    pub migration_checkpoint: Option<PathBuf>,
+    pub migration_dry_run: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -151,6 +154,9 @@ struct MigrationConfig {
     max_album_memberships: Option<usize>,
     max_asset_bytes: Option<u64>,
     max_total_bytes: Option<u64>,
+    plan: Option<PathBuf>,
+    checkpoint: Option<PathBuf>,
+    dry_run: Option<bool>,
 }
 
 pub fn load(arguments: &[OsString]) -> Result<(EffectiveConfig, Vec<OsString>), CliFailure> {
@@ -256,5 +262,8 @@ fn load_file(path: &Path) -> Result<EffectiveConfig, CliFailure> {
         migration_max_album_memberships: file.migration.max_album_memberships,
         migration_max_asset_bytes: file.migration.max_asset_bytes,
         migration_max_total_bytes: file.migration.max_total_bytes,
+        migration_plan: file.migration.plan,
+        migration_checkpoint: file.migration.checkpoint,
+        migration_dry_run: file.migration.dry_run,
     })
 }

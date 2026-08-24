@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::{self, BufReader, Write};
 use std::path::Path;
 
-use immich_rs_core::{ArchiveManifest, UploadPlan};
+use immich_rs_core::{ArchiveManifest, MigrationPlan, UploadPlan};
 
 use crate::failure::CliFailure;
 
@@ -55,4 +55,24 @@ pub fn load_archive_manifest(path: &Path) -> Result<ArchiveManifest, CliFailure>
         .validate()
         .map_err(|_| CliFailure::usage("invalid archive manifest"))?;
     Ok(manifest)
+}
+
+pub fn load_migration_plan(path: &Path) -> Result<MigrationPlan, CliFailure> {
+    let metadata =
+        fs::symlink_metadata(path).map_err(|_| CliFailure::usage("cannot read migration plan"))?;
+    if !metadata.file_type().is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.len() == 0
+        || metadata.len() > MAX_PLAN_BYTES
+    {
+        return Err(CliFailure::usage(
+            "migration plan must be a bounded regular file",
+        ));
+    }
+    let file = File::open(path).map_err(|_| CliFailure::usage("cannot read migration plan"))?;
+    let plan: MigrationPlan = serde_json::from_reader(BufReader::new(file))
+        .map_err(|_| CliFailure::usage("invalid migration plan JSON"))?;
+    plan.validate()
+        .map_err(|_| CliFailure::usage("invalid migration plan"))?;
+    Ok(plan)
 }

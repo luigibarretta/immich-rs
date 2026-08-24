@@ -112,6 +112,15 @@ pub struct MigrationPlanRequest {
     pub config: MigrationPlanningConfig,
 }
 
+pub struct MigrationApplyRequest {
+    pub plan: PathBuf,
+    pub checkpoint: Option<PathBuf>,
+    pub source_server: Option<String>,
+    pub destination_server: Option<String>,
+    pub dry_run: bool,
+    pub config: MigrationPlanningConfig,
+}
+
 pub fn folder_config(config: &EffectiveConfig) -> FolderScanConfig {
     let mut scan = FolderScanConfig::default();
     scan.buffer_bytes = config.buffer_bytes.unwrap_or(scan.buffer_bytes);

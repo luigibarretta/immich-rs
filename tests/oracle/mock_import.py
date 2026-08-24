@@ -31,6 +31,18 @@ class MockImportState:
     def list_albums(self, query: str) -> tuple[int, object, bool]:
         values = dict(parse_qsl(query, keep_blank_values=True))
         name = values.get("name")
+        asset_id = values.get("assetId")
+        if isinstance(asset_id, str):
+            albums = [
+                {
+                    "id": album.get("id"),
+                    "albumName": album.get("name"),
+                    "assetCount": len(album.get("asset_ids", [])),
+                }
+                for album in self._source_albums
+                if asset_id in album.get("asset_ids", [])
+            ]
+            return 200, albums, False
         if values.get("isOwned") != "true":
             return 400, {"message": "invalid synthetic album query"}, False
         if name is None:
@@ -51,12 +63,15 @@ class MockImportState:
 
     def create_album(self, body: Any) -> tuple[int, object, bool]:
         name = body.get("albumName") if isinstance(body, dict) else None
+        asset_ids = body.get("assetIds", []) if isinstance(body, dict) else []
         if not isinstance(name, str) or not name or len(name.encode()) > 4_096:
             return 400, {"message": "invalid synthetic album"}, False
+        if not isinstance(asset_ids, list) or any(not isinstance(value, str) for value in asset_ids):
+            return 400, {"message": "invalid synthetic album assets"}, False
         with self._lock:
             self._next_album += 1
             album_id = f"00000000-0000-4000-8000-{self._next_album:012d}"
-            album = {"id": album_id, "name": name, "assets": set()}
+            album = {"id": album_id, "name": name, "assets": set(asset_ids)}
             self._albums[album_id] = album
             response = self._album_response(album)
         return 201, response, True

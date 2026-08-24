@@ -153,6 +153,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore the pinned Rust toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/1.88.0-x86_64-unknown-linux-gnu
+            ~/.rustup/update-hashes/1.88.0-x86_64-unknown-linux-gnu
+          key: rustup-linux-x86-64-1.88.0
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
       - name: Restore the pinned oracle cache
         uses: actions/cache@v4
         with:
@@ -160,6 +169,8 @@ jobs:
           key: immich-go-v0.32.0-linux-x86-64-6e2ad86b
       - name: Fetch and verify the official oracle on cache miss
         run: python3 scripts/fetch-oracle.py
+      - name: Build the migration differential subject
+        run: cargo build --locked -p immich-rs-cli
       - name: Run the normalized black-box differential
         run: |
           mkdir -p .artifacts/oracle
@@ -208,6 +219,11 @@ jobs:
             .artifacts/oracle/picasa-directory-observation.json \
             .artifacts/oracle/picasa-zip-observation.json \
             --output .artifacts/oracle/picasa-report.json
+          python3 scripts/run-migration-differential.py \
+            tests/oracle/compatibility/immich-migration-v1.json \
+            --oracle .cache/oracle/immich-go-0.32.0-linux-x86_64/immich-go \
+            --immich-rs target/debug/immich-rs \
+            --output .artifacts/oracle/immich-migration-report.json
       - name: Preserve normalized evidence without redistributing the oracle
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

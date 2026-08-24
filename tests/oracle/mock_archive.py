@@ -18,6 +18,7 @@ def archive_search_response(
     visibility = request.get("visibility")
     album_ids = request.get("albumIds")
     include_trashed = request.get("withDeleted") is True
+    trashed_only = isinstance(request.get("trashedAfter"), str)
     if (
         not isinstance(page, int)
         or page < 1
@@ -38,7 +39,10 @@ def archive_search_response(
         asset
         for asset in _assets(scenario)
         if asset["visibility"] == visibility
-        and (include_trashed or not asset.get("trashed", False))
+        and (
+            (trashed_only and asset.get("trashed", False))
+            or (not trashed_only and (include_trashed or not asset.get("trashed", False)))
+        )
         and (
             album_ids is None
             or any(album_id in asset.get("album_ids", []) for album_id in album_ids)
@@ -108,11 +112,25 @@ def _response_asset(asset: dict[str, Any]) -> dict[str, object]:
     body = asset["body"]
     response = {
         "id": asset["id"],
+        "deviceAssetId": f"synthetic-{asset['id']}",
+        "ownerId": "00000000-0000-4000-8000-000000000001",
+        "deviceId": "synthetic-mock-device",
+        "libraryId": None,
         "originalFileName": asset["filename"],
+        "originalPath": f"/synthetic/{asset['filename']}",
+        "originalMimeType": "image/jpeg" if asset["type"] == "IMAGE" else "video/quicktime",
         "checksum": base64.b64encode(hashlib.sha1(body).digest()).decode("ascii"),
         "type": asset["type"],
         "fileCreatedAt": asset.get("file_created_at", "2024-01-01T00:00:00Z"),
         "fileModifiedAt": asset.get("file_modified_at", "2024-01-01T00:00:01Z"),
+        "localDateTime": asset.get("file_created_at", "2024-01-01T00:00:00Z"),
+        "updatedAt": asset.get("file_modified_at", "2024-01-01T00:00:01Z"),
+        "isFavorite": False,
+        "isArchived": asset["visibility"] == "archive",
+        "isTrashed": asset.get("trashed", False),
+        "isOffline": False,
+        "hasMetadata": True,
+        "duration": "0:00:00.000000",
         "exifInfo": {"fileSizeInByte": len(body)},
     }
     exif = response["exifInfo"]

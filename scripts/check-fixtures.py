@@ -171,7 +171,8 @@ def check_server_fixtures() -> None:
         provenance = fixture.get("provenance")
         version = fixture.get("version")
         if (
-            fixture.get("schema") != "mock-immich-responses-v1"
+            fixture.get("schema")
+            not in {"mock-immich-responses-v1", "mock-immich-migration-v1"}
             or not isinstance(fixture.get("fixture_id"), str)
             or not isinstance(provenance, dict)
             or provenance.get("kind") != "synthetic"

@@ -1,0 +1,50 @@
+{
+  "schema": "mock-immich-migration-v1",
+  "fixture_id": "synthetic-immich-migration",
+  "version": { "major": 1, "minor": 0, "patch": 0 },
+  "provenance": {
+    "kind": "synthetic",
+    "generator": "immich-rs test harness",
+    "generator_version": "1",
+    "license": "CC0-1.0"
+  },
+  "assets": [
+    {
+      "id": "00000000-0000-4000-8000-000000000201",
+      "filename": "synthetic-live.jpg",
+      "body_base64": "c3ludGhldGljIG1pZ3JhdGlvbiBsaXZlIGltYWdlCg==",
+      "type": "IMAGE",
+      "visibility": "timeline",
+      "live_photo_video_id": "00000000-0000-4000-8000-000000000202",
+      "album_ids": ["00000000-0000-4000-8000-000000000204"],
+      "date_time_original": "2024-02-03T04:05:06.000Z",
+      "description": "synthetic migration description",
+      "synthetic_location": [12.5, -45.25]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000202",
+      "filename": "synthetic-live.mov",
+      "body_base64": "c3ludGhldGljIG1pZ3JhdGlvbiBsaXZlIG1vdGlvbgo=",
+      "type": "VIDEO",
+      "visibility": "linked"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000203",
+      "filename": "synthetic-standalone.jpg",
+      "body_base64": "c3ludGhldGljIG1pZ3JhdGlvbiBzdGFuZGFsb25lCg==",
+      "type": "IMAGE",
+      "visibility": "timeline",
+      "album_ids": ["00000000-0000-4000-8000-000000000204"]
+    }
+  ],
+  "albums": [
+    {
+      "id": "00000000-0000-4000-8000-000000000204",
+      "name": "Synthetic Migration Album",
+      "asset_ids": [
+        "00000000-0000-4000-8000-000000000201",
+        "00000000-0000-4000-8000-000000000203"
+      ]
+    }
+  ]
+}

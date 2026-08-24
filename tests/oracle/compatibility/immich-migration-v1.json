@@ -1,0 +1,15 @@
+{
+  "schema": "immich-migration-differential-expectation-v1",
+  "case_id": "immich-migration-v1",
+  "fixture_id": "synthetic-immich-migration",
+  "matrix": [
+    { "id": "oracle_identity", "outcome": "exact_pinned_black_box" },
+    { "id": "source_immutability", "outcome": "parity" },
+    { "id": "timeline_originals", "outcome": "parity" },
+    { "id": "description_location", "outcome": "parity" },
+    { "id": "owned_album", "outcome": "parity" },
+    { "id": "live_photo_motion", "outcome": "immich_rs_preserves_linked_motion" },
+    { "id": "checkpoint_resume", "outcome": "immich_rs_extension" },
+    { "id": "job_mutations", "outcome": "contained_oracle_defect" }
+  ]
+}

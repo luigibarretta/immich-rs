@@ -14,57 +14,13 @@ from typing import Any
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 MOCK = runpy.run_path(str(REPOSITORY_ROOT / "tests/oracle/mock_immich_server.py"))
+MIGRATION = runpy.run_path(str(REPOSITORY_ROOT / "tests/oracle/mock_migration.py"))
 SOURCE_KEY = MOCK["SYNTHETIC_MIGRATION_SOURCE_KEY"]
 DESTINATION_KEY = MOCK["SYNTHETIC_MIGRATION_DESTINATION_KEY"]
-ALBUM_ID = "00000000-0000-4000-8000-000000000204"
-IMAGE_ID = "00000000-0000-4000-8000-000000000201"
-VIDEO_ID = "00000000-0000-4000-8000-000000000202"
-STANDALONE_ID = "00000000-0000-4000-8000-000000000203"
-ASSETS = [
-    {
-        "id": IMAGE_ID,
-        "filename": "synthetic-live.jpg",
-        "body": b"synthetic migration live image\n",
-        "type": "IMAGE",
-        "visibility": "timeline",
-        "live_photo_video_id": VIDEO_ID,
-        "album_ids": [ALBUM_ID],
-        "date_time_original": "2024-02-03T04:05:06Z",
-        "description": "synthetic migration description",
-        "latitude": 12.5,
-        "longitude": -45.25,
-    },
-    {
-        "id": VIDEO_ID,
-        "filename": "synthetic-live.mov",
-        "body": b"synthetic migration live motion\n",
-        "type": "VIDEO",
-        "visibility": "linked",
-    },
-    {
-        "id": STANDALONE_ID,
-        "filename": "synthetic-standalone.jpg",
-        "body": b"synthetic migration standalone\n",
-        "type": "IMAGE",
-        "visibility": "timeline",
-        "album_ids": [ALBUM_ID],
-    },
-]
 
 
 def scenario(api_key: str, source: bool) -> dict[str, Any]:
-    selected = MOCK["default_scenario"]()
-    selected["api_key"] = api_key
-    if source:
-        selected["archive_assets"] = [dict(asset) for asset in ASSETS]
-        selected["archive_albums"] = [
-            {
-                "id": ALBUM_ID,
-                "name": "Synthetic Migration Album",
-                "asset_ids": [IMAGE_ID, STANDALONE_ID],
-            }
-        ]
-    return selected
+    return MIGRATION["scenario"](MOCK["default_scenario"], api_key, source=source)
 
 
 def environment(*, with_keys: bool = True) -> dict[str, str]:

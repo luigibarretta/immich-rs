@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate paired Apple Photos and Picasa import benchmark reports."""
+"""Validate paired real-server Immich migration benchmark evidence."""
 
 from __future__ import annotations
 
@@ -12,26 +12,27 @@ import sys
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-EVIDENCE_ROOT = ROOT / "benchmarks/evidence"
+DEFAULT_EVIDENCE = ROOT / "benchmarks/evidence/phase11-real-2026-08-24.json"
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
-FIXTURE_SHA256 = "20f7ba19792221abf76034e44efb69fdac676bdf33700c947f05db8aaf3394ce"
-CORPUS_SHA256 = "d0c52a6f70ea3bd58f1f5d5fe013ae74d4fee6199c4544b18a7d8b152ea00cb0"
 METRICS = (
     "wall_time_seconds", "user_cpu_seconds", "system_cpu_seconds", "peak_rss_bytes",
     "peak_open_file_descriptors", "characters_read", "characters_written",
     "storage_bytes_read", "storage_bytes_written",
 )
-OPERATIONS = {"assets": 8, "media_bytes": 67_108_864, "retries": 0}
+OPERATIONS = {
+    "source_assets": 8, "destination_assets": 8, "metadata_updates": 8,
+    "media_bytes": 67_108_864, "retries": 0,
+}
 
 
 class EvidenceError(ValueError):
-    """Source import benchmark evidence is incomplete or inconsistent."""
+    """Migration benchmark evidence is incomplete or inconsistent."""
 
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, action="append")
+    parser.add_argument("--input", type=Path, default=DEFAULT_EVIDENCE)
     return parser.parse_args()
 
 
@@ -44,17 +45,6 @@ def object_value(value: object, label: str) -> dict[str, Any]:
 def digest(value: object, label: str) -> None:
     if not isinstance(value, str) or SHA256.fullmatch(value) is None:
         raise EvidenceError(f"{label} is not a SHA-256 digest")
-
-
-def validate_fixture(value: object) -> None:
-    if value != {
-        "id": "synthetic-source-import-64m", "kind": "synthetic",
-        "license": "CC0-1.0", "manifest_sha256": FIXTURE_SHA256,
-        "corpus_sha256": CORPUS_SHA256, "media_assets": 8,
-        "media_bytes": 67_108_864, "metadata_updates": 0,
-        "album_mutations": 0, "concurrency": 1,
-    }:
-        raise EvidenceError("benchmark fixture contract drifted")
 
 
 def validate_tools(value: object) -> None:
@@ -77,8 +67,26 @@ def validate_tools(value: object) -> None:
         raise EvidenceError("oracle identity drifted")
 
 
-def validate_methodology(value: object) -> tuple[int, int]:
-    method = object_value(value, "methodology")
+def validate_manifest(value: object) -> tuple[int, int]:
+    manifest = object_value(value, "manifest")
+    if set(manifest) != {"source_revision", "fixture", "tools", "environment", "methodology"}:
+        raise EvidenceError("benchmark manifest drifted")
+    revision = manifest.get("source_revision")
+    if not isinstance(revision, str) or COMMIT.fullmatch(revision) is None:
+        raise EvidenceError("source revision is invalid")
+    if manifest.get("fixture") != {
+        "id": "synthetic-phase8-takeout-64m", "kind": "synthetic",
+        "license": "CC0-1.0",
+        "manifest_sha256": "e7b4352f7c98189cb4094e645cd8ba22561ca0f75f7055a72847645f83c6cfe2",
+        "corpus_sha256": "54c2a3189642c8c26c1c65b28be285df0154d3b06957f349a0cf2e815aeb697f",
+        "assets": 8, "media_bytes": 67_108_864, "metadata_updates": 8,
+    }:
+        raise EvidenceError("migration benchmark fixture drifted")
+    validate_tools(manifest.get("tools"))
+    environment = object_value(manifest.get("environment"), "environment")
+    if environment.get("system") != "Linux" or environment.get("architecture") != "x86_64" or environment.get("hostname") != "<REDACTED_HOST>":
+        raise EvidenceError("benchmark environment drifted")
+    method = object_value(manifest.get("methodology"), "methodology")
     samples = method.get("samples")
     warmups = method.get("warmups")
     if not isinstance(samples, int) or isinstance(samples, bool) or not 2 <= samples <= 10:
@@ -87,20 +95,13 @@ def validate_methodology(value: object) -> tuple[int, int]:
         raise EvidenceError("warmup count is outside its bound")
     if method != {
         "samples": samples, "warmups": warmups,
-        "pairing": "fresh isolated owner per tool on one disposable server and one corpus",
+        "pairing": "fresh isolated source and destination owner per tool on two disposable servers",
         "order": "alternating within pairs", "concurrency": 1,
-        "scope": "complete plan plus import; setup and probes excluded",
-        "compatibility_intersection": "uploads only; albums and metadata disabled",
+        "scope": "complete inventory, plan and migration; seed, setup and probes excluded",
         "percentiles": "nearest-rank p95 over retained samples",
     }:
         raise EvidenceError("benchmark methodology drifted")
     return samples, warmups
-
-
-def metric_value(value: object, label: str) -> float | int:
-    if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
-        raise EvidenceError(f"{label} is invalid")
-    return value
 
 
 def validate_samples(value: object, count: int, warmups: int) -> list[dict[str, Any]]:
@@ -119,7 +120,9 @@ def validate_samples(value: object, count: int, warmups: int) -> list[dict[str, 
             if set(measured) != {*METRICS, "operations"} or measured.get("operations") != OPERATIONS:
                 raise EvidenceError("sample operation counters drifted")
             for metric in METRICS:
-                metric_value(measured.get(metric), f"sample {index} {tool} {metric}")
+                value = measured.get(metric)
+                if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+                    raise EvidenceError("sample metric is invalid")
         samples.append(pair)
     return samples
 
@@ -136,14 +139,14 @@ def expected_aggregate(samples: list[dict[str, Any]], tool: str) -> dict[str, ob
     return result
 
 
-def validate_claims(value: object, aggregate: dict[str, Any], adapter: str) -> None:
+def validate_claims(value: object, aggregate: dict[str, Any]) -> None:
     rust = aggregate["immich_rs"]["wall_time_seconds"]
     go = aggregate["immich_go"]["wall_time_seconds"]
     improvement = 100 * (go["median"] - rust["median"]) / go["median"]
     claim = "Raw measurements only; no performance improvement is claimed."
     if improvement >= 10 and rust["max"] < go["min"]:
         claim = (
-            f"On this exact 67,108,864-byte eight-asset synthetic {adapter} import, "
+            "On this exact 67,108,864-byte eight-asset synthetic real-server migration, "
             f"immich-rs median wall time was {improvement:.1f}% lower than immich-go v0.32.0; "
             "this is not a large-library, WAN or production claim."
         )
@@ -151,52 +154,31 @@ def validate_claims(value: object, aggregate: dict[str, Any], adapter: str) -> N
         raise EvidenceError("performance claim is not justified by raw samples")
 
 
-def validate(path: Path) -> str:
+def validate(path: Path) -> None:
     try:
         report = object_value(json.loads(path.read_text(encoding="utf-8")), str(path))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise EvidenceError(f"cannot load benchmark: {error}") from error
-    if set(report) != {"schema", "adapter", "manifest", "raw_samples", "aggregate", "claims"}:
-        raise EvidenceError("benchmark schema drifted")
-    adapter = report.get("adapter")
-    if report.get("schema") != "source-import-benchmark-v1" or adapter not in {"apple-photos", "picasa"}:
-        raise EvidenceError("benchmark identity drifted")
-    manifest = object_value(report.get("manifest"), "manifest")
-    if set(manifest) != {"source_revision", "fixture", "tools", "environment", "methodology"}:
-        raise EvidenceError("benchmark manifest drifted")
-    revision = manifest.get("source_revision")
-    if not isinstance(revision, str) or COMMIT.fullmatch(revision) is None:
-        raise EvidenceError("source revision is invalid")
-    validate_fixture(manifest.get("fixture"))
-    validate_tools(manifest.get("tools"))
-    environment = object_value(manifest.get("environment"), "environment")
-    if environment.get("system") != "Linux" or environment.get("architecture") != "x86_64" or environment.get("hostname") != "<REDACTED_HOST>":
-        raise EvidenceError("benchmark environment drifted")
-    count, warmups = validate_methodology(manifest.get("methodology"))
+    if set(report) != {"schema", "manifest", "raw_samples", "aggregate", "claims"} or report.get("schema") != "phase11-disposable-benchmark-v1":
+        raise EvidenceError("migration benchmark schema drifted")
+    count, warmups = validate_manifest(report.get("manifest"))
     samples = validate_samples(report.get("raw_samples"), count, warmups)
     expected = {tool: expected_aggregate(samples, tool) for tool in ("immich_rs", "immich_go")}
     if report.get("aggregate") != expected:
         raise EvidenceError("benchmark aggregate does not match raw samples")
-    validate_claims(report.get("claims"), expected, adapter)
+    validate_claims(report.get("claims"), expected)
     encoded = json.dumps(report, sort_keys=True)
     if any(token in encoded for token in ("/tmp/", "127.0.0.1", "example.invalid", "accessToken", "api_key")):
         raise EvidenceError("benchmark leaked sensitive or host-specific material")
-    return adapter
 
 
 def main() -> int:
-    requested = arguments().input
-    paths = requested or sorted(EVIDENCE_ROOT.glob("phase*-source-import-benchmark-*.json"))
     try:
-        if not paths:
-            raise EvidenceError("source import benchmark evidence is missing")
-        adapters = {validate(path) for path in paths}
-        if requested is None and adapters != {"apple-photos", "picasa"}:
-            raise EvidenceError("Apple Photos and Picasa benchmark evidence are both required")
+        validate(arguments().input)
     except EvidenceError as error:
-        print(f"source import benchmark check failed: {error}", file=sys.stderr)
+        print(f"real migration benchmark check failed: {error}", file=sys.stderr)
         return 1
-    print(f"source import benchmark evidence passed: {len(paths)} report(s)")
+    print("real-server migration benchmark evidence passed")
     return 0
 
 

@@ -1,0 +1,79 @@
+---
+name: native-matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: immich-rs-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    if: github.server_url == 'https://github.com'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            binary: target/release/immich-rs
+            quality: true
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            binary: target/release/immich-rs
+            quality: false
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            binary: target/release/immich-rs
+            quality: false
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            binary: target/release/immich-rs
+            quality: false
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            binary: target/release/immich-rs.exe
+            quality: false
+    runs-on: ${{ github.server_url == 'https://github.com' && matrix.runner || 'docker' }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - name: Verify the exact native host
+        shell: bash
+        run: >-
+          python -c "import subprocess;
+          assert 'host: ${{ matrix.target }}' in
+          subprocess.check_output(['rustc', '-vV'], text=True)"
+      - name: Validate release tooling
+        shell: bash
+        run: python -m unittest discover -s tests/tooling -p 'test_*.py'
+      - name: Enforce formatting and lints
+        if: matrix.quality
+        shell: bash
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - name: Test and build the native product
+        shell: bash
+        run: |
+          cargo test --locked --workspace --all-targets
+          cargo build --locked --release -p immich-rs-cli
+          test -s "${{ matrix.binary }}"
+      - name: Verify the Windows executable format
+        if: runner.os == 'Windows'
+        shell: bash
+        run: python scripts/check-pe.py "${{ matrix.binary }}"

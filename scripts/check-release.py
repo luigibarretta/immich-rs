@@ -8,11 +8,11 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {
-    "x86_64-unknown-linux-gnu": "docker",
-    "aarch64-unknown-linux-gnu": "linux-arm64",
-    "x86_64-apple-darwin": "macos-x64",
-    "aarch64-apple-darwin": "macos-arm64",
-    "x86_64-pc-windows-msvc": "windows-x64",
+    "x86_64-unknown-linux-gnu": "ubuntu-24.04",
+    "aarch64-unknown-linux-gnu": "ubuntu-24.04-arm",
+    "x86_64-apple-darwin": "macos-15-intel",
+    "aarch64-apple-darwin": "macos-15",
+    "x86_64-pc-windows-msvc": "windows-2025",
 }
 
 
@@ -28,30 +28,17 @@ def read(relative: str) -> str:
 
 
 def validate() -> None:
-    workflow = read(".gitea/workflows/release.yml")
+    workflow = read(".github/workflows/release.yml")
+    workflow_lines = [line.strip() for line in workflow.splitlines()]
     for target, runner in TARGETS.items():
-        if workflow.count(f"target: {target}") != 1 or workflow.count(f"runner: {runner}") != 1:
+        if (
+            workflow_lines.count(f"target: {target}") != 1
+            or workflow_lines.count(f"- runner: {runner}") != 1
+        ):
             raise ReleaseCheckError(f"native target mapping drifted: {target}")
-    macos_host_python = (
-        "runner: macos-x64\n            target: x86_64-apple-darwin\n"
-        "            binary: target/release/immich-rs\n            python: python3.12\n"
-        "            setup_python: false",
-        "runner: macos-arm64\n            target: aarch64-apple-darwin\n"
-        "            binary: target/release/immich-rs\n            python: python3.12\n"
-        "            setup_python: false",
-    )
-    if any(value not in workflow for value in macos_host_python):
-        raise ReleaseCheckError("macOS native jobs must use the validated host Python")
-    windows_host_python = (
-        "runner: windows-x64\n            target: x86_64-pc-windows-msvc\n"
-        "            binary: target/release/immich-rs.exe\n            python: py -3.12\n"
-        "            setup_python: false"
-    )
-    if windows_host_python not in workflow:
-        raise ReleaseCheckError("Windows native jobs must use the validated host Python")
     required = (
         'tags: ["v*-rc.*"]',
-        "cargo-cyclonedx@0.5.9",
+        "cargo install cargo-cyclonedx --version 0.5.9 --locked",
         "--spec-version 1.5",
         "RELEASE_SIGNING_PRIVATE_KEY",
         "RELEASE_SIGNING_FINGERPRINT",
@@ -63,33 +50,38 @@ def validate() -> None:
         "build-multiarch-container.sh",
         "linux-multiarch.oci.tar",
         "cancel-in-progress: false",
-        "if: ${{ matrix.setup_python }}",
-        "${{ matrix.python }} scripts/package-release.py",
-        "shell: powershell",
-        'py -3.12 scripts/check-pe.py "${{ matrix.binary }}"',
+        "environment: immich-rs-release",
+        "python scripts/package-release.py",
+        'python scripts/check-pe.py "${{ matrix.binary }}"',
+        "gh release create",
         "check-production-evidence.py",
         "check-phase8-evidence.py",
         "check-phase8-benchmark.py",
+        "check-source-import-evidence.py",
+        "check-migration-evidence.py",
     )
     if any(value not in workflow for value in required):
         raise ReleaseCheckError("release identity, SBOM or signing gate drifted")
     forbidden = ("workflow_dispatch", "pull_request", "latest", "zigbuild", "cargo xwin")
     if any(value in workflow for value in forbidden):
         raise ReleaseCheckError("release workflow has an unsupported trigger or cross-build path")
-    rehearsal = read(".gitea/workflows/release-rehearsal.yml")
+    rehearsal = read(".github/workflows/native-ci.yml")
+    rehearsal_lines = [line.strip() for line in rehearsal.splitlines()]
     for target, runner in TARGETS.items():
-        if rehearsal.count(f"target: {target}") != 1 or rehearsal.count(f"runner: {runner}") != 1:
+        if (
+            rehearsal_lines.count(f"target: {target}") != 1
+            or rehearsal_lines.count(f"- runner: {runner}") != 1
+        ):
             raise ReleaseCheckError(f"rehearsal target mapping drifted: {target}")
     required_rehearsal = (
-        "workflow_dispatch", "RELEASE_SIGNING_PRIVATE_KEY",
-        "RELEASE_SIGNING_FINGERPRINT", "RELEASE_SIGNING_PASSPHRASE",
-        "gpg --batch --verify", "cargo test --locked --workspace --all-targets",
+        "workflow_dispatch", "cargo test --locked --workspace --all-targets",
         "cargo build --locked --release -p immich-rs-cli", "host: ${{ matrix.target }}",
+        "fail-fast: false", "branches: [main]",
     )
     if any(value not in rehearsal for value in required_rehearsal):
         raise ReleaseCheckError("non-publishing rehearsal contract drifted")
-    if "upload-artifact" in rehearsal or "push:" in rehearsal:
-        raise ReleaseCheckError("release rehearsal must not publish artifacts")
+    if "upload-artifact" in rehearsal or "RELEASE_SIGNING_PRIVATE_KEY" in rehearsal:
+        raise ReleaseCheckError("native rehearsal must not publish or access signing material")
     package = read("scripts/package-release.py")
     for document in (
         "LICENSE", "NOTICE.md", "README.md", "SECURITY.md", "CHANGELOG.md",

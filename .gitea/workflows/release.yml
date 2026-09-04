@@ -1,9 +1,8 @@
 ---
-name: release-candidate-artifacts
+name: legacy-self-hosted-release
 
 on:
-  push:
-    tags: ["v*-rc.*"]
+  workflow_dispatch:
 
 concurrency:
   group: immich-rs-release-${{ github.ref }}

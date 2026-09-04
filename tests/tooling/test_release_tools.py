@@ -109,7 +109,7 @@ class ReleaseToolTests(unittest.TestCase):
                     destination = root / f"dist-{index}"
                     arguments = SimpleNamespace(
                         target=target,
-                        runner="docker",
+                        runner="ubuntu-24.04",
                         binary=binary,
                         sbom=sbom,
                         revision=revision,

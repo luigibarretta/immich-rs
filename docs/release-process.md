@@ -1,29 +1,25 @@
 # Release candidate process
 
-No supported release exists yet. This procedure becomes active only after the
-ADR-0025 prerequisites are provisioned.
+This procedure is active for signed release candidates. A candidate is
+published only after the exact `main` revision is green on Gitea and on the
+five-target GitHub native matrix.
 
 ## One-time prerequisites
 
-1. Retain the existing `docker` Linux x86-64 runner and the manually operated
-   `macos-arm64` and `windows-x64` host runners validated by Gitea runs 5440
-   and 5470. Register the remaining protected native runners named
-   `linux-arm64` and `macos-x64`. Keep host runners offline outside an
-   intentional validation or release window.
-2. Create the project release OpenPGP identity offline under maintainer
-   control. Commit only its armored public key as `docs/release-signing-key.asc`.
-3. Store the armored private key, its fingerprint and its passphrase as the
-   protected Gitea release secrets `RELEASE_SIGNING_PRIVATE_KEY`,
-   `RELEASE_SIGNING_FINGERPRINT` and `RELEASE_SIGNING_PASSPHRASE`. Do not expose
-   them to pull requests or ordinary push jobs.
-4. Validate all five host targets, repository secrets and runner isolation with
-   a non-publishing `release-rehearsal` workflow dispatch. It retains no
-   artifact and does not create a tag or release.
+1. Keep the dedicated OpenPGP private key, fingerprint and passphrase only in
+   `immich_rs_release.vault.yml`; commit only
+   `docs/release-signing-key.asc` in the product repository.
+2. Run `playbooks/reconcile-immich-rs-github-release.yml` from the reviewed
+   Ansible repository with its exact confirmation. It proves public/private
+   fingerprint equality and writes all three secrets through stdin into the
+   `immich-rs-release` GitHub environment.
+3. Require a green `native-matrix` run on `ubuntu-24.04`,
+   `ubuntu-24.04-arm`, `macos-15-intel`, `macos-15` and `windows-2025` for the
+   exact candidate commit. Ordinary main/PR jobs cannot read release secrets.
 
 The project does not download or redistribute Apple SDKs. Both macOS artifacts
-must be built and tested on native Apple hosts. macOS host runners must provide
-Python 3.12 as `python3.12`; the workflows deliberately avoid privileged
-`actions/setup-python` installation on those runners.
+are built and tested on GitHub's native Apple hosted images. Every hosted job
+installs the same Python 3.12 and Rust 1.88 toolchain contract.
 
 ## Candidate checklist
 
@@ -38,9 +34,10 @@ Python 3.12 as `python3.12`; the workflows deliberately avoid privileged
    native targets, generate CycloneDX SBOMs, build the attested amd64/arm64 OCI
    archive, create deterministic native archives and provenance, sign
    `SHA256SUMS` and verify the detached signature.
-6. Download the workflow artifact into a new directory. Verify the signature,
-   every checksum, SBOM schema, provenance source SHA and `immich-rs --version`
-   before publishing the immutable candidate.
+6. Download the workflow artifact or GitHub prerelease into a new directory.
+   Verify the signature, every checksum, SBOM schema, provenance source SHA and
+   `immich-rs --version`; the workflow publishes only after doing the same
+   checksum and signature verification itself.
 7. Record the exact tag, workflow run and artifact digests in `ROADMAP.md` and
    project memory. Never replace an artifact under an existing tag.
 

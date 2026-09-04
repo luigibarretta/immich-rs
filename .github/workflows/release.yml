@@ -1,0 +1,202 @@
+---
+name: signed-release-candidate
+
+on:
+  push:
+    tags: ["v*-rc.*"]
+
+concurrency:
+  group: immich-rs-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.server_url == 'https://github.com'
+    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-24.04' || 'docker' }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Import and verify the committed release identity
+        shell: bash
+        run: |
+          gpg --batch --import docs/release-signing-key.asc
+          python scripts/release-preflight.py \
+            --tag "${GITHUB_REF_NAME}" --revision "${GITHUB_SHA}"
+      - name: Revalidate every committed product gate
+        shell: bash
+        run: |
+          scripts/check-adrs.sh
+          python scripts/check-architecture.py
+          python scripts/check-benchmark-evidence.py
+          python scripts/check-disposable-evidence.py
+          python scripts/check-phase5-evidence.py
+          python scripts/check-phase6-evidence.py
+          python scripts/check-production-evidence.py
+          python scripts/check-phase8-evidence.py
+          python scripts/check-phase8-benchmark.py
+          python scripts/check-source-import-evidence.py
+          python scripts/check-source-import-benchmark.py
+          python scripts/check-migration-evidence.py
+          python scripts/check-real-migration-benchmark.py
+          python scripts/check-release.py
+          python scripts/check-container.py
+          python scripts/check-fixtures.py
+          python scripts/check-loc.py
+          python -m unittest discover -s tests/tooling -p 'test_*.py'
+
+  native:
+    needs: preflight
+    if: github.server_url == 'https://github.com'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            binary: target/release/immich-rs
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            binary: target/release/immich-rs
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            binary: target/release/immich-rs
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            binary: target/release/immich-rs
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            binary: target/release/immich-rs.exe
+    runs-on: ${{ github.server_url == 'https://github.com' && matrix.runner || 'docker' }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@2eae45db285e407f22119950686d47e1101e071b # 1.88.0
+        with:
+          components: clippy,rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - name: Verify, test and build on the exact native target
+        shell: bash
+        run: |
+          python -c "import subprocess; assert 'host: ${{ matrix.target }}' in subprocess.check_output(['rustc', '-vV'], text=True)"
+          cargo test --locked --workspace --all-targets
+          cargo build --locked --release -p immich-rs-cli
+          cargo install cargo-cyclonedx --version 0.5.9 --locked
+          cargo cyclonedx --manifest-path crates/immich-cli/Cargo.toml \
+            --format json --describe binaries --target "${{ matrix.target }}" \
+            --spec-version 1.5
+          python scripts/package-release.py \
+            --binary "${{ matrix.binary }}" \
+            --sbom crates/immich-cli/immich-rs_bin.cdx.json \
+            --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" \
+            --tag "${GITHUB_REF_NAME}" --revision "${GITHUB_SHA}" --output dist
+      - name: Verify the Windows candidate format
+        if: runner.os == 'Windows'
+        shell: bash
+        run: python scripts/check-pe.py "${{ matrix.binary }}"
+      - name: Preserve the native candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.target }}-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  container:
+    needs: preflight
+    if: github.server_url == 'https://github.com'
+    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-24.04' || 'docker' }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build the attested multiarch OCI candidate
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          scripts/build-multiarch-container.sh \
+            --output "dist/immich-rs-${version}-linux-multiarch.oci.tar" \
+            --report "dist/immich-rs-${version}-linux-multiarch.container.json" \
+            --revision "${GITHUB_SHA}" --version "$version"
+      - name: Preserve the multiarch candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: container-linux-multiarch-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  signed-bundle:
+    needs: [native, container]
+    if: github.server_url == 'https://github.com'
+    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-24.04' || 'docker' }}
+    timeout-minutes: 30
+    environment: immich-rs-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Validate, checksum, sign and verify the complete target set
+        shell: bash
+        env:
+          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
+          RELEASE_SIGNING_FINGERPRINT: ${{ secrets.RELEASE_SIGNING_FINGERPRINT }}
+          RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python scripts/finalize-release.py \
+            --input dist --version "$version" --revision "${GITHUB_SHA}" \
+            --output dist/SHA256SUMS
+          test -n "$RELEASE_SIGNING_PRIVATE_KEY"
+          test -n "$RELEASE_SIGNING_FINGERPRINT"
+          test -n "$RELEASE_SIGNING_PASSPHRASE"
+          printf '%s' "$RELEASE_SIGNING_PRIVATE_KEY" | gpg --batch --import
+          public_fingerprint=$(gpg --batch --show-keys --with-colons \
+            docs/release-signing-key.asc | awk -F: '$1 == "fpr" {print $10; exit}')
+          test "$public_fingerprint" = "$RELEASE_SIGNING_FINGERPRINT"
+          printf '%s' "$RELEASE_SIGNING_PASSPHRASE" | \
+            gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+              --local-user "$RELEASE_SIGNING_FINGERPRINT" --armor \
+              --detach-sign --output dist/SHA256SUMS.asc dist/SHA256SUMS
+          gpg --batch --verify dist/SHA256SUMS.asc dist/SHA256SUMS
+          (cd dist && sha256sum -c SHA256SUMS)
+      - name: Preserve the signed immutable bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: immich-rs-${{ github.ref_name }}-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish the immutable GitHub prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --prerelease
+          --title "immich-rs ${GITHUB_REF_NAME#v}"
+          --notes "Signed five-platform release candidate built from ${GITHUB_SHA}."

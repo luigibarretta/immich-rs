@@ -200,16 +200,15 @@ Rust tests passed, Clippy denied warnings, the release build succeeded and the
 binary was verified as Mach-O ARM64. The non-root host runner was stopped after
 the run and is intentionally offline when not in use.
 
-The Phase 6 release gate is **not passed**. The Linux x86-64 `docker`, macOS
-ARM64 and Windows x86-64 native gates are complete; Windows Gitea run 5470 is
-green on exact SHA `4cf3a4eddfb7dccc9072258ab44fb8ebf64a12b5`.
-`linux-arm64` and `macos-x64` remain unprovisioned.
-The maintainer has created an offline OpenPGP signing identity, but its armored
-public key is not committed and the private key, fingerprint and passphrase are
-not configured as protected Gitea secrets. A non-publishing rehearsal of all
-five targets is also still required. ADR-0025 forbids skipping a target or
-using an unprovisioned Apple SDK. Version remains `0.0.0`; no RC tag or artifact
-is published until these explicit security and operations prerequisites pass.
+The Phase 6 release-candidate gate is **passed** for version `0.1.0-rc.1`.
+GitHub native-matrix run 33849192526 built and tested Linux x86-64/ARM64,
+macOS x86-64/ARM64 and Windows x86-64 on exact revision
+`f69a4c09bdeb09fbdae6d61260b0f8a20e2b6c3c`; Gitea run 6155 passed on that same
+revision. The committed OpenPGP public key matches the independently encrypted
+Vault identity, and the protected GitHub release environment contains only the
+private key, fingerprint and passphrase required by ADR-0025. The signed tag
+still remains fail-closed until the exact version commit also passes both main
+pipelines.
 
 No replacement of immich-go is considered before Phase 6 evidence.
 

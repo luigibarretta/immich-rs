@@ -4,7 +4,7 @@ All notable changes will be documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 Semantic Versioning.
 
-## Unreleased
+## [0.1.0-rc.1] - 2026-09-04
 
 ### Added
 
@@ -36,4 +36,6 @@ Semantic Versioning.
   Photos, Picasa and two-server migration, with ADR-0012-scoped synthetic
   performance claims and no generalized or production claim.
 
-No supported release has been published.
+This is the first signed release candidate. Production migration, destructive
+maintenance and compatibility beyond the documented Immich v3.1.x surfaces
+remain out of scope.

@@ -4,6 +4,9 @@ This procedure is active for signed release candidates. A candidate is
 published only after the exact `main` revision is green on Gitea and on the
 five-target GitHub native matrix.
 
+The current candidate version is `0.1.0-rc.1`. Its signed tag must resolve to
+the exact version commit after both main pipelines pass on that commit.
+
 ## One-time prerequisites
 
 1. Keep the dedicated OpenPGP private key, fingerprint and passphrase only in

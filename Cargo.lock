@@ -550,7 +550,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-cli"
-version = "0.0.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "ctrlc",
  "immich-rs-client",
@@ -565,7 +565,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-client"
-version = "0.0.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "base64",
  "immich-rs-core",
@@ -581,7 +581,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-core"
-version = "0.0.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -590,7 +590,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-executor"
-version = "0.0.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "base64",
  "futures-util",
@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-sources"
-version = "0.0.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "base64",
  "immich-rs-core",

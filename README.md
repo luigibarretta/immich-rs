@@ -120,26 +120,26 @@ is green and published both reports. Evidence enforcement commit
 
 ## Release status
 
-No supported release is published yet. Phase 7 permits a source-built client
-to use the proven read-only archive and immutable folder uploader against a
-remote Immich v3.1.x HTTPS endpoint. Phase 8 extends that boundary to
-plan-bound Google Takeout, Apple Photos and Picasa uploads, normalized metadata
-and albums. The source import synthetic gates are complete; their explicitly
-authorized private-export shadows remain release evidence. Disposable
-Immich-to-Immich migration is implemented, while production migration is not
-authorized. Delete, replace, trash and independent maintenance remain
-unavailable. The
+`0.1.0-rc.1` is the first supported release candidate. It includes the proven
+read-only archive and immutable folder uploader against remote Immich v3.1.x
+HTTPS endpoints, plus plan-bound Google Takeout, Apple Photos and Picasa
+uploads with normalized metadata and albums. The source-import synthetic gates
+are complete; their explicitly authorized private-export shadows remain
+release evidence. Disposable Immich-to-Immich migration is implemented, while
+production migration is not authorized. Delete, replace, trash and independent
+maintenance remain unavailable. The
 Phase 7 synthetic gate is green in
 Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
 on implementation SHA `db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`;
 its [committed evidence](docs/evidence/phase7-disposable-production-2026-08-23.json)
 is enforced by push CI.
 
-ADR-0014/ADR-0025 still require five native target builds and an explicitly
-provisioned OpenPGP release identity before an RC can exist. The repository
-contains a fail-closed signed-tag pipeline, deterministic native packaging, a
-hardened multiarch OCI candidate with SPDX SBOM/SLSA provenance checks and a
-[migration/rollback guide](docs/migration-from-immich-go.md).
+ADR-0014/ADR-0025 are enforced by the fail-closed signed-tag pipeline,
+deterministic native packaging, a hardened multiarch OCI candidate with SPDX
+SBOM/SLSA provenance checks and a
+[migration/rollback guide](docs/migration-from-immich-go.md). The committed
+OpenPGP public identity matches the independently encrypted maintainer key, and
+the protected release environment exposes only the three required secrets.
 
 The macOS ARM64 native gate is complete on implementation SHA
 `1168b17aa8349f76064e80471c0b72bf55009978`: manual Gitea
@@ -148,10 +148,12 @@ ran 64 Python tooling tests, 76 Rust tests, Clippy with warnings denied and a
 native release build, then identified the output as a Mach-O ARM64 executable.
 The Windows x86-64 native gate is also green in Gitea
 [run 5470](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5470)
-on SHA `4cf3a4eddfb7dccc9072258ab44fb8ebf64a12b5`. The remaining RC
-prerequisites are native Linux ARM64 and macOS x86-64 runners, the armored
-maintainer public key, three protected signing secrets and one non-publishing
-five-target rehearsal. No RC is published yet.
+on SHA `4cf3a4eddfb7dccc9072258ab44fb8ebf64a12b5`. GitHub
+[run 33849192526](https://github.com/luigibarretta/immich-rs/actions/runs/33849192526)
+then completed the non-publishing rehearsal on Linux x86-64/ARM64, macOS
+x86-64/ARM64 and Windows x86-64 at exact revision
+`f69a4c09bdeb09fbdae6d61260b0f8a20e2b6c3c`; Gitea run 6155 passed on the same
+revision.
 
 ## Current capabilities
 

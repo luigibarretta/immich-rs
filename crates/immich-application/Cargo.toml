@@ -1,0 +1,21 @@
+[package]
+name = "immich-rs-application"
+description = "Typed workflow facade shared by immich-rs frontends"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+immich-rs-core = { path = "../immich-core", version = "=0.1.0-rc.1" }
+immich-rs-sources = { path = "../immich-sources", version = "=0.1.0-rc.1" }
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

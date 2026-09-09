@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "crates/immich-application",
   "crates/immich-cli",
   "crates/immich-client",
   "crates/immich-core",

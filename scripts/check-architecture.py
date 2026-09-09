@@ -9,6 +9,7 @@ import tomllib
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 MANIFESTS = {
+    "immich-rs-application": REPOSITORY_ROOT / "crates" / "immich-application" / "Cargo.toml",
     "immich-rs-cli": REPOSITORY_ROOT / "crates" / "immich-cli" / "Cargo.toml",
     "immich-rs-client": REPOSITORY_ROOT / "crates" / "immich-client" / "Cargo.toml",
     "immich-rs-core": REPOSITORY_ROOT / "crates" / "immich-core" / "Cargo.toml",
@@ -16,7 +17,9 @@ MANIFESTS = {
     "immich-rs-sources": REPOSITORY_ROOT / "crates" / "immich-sources" / "Cargo.toml",
 }
 ALLOWED_INTERNAL = {
+    "immich-rs-application": {"immich-rs-core", "immich-rs-sources"},
     "immich-rs-cli": {
+        "immich-rs-application",
         "immich-rs-client",
         "immich-rs-core",
         "immich-rs-executor",
@@ -44,6 +47,29 @@ def check() -> list[str]:
         unexpected = actual - ALLOWED_INTERNAL[package]
         if unexpected:
             failures.append(f"{package}: forbidden internal dependencies: {sorted(unexpected)}")
+    folder_frontend = (
+        REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "folder.rs"
+    ).read_text(encoding="utf-8")
+    if (
+        "immich_rs_application" not in folder_frontend
+        or "immich_rs_sources" in folder_frontend
+        or "scan_folder(" in folder_frontend
+    ):
+        failures.append("folder CLI does not use only the application workflow facade")
+    application_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPOSITORY_ROOT / "crates" / "immich-application" / "src").glob("*.rs")
+    ).casefold()
+    forbidden_application_tokens = (
+        "immich_rs_client",
+        "immich_rs_executor",
+        "std::env",
+        "println!",
+        "eprintln!",
+        "process::exit",
+    )
+    if any(token in application_source for token in forbidden_application_tokens):
+        failures.append("read-only application facade can reach effects or process concerns")
     dry_run_source = (REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "upload_dry_run.rs").read_text(
         encoding="utf-8"
     )

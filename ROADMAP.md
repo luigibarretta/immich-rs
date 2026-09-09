@@ -380,7 +380,7 @@ this is not a non-production shadow, WAN or production claim.
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
 and authenticated loopback folder scan/review library surface are implemented.
-The remaining SSE, server, durable-state, apply, source-import, LAN, release and
+The remaining server, durable-state, apply, source-import, LAN, release and
 observability slices stay unsupported until their evidence gates are green.
 
 Sequential gates are:
@@ -389,8 +389,8 @@ Sequential gates are:
    exit-compatible CLI use;
 2. **Implemented:** authenticated loopback folder scan/review with opaque
    configured profiles and hardened development-listener tests;
-3. **In progress:** bounded authenticated polling, cooperative cancellation and
-   owned shutdown are implemented; SSE replay/subscriber handling remains;
+3. **Implemented:** bounded authenticated SSE and polling, isolated replay,
+   cooperative cancellation and owned shutdown;
 4. server-bound probe planning, immutable inspection/export, offline dry-run
    receipts and separate bounded history;
 5. exact single-use folder apply grants against disposable loopback/HTTPS;

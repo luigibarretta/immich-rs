@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::auth::SessionView;
 use crate::cookies::{SESSION_COOKIE, value as cookie_value};
+use crate::events_http;
 use crate::http::ConsoleState;
 use crate::jobs::AdmissionError;
 use crate::{views, views::JobView};
@@ -21,6 +22,7 @@ pub fn routes() -> Router<ConsoleState> {
     Router::new()
         .route("/sources/{source_id}/scan", post(admit_folder))
         .route("/jobs/{job_id}", get(job_status))
+        .route("/jobs/{job_id}/events", get(events_http::job_events))
         .route("/jobs/{job_id}/cancel", post(cancel_job))
 }
 

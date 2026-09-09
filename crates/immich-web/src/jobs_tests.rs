@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::WebConfig;
-use crate::jobs::{AdmissionError, JobManager, JobStatus};
+use crate::jobs::{AdmissionError, JobManager, JobStatus, SubscribeError, SubscriptionDelivery};
 
 static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -34,6 +34,9 @@ bootstrap_secret_file = "{}"
 concurrent_jobs = 1
 queued_jobs = 1
 retained_jobs = 2
+sse_subscribers_per_session = 1
+sse_subscribers_per_process = 1
+sse_replay_events = 1
 
 [[sources]]
 id = "bounded"
@@ -52,6 +55,94 @@ generation = 1
     fn config(&self) -> Result<WebConfig, Box<dyn std::error::Error>> {
         Ok(WebConfig::load(&self.root.join("web.toml"))?)
     }
+}
+
+#[tokio::test]
+async fn subscriptions_bound_owners_replay_and_slow_consumers()
+-> Result<(), Box<dyn std::error::Error>> {
+    let workspace = Workspace::new()?;
+    let manager = JobManager::new(Arc::new(workspace.config()?));
+    let owner = [11_u8; 32];
+    let other = [12_u8; 32];
+    let running = manager
+        .admit(owner, "bounded")
+        .map_err(|_| "first job admission failed")?;
+    let queued = manager
+        .admit(other, "bounded")
+        .map_err(|_| "second job admission failed")?;
+
+    for _attempt in 0..100 {
+        let status = manager
+            .snapshot(&running, &owner)
+            .ok_or("running job missing")?
+            .status;
+        if status == JobStatus::Running {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    }
+    assert_eq!(
+        manager
+            .snapshot(&running, &owner)
+            .ok_or("running job missing")?
+            .status,
+        JobStatus::Running
+    );
+    assert!(matches!(
+        manager.subscribe(&running, owner, Some(0)),
+        Err(SubscribeError::ReplayExhausted)
+    ));
+    assert!(matches!(
+        manager.subscribe(&running, owner, Some(u64::MAX)),
+        Err(SubscribeError::InvalidCursor)
+    ));
+    let subscriber = manager
+        .subscribe(&running, owner, None)
+        .map_err(|_| "first subscription failed")?;
+    assert!(matches!(
+        manager.subscribe(&running, other, None),
+        Err(SubscribeError::NotFound)
+    ));
+    assert!(matches!(
+        manager.subscribe(&running, owner, None),
+        Err(SubscribeError::SessionCapacity)
+    ));
+    assert!(matches!(
+        manager.subscribe(&queued, other, None),
+        Err(SubscribeError::ProcessCapacity)
+    ));
+    drop(subscriber);
+    assert_eq!(
+        manager
+            .snapshot(&running, &owner)
+            .ok_or("running job missing after disconnect")?
+            .status,
+        JobStatus::Running
+    );
+    let replacement = manager
+        .subscribe(&queued, other, None)
+        .map_err(|_| "subscriber lease was not released")?;
+    drop(replacement);
+
+    let mut slow = manager
+        .subscribe(&running, owner, None)
+        .map_err(|_| "slow subscription failed")?;
+    assert!(manager.cancel(&running, &owner).is_some());
+    assert!(manager.shutdown());
+    assert!(matches!(
+        slow.next(std::time::Duration::from_millis(1)).await,
+        Some(SubscriptionDelivery::Event(_))
+    ));
+    assert_eq!(
+        slow.next(std::time::Duration::from_millis(1)).await,
+        Some(SubscriptionDelivery::ReplayExhausted)
+    );
+    let cancelled = manager
+        .snapshot(&running, &owner)
+        .ok_or("cancelled job missing")?;
+    assert_eq!(cancelled.status, JobStatus::Cancelled);
+    assert!(cancelled.summary.is_none());
+    Ok(())
 }
 
 impl Drop for Workspace {

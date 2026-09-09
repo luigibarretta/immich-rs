@@ -5,7 +5,7 @@ use std::io::ErrorKind;
 use std::net::TcpListener;
 
 use axum::Router;
-use axum::http::header::LOCATION;
+use axum::http::header::{CONTENT_TYPE, LOCATION};
 use axum::http::{Method, StatusCode};
 
 mod support;
@@ -76,6 +76,43 @@ async fn wait_for_job(
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
     Err("job did not finish within the bounded wait".into())
+}
+
+async fn assert_terminal_events(
+    router: &Router,
+    session: &PairedSession,
+    events_url: &str,
+    workspace: &TestWorkspace,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let unauthenticated = send(router, Method::GET, events_url, Some(HOST), None, None, "").await?;
+    assert_eq!(unauthenticated.status, StatusCode::UNAUTHORIZED);
+    let events = send(
+        router,
+        Method::GET,
+        events_url,
+        Some(HOST),
+        None,
+        Some(&session.cookie),
+        "",
+    )
+    .await?;
+    assert_eq!(events.status, StatusCode::OK);
+    assert_eq!(
+        events
+            .headers
+            .get(CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok()),
+        Some("text/event-stream")
+    );
+    assert!(events.body.contains("event: job"));
+    assert!(events.body.contains("Completed|complete|false"));
+    assert!(!events.body.contains("synthetic.jpg"));
+    assert!(
+        !events
+            .body
+            .contains(&workspace.path("").display().to_string())
+    );
+    Ok(())
 }
 
 #[tokio::test]
@@ -152,12 +189,14 @@ async fn scan_uses_only_authenticated_opaque_profile_and_never_connects()
         .get(LOCATION)
         .ok_or("job redirect missing")?
         .to_str()?;
+    let events_url = format!("{location}/events");
     let body = wait_for_job(&router, &session, location).await?;
     assert!(body.contains("Completed ·"));
     assert!(body.contains("Completed plan summary"));
     assert!(body.contains("<dd>1</dd>"));
     assert!(!body.contains("synthetic.jpg"));
     assert!(!body.contains(&workspace.path("").display().to_string()));
+    assert_terminal_events(&router, &session, &events_url, &workspace).await?;
     assert!(!workspace.path("never-read-api-key.secret").exists());
     match listener.accept() {
         Err(error) if error.kind() == ErrorKind::WouldBlock => {}

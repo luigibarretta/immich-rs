@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Scan status · immich-rs{% endblock %}
 {% block content %}
-<section class="panel" aria-labelledby="job-title" data-events-url="/jobs/{{ id }}/events">
+<section class="panel" aria-labelledby="job-title" data-events-url="/jobs/{{ id }}/events" data-terminal="{{ terminal }}">
   <p class="eyebrow">Bounded read-only scan</p>
   <h1 id="job-title">{{ label }}</h1>
   <p id="job-status" class="job-status" role="status" aria-live="polite">{{ status }} · {{ stage }}</p>
@@ -28,6 +28,7 @@
     <button class="secondary" type="submit">Cancel scan</button>
   </form>
   {% endif %}
-  <p><a href="/jobs/{{ id }}">Refresh status</a> · <a href="/">Configured sources</a></p>
+  <p id="polling-fallback"><a href="/jobs/{{ id }}">Refresh status</a> · <a href="/">Configured sources</a></p>
 </section>
+<script src="/assets/job.js" defer></script>
 {% endblock %}

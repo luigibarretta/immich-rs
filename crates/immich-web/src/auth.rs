@@ -184,6 +184,18 @@ impl AuthStore {
         constant_time_equal(csrf_token, &session.csrf_token).then_some(session)
     }
 
+    pub fn valid_binding(&self, cookie_token: &str, binding: &[u8; 32]) -> bool {
+        let now = Instant::now();
+        let Ok(mut state) = self.state.lock() else {
+            return false;
+        };
+        expire_sessions(&mut state.sessions, now, self.limits);
+        state
+            .sessions
+            .get(cookie_token)
+            .is_some_and(|session| bool::from(session.binding.ct_eq(binding)))
+    }
+
     pub fn logout(&self, cookie_token: &str, csrf_token: &str) -> bool {
         let now = Instant::now();
         let Ok(mut state) = self.state.lock() else {

@@ -7,6 +7,7 @@ mod auth_tests;
 mod config;
 mod cookies;
 mod error;
+mod events_http;
 mod http;
 mod job_http;
 mod jobs;

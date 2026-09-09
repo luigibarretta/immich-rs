@@ -37,6 +37,7 @@ pub struct JobView<'a> {
     pub stage: &'static str,
     pub cancellation_requested: bool,
     pub cancellable: bool,
+    pub terminal: &'static str,
     pub csrf_token: &'a str,
     pub assets_observed: u64,
     pub progress_bytes: u64,
@@ -66,6 +67,11 @@ impl<'a> JobView<'a> {
             stage: stage_label(snapshot),
             cancellation_requested: snapshot.cancellation_requested,
             cancellable: !snapshot.status.terminal() && !snapshot.cancellation_requested,
+            terminal: if snapshot.status.terminal() {
+                "true"
+            } else {
+                "false"
+            },
             csrf_token,
             assets_observed: snapshot.progress.assets_observed,
             progress_bytes: snapshot.progress.bytes_read,

@@ -1,3 +1,4 @@
+mod subscription;
 mod worker;
 
 use std::collections::{BTreeMap, VecDeque};
@@ -10,6 +11,8 @@ use immich_rs_application::{CancellationToken, ProgressStage};
 use tokio::sync::broadcast;
 
 use crate::{WebConfig, WebLimits};
+
+pub use subscription::{JobSubscription, SubscribeError, SubscriptionDelivery};
 
 const JOB_ID_BYTES: usize = 16;
 
@@ -104,6 +107,8 @@ pub struct JobsState {
     pub queued: usize,
     pub shutting_down: bool,
     worker_failed: bool,
+    subscribers: usize,
+    subscribers_by_owner: BTreeMap<[u8; 32], usize>,
 }
 
 pub struct StoredJob {
@@ -140,6 +145,8 @@ impl JobManager {
                     queued: 0,
                     shutting_down: false,
                     worker_failed: false,
+                    subscribers: 0,
+                    subscribers_by_owner: BTreeMap::new(),
                 }),
                 worker_available: Condvar::new(),
             }),

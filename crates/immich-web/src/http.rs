@@ -28,6 +28,7 @@ use crate::server;
 use crate::{WebConfig, WebConfigError, views};
 
 const STYLESHEET: &str = include_str!("../assets/console.css");
+const JOB_SCRIPT: &str = include_str!("../assets/job.js");
 
 /// Authenticated loopback console assembled from validated operator configuration.
 pub struct WebConsole {
@@ -78,6 +79,7 @@ impl WebConsole {
             .route("/pair", get(pair_page).post(pair))
             .route("/logout", post(logout))
             .route("/assets/console.css", get(stylesheet))
+            .route("/assets/job.js", get(job_script))
             .merge(job_http::routes())
             .fallback(not_found)
             .layer(RequestBodyLimitLayer::new(limits.request_body_bytes))
@@ -200,6 +202,14 @@ async fn logout(
 
 async fn stylesheet() -> Response {
     ([(CONTENT_TYPE, "text/css; charset=utf-8")], STYLESHEET).into_response()
+}
+
+async fn job_script() -> Response {
+    (
+        [(CONTENT_TYPE, "application/javascript; charset=utf-8")],
+        JOB_SCRIPT,
+    )
+        .into_response()
 }
 
 async fn not_found() -> Response {

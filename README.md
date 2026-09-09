@@ -157,11 +157,15 @@ revision.
 
 ## Current capabilities
 
-An optional authenticated operator Web Console is accepted in ADR-0033 but is
-not implemented at this revision. The current supported interface remains the
-CLI. See the [threat model](docs/web-console-threat-model.md) and
-[capability/resource matrix](docs/web-console-resources.md); no web route,
-binary, artifact or container is currently supported.
+The optional operator Web Console now has a tested loopback library surface for
+one-time bootstrap pairing, restart-ephemeral sessions and source-only folder
+scan/review through opaque operator-configured profiles. It applies exact
+Host/Origin/CSRF policy, contextual SSR escaping, private response headers and
+bounded connections, headers, bodies and deadlines. It exposes no server probe,
+durable plan, history, dry-run, apply or media-serving route. A standalone web
+binary, native artifact and container are not yet supported. The CLI remains
+the canonical complete interface. See the [threat model](docs/web-console-threat-model.md)
+and [capability/resource matrix](docs/web-console-resources.md).
 
 - deterministic recursive folder discovery with bounded entry and path limits;
 - one-file-at-a-time SHA-256 streaming through a configurable bounded buffer;

@@ -9,6 +9,7 @@ mod error;
 mod http;
 mod policy;
 mod profiles;
+mod server;
 mod views;
 
 pub use config::{WebConfig, WebLimits};

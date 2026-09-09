@@ -1,20 +1,28 @@
+use std::future::Future;
+use std::io;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use axum::extract::{ConnectInfo, Form, State};
+use axum::extract::{ConnectInfo, Form, Path, State};
 use axum::http::header::{CONTENT_TYPE, COOKIE, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::middleware;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
+use immich_rs_application::{
+    ApplicationNoProgress, CancellationToken, FolderPlanRequest, plan_folder,
+};
 use serde::Deserialize;
+use tokio::net::TcpListener;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::timeout::TimeoutLayer;
 
 use crate::auth::{AuthStore, PairingFailure, PairingView, SessionView};
 use crate::policy::{RequestPolicy, request_policy};
+use crate::server;
+use crate::views::ScanReview;
 use crate::{WebConfig, WebConfigError, views};
 
 const SESSION_COOKIE: &str = "immich_rs_session";
@@ -57,7 +65,7 @@ impl WebConsole {
         })
     }
 
-    /// Build the bounded HTTP router. No filesystem or server operation is routed yet.
+    /// Build the bounded authenticated router for local source-only folder review.
     pub fn router(&self) -> Router {
         let limits = self.state.config.limits();
         let policy = RequestPolicy::new(&self.state.config);
@@ -65,6 +73,7 @@ impl WebConsole {
             .route("/", get(index))
             .route("/pair", get(pair_page).post(pair))
             .route("/logout", post(logout))
+            .route("/sources/{source_id}/scan", post(scan_folder))
             .route("/assets/console.css", get(stylesheet))
             .fallback(not_found)
             .layer(RequestBodyLimitLayer::new(limits.request_body_bytes))
@@ -74,6 +83,35 @@ impl WebConsole {
             ))
             .layer(middleware::from_fn_with_state(policy, request_policy))
             .with_state(self.state.clone())
+    }
+
+    /// Bind the configured loopback address and serve until shutdown is requested.
+    pub async fn serve<Shutdown>(self, shutdown: Shutdown) -> io::Result<()>
+    where
+        Shutdown: Future<Output = ()>,
+    {
+        let listener = TcpListener::bind(self.state.config.listen_address()).await?;
+        self.serve_on(listener, shutdown).await
+    }
+
+    /// Serve a pre-bound configured listener for hardened development and tests.
+    pub async fn serve_on<Shutdown>(
+        self,
+        listener: TcpListener,
+        shutdown: Shutdown,
+    ) -> io::Result<()>
+    where
+        Shutdown: Future<Output = ()>,
+    {
+        if listener.local_addr()? != self.state.config.listen_address() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "listener does not match configured web address",
+            ));
+        }
+        let limits = self.state.config.limits();
+        let router = self.router();
+        server::serve(listener, router, limits, shutdown).await
     }
 }
 
@@ -149,6 +187,48 @@ async fn logout(
     } else {
         views::locked(StatusCode::INTERNAL_SERVER_ERROR)
     }
+}
+
+async fn scan_folder(
+    State(state): State<ConsoleState>,
+    Path(source_id): Path<String>,
+    headers: HeaderMap,
+    Form(form): Form<CsrfForm>,
+) -> Response {
+    let Some(cookie_token) = cookie_value(&headers, SESSION_COOKIE) else {
+        return views::locked(StatusCode::UNAUTHORIZED);
+    };
+    if state
+        .auth
+        .authenticate_csrf(&cookie_token, &form.csrf)
+        .is_none()
+    {
+        return views::locked(StatusCode::FORBIDDEN);
+    }
+    let Some(profile) = state.config.source(&source_id) else {
+        return views::scan_failed(StatusCode::NOT_FOUND);
+    };
+    let Ok(resolved) = profile.resolve() else {
+        return views::scan_failed(StatusCode::CONFLICT);
+    };
+    let request = FolderPlanRequest {
+        root: resolved.root().to_path_buf(),
+        label: resolved.label().to_owned(),
+        config: resolved.config().clone(),
+    };
+    let cancellation = CancellationToken::default();
+    let Ok(plan) = plan_folder(&request, &cancellation, &mut ApplicationNoProgress) else {
+        return views::scan_failed(StatusCode::UNPROCESSABLE_ENTITY);
+    };
+    views::scan_review(&ScanReview {
+        label: resolved.label(),
+        schema_version: plan.schema_version,
+        assets: plan.summary.assets,
+        sidecars: plan.summary.sidecars,
+        bytes_read: plan.summary.bytes_read,
+        warnings: plan.warnings.len(),
+        errors: plan.errors.len(),
+    })
 }
 
 async fn stylesheet() -> Response {

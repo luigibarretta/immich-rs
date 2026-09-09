@@ -128,6 +128,48 @@ a:focus-visible {
   gap: 1rem;
 }
 
+.source-list li span,
+.source-list li code {
+  display: block;
+}
+
+.source-list li code {
+  margin-top: 0.4rem;
+}
+
+.source-list li form {
+  margin: 0;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.summary-grid div {
+  padding: 1rem;
+  border: 1px solid #344467;
+  border-radius: 0.75rem;
+  background: #0b1223;
+}
+
+.summary-grid dt {
+  color: #9eabc7;
+  font-size: 0.85rem;
+}
+
+.summary-grid dd {
+  margin: 0.3rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 750;
+}
+
+a {
+  color: #8fc7ff;
+}
+
 .source-list {
   padding: 0;
   list-style: none;

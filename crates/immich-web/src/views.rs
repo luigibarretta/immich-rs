@@ -27,6 +27,22 @@ struct SourceView<'a> {
 #[template(path = "locked.html")]
 struct LockedTemplate;
 
+#[derive(Template)]
+#[template(path = "scan_review.html")]
+pub struct ScanReview<'a> {
+    pub label: &'a str,
+    pub schema_version: u32,
+    pub assets: u64,
+    pub sidecars: u64,
+    pub bytes_read: u64,
+    pub warnings: usize,
+    pub errors: usize,
+}
+
+#[derive(Template)]
+#[template(path = "scan_failed.html")]
+struct ScanFailedTemplate;
+
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
     render(status, &PairTemplate { csrf_token, denied })
 }
@@ -50,6 +66,14 @@ pub fn dashboard(csrf_token: &str, profiles: &[SourceProfile]) -> Response {
 
 pub fn locked(status: StatusCode) -> Response {
     render(status, &LockedTemplate)
+}
+
+pub fn scan_review(review: &ScanReview<'_>) -> Response {
+    render(StatusCode::OK, review)
+}
+
+pub fn scan_failed(status: StatusCode) -> Response {
+    render(status, &ScanFailedTemplate)
 }
 
 fn render<T: Template>(status: StatusCode, template: &T) -> Response {

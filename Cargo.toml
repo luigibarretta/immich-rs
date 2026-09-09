@@ -26,6 +26,8 @@ ctrlc = "3.5.2"
 base64 = "0.22.1"
 futures-util = "0.3.31"
 getrandom = "=0.4.3"
+hyper = { version = "=1.11.0", default-features = false, features = ["http1", "server"] }
+hyper-util = { version = "=0.1.20", default-features = false, features = ["http1", "server", "service", "tokio"] }
 reqwest = { version = "0.12.23", default-features = false, features = ["json", "multipart", "rustls-tls", "stream"] }
 rusqlite = { version = "0.37.0", features = ["bundled"] }
 sha1 = "0.10.6"

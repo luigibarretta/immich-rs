@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Scan review · immich-rs{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="review-title">
+  <p class="eyebrow">Completed read-only scan</p>
+  <h1 id="review-title">{{ label }}</h1>
+  <p>No server connection or durable effect was permitted. This browser summary is informational and cannot authorize a later job.</p>
+  <dl class="summary-grid">
+    <div><dt>Plan schema</dt><dd>{{ schema_version }}</dd></div>
+    <div><dt>Assets</dt><dd>{{ assets }}</dd></div>
+    <div><dt>Sidecars</dt><dd>{{ sidecars }}</dd></div>
+    <div><dt>Bytes read</dt><dd>{{ bytes_read }}</dd></div>
+    <div><dt>Warnings</dt><dd>{{ warnings }}</dd></div>
+    <div><dt>Blocking errors</dt><dd>{{ errors }}</dd></div>
+  </dl>
+  <p><a href="/">Back to configured sources</a></p>
+</section>
+{% endblock %}

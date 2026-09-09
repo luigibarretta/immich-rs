@@ -174,6 +174,11 @@ impl AuthStore {
         Some(view)
     }
 
+    pub fn authenticate_csrf(&self, cookie_token: &str, csrf_token: &str) -> Option<SessionView> {
+        let session = self.authenticate(cookie_token)?;
+        constant_time_equal(csrf_token, &session.csrf_token).then_some(session)
+    }
+
     pub fn logout(&self, cookie_token: &str, csrf_token: &str) -> bool {
         let now = Instant::now();
         let Ok(mut state) = self.state.lock() else {

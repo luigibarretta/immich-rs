@@ -378,14 +378,17 @@ this is not a non-production shadow, WAN or production claim.
 ## Optional Web Console
 
 ADR-0033 accepts a separate authenticated operator console without changing
-the supported CLI or authorizing production migration. At ADR acceptance no
-web crate, route, binary, native artifact or image exists, so the entire console
-is unsupported until each bounded slice is implemented and evidence-enforced.
+the supported CLI or authorizing production migration. The application facade
+and authenticated loopback folder scan/review library surface are implemented.
+The remaining job, server, durable-state, apply, source-import, LAN, release and
+observability slices stay unsupported until their evidence gates are green.
 
-Planned gates are:
+Sequential gates are:
 
-1. thin `immich-application` facade with byte- and exit-compatible CLI use;
-2. authenticated loopback folder scan/review with opaque configured profiles;
+1. **Implemented:** thin `immich-application` facade with byte- and
+   exit-compatible CLI use;
+2. **Implemented:** authenticated loopback folder scan/review with opaque
+   configured profiles and hardened development-listener tests;
 3. bounded SSE, polling, cancellation and owned shutdown;
 4. server-bound probe planning, immutable inspection/export, offline dry-run
    receipts and separate bounded history;

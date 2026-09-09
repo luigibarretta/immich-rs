@@ -635,6 +635,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "immich-rs-web"
+version = "0.1.0-rc.1"
+dependencies = [
+ "immich-rs-application",
+ "serde",
+ "sha2",
+ "toml",
+ "url",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

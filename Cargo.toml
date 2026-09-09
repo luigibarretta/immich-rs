@@ -6,6 +6,7 @@ members = [
   "crates/immich-core",
   "crates/immich-executor",
   "crates/immich-sources",
+  "crates/immich-web",
 ]
 resolver = "3"
 

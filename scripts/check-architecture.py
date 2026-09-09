@@ -15,6 +15,7 @@ MANIFESTS = {
     "immich-rs-core": REPOSITORY_ROOT / "crates" / "immich-core" / "Cargo.toml",
     "immich-rs-executor": REPOSITORY_ROOT / "crates" / "immich-executor" / "Cargo.toml",
     "immich-rs-sources": REPOSITORY_ROOT / "crates" / "immich-sources" / "Cargo.toml",
+    "immich-rs-web": REPOSITORY_ROOT / "crates" / "immich-web" / "Cargo.toml",
 }
 ALLOWED_INTERNAL = {
     "immich-rs-application": {
@@ -28,6 +29,7 @@ ALLOWED_INTERNAL = {
     "immich-rs-core": set(),
     "immich-rs-executor": {"immich-rs-client", "immich-rs-core", "immich-rs-sources"},
     "immich-rs-sources": {"immich-rs-core"},
+    "immich-rs-web": {"immich-rs-application"},
 }
 
 
@@ -60,6 +62,22 @@ def check() -> list[str]:
         )
     ):
         failures.append("CLI production source bypasses the application crate")
+    web_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPOSITORY_ROOT / "crates" / "immich-web" / "src").glob("*.rs")
+    )
+    if any(
+        token in web_source
+        for token in (
+            "immich_rs_client",
+            "immich_rs_core",
+            "immich_rs_executor",
+            "immich_rs_sources",
+            "std::process::Command",
+            "tokio::process::Command",
+        )
+    ):
+        failures.append("Web Console bypasses application or spawns a subprocess")
     folder_frontend = (
         REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "folder.rs"
     ).read_text(encoding="utf-8")

@@ -21,7 +21,7 @@ homepage = "https://git.luigibarretta.com/luigibarretta/immich-rs"
 
 [workspace.dependencies]
 askama = { version = "=0.16.1", default-features = false, features = ["derive", "std"] }
-axum = { version = "=0.8.9", default-features = false, features = ["form", "http1", "tokio"] }
+axum = { version = "=0.8.9", default-features = false, features = ["form", "http1", "query", "tokio"] }
 ctrlc = "3.5.2"
 base64 = "0.22.1"
 futures-util = "0.3.31"
@@ -29,7 +29,10 @@ getrandom = "=0.4.3"
 hyper = { version = "=1.11.0", default-features = false, features = ["http1", "server"] }
 hyper-util = { version = "=0.1.20", default-features = false, features = ["http1", "server", "service", "tokio"] }
 reqwest = { version = "0.12.23", default-features = false, features = ["json", "multipart", "rustls-tls", "stream"] }
+rcgen = "=0.14.5"
+ring = "=0.17.14"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
+rustls = { version = "=0.23.43", default-features = false, features = ["ring", "std", "tls12"] }
 sha1 = "0.10.6"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
@@ -37,6 +40,7 @@ sha2 = "0.10.9"
 subtle = "=2.6.1"
 time = { version = "0.3.41", features = ["formatting", "parsing"] }
 tokio = { version = "1.48.0", default-features = false, features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
+tokio-rustls = { version = "=0.26.4", default-features = false, features = ["ring", "tls12"] }
 tokio-util = { version = "0.7.16", features = ["io"] }
 toml = { version = "0.8.23", default-features = false, features = ["parse"] }
 tower = { version = "=0.5.3", features = ["limit", "timeout", "util"] }

@@ -15,10 +15,13 @@ mod jobs;
 #[cfg(test)]
 mod jobs_tests;
 mod limits;
+mod oidc;
+mod oidc_http;
 mod policy;
 mod profiles;
 mod server;
 mod state_store;
+mod tls;
 mod views;
 
 pub use config::WebConfig;

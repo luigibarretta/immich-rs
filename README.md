@@ -157,8 +157,9 @@ revision.
 
 ## Current capabilities
 
-The optional operator Web Console now has a tested loopback library surface for
-one-time bootstrap pairing, restart-ephemeral sessions, source-only folder,
+The optional operator Web Console now has a tested loopback and direct-TLS LAN
+library surface. Loopback uses one-time bootstrap pairing; LAN mode uses OIDC
+authorization code with PKCE and restart-ephemeral sessions. Source-only folder,
 Google Takeout, Apple Photos and Picasa scan/review plus server-bound immutable
 upload planning through opaque operator-configured profiles. Import profiles
 select exactly one contained directory or a bounded contained split-ZIP set;
@@ -197,8 +198,12 @@ expiry, logout, drift and bounded before/after-commit fault tests use only a
 synthetic loopback server. Import tests exercise executor-owned apply and
 fresh-plan duplicate convergence for a synthetic Takeout ZIP plus Apple and
 Picasa directories, including metadata and album effects. The external private
-Apple/Picasa shadow evidence remains pending and is not claimed. Media-serving
-routes remain unsupported. A
+Apple/Picasa shadow evidence remains pending and is not claimed. LAN tests use
+only a disposable TLS identity and IdP. Exact claim/signature checks, replay,
+key rotation, provider outage, fixation, expiry, SSE revocation, Origin/proxy
+denial and private-address CIDR pinning are covered. Direct TLS is supported;
+trusted reverse-proxy termination is not. Media-serving routes remain
+unsupported. See the [LAN configuration contract](docs/web-console-lan.md). A
 standalone web binary, native artifact and container are not yet supported. The
 CLI remains the canonical complete interface. See the
 [threat model](docs/web-console-threat-model.md) and

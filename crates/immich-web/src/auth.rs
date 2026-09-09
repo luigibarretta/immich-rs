@@ -69,6 +69,16 @@ pub enum PairingFailure {
 }
 
 impl AuthStore {
+    pub const fn oidc(limits: WebLimits) -> Self {
+        Self {
+            limits,
+            state: Mutex::new(AuthState {
+                bootstrap: None,
+                sessions: BTreeMap::new(),
+            }),
+        }
+    }
+
     pub fn load(path: &Path, limits: WebLimits) -> Result<Self, WebConfigError> {
         let mut bootstrap_material = read_secret(path)?;
         let secret_digest = Sha256::digest(&bootstrap_material).into();
@@ -177,6 +187,44 @@ impl AuthStore {
         };
         drop(state);
         Some(view)
+    }
+
+    pub fn establish_oidc(
+        &self,
+        principal: &str,
+        previous_cookie: Option<&str>,
+    ) -> Result<EstablishedSession, WebConfigError> {
+        let now = Instant::now();
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| WebConfigError::new("OIDC session state is unavailable"))?;
+        expire_sessions(&mut state.sessions, now, self.limits);
+        if let Some(previous) = previous_cookie {
+            state.sessions.remove(previous);
+        }
+        if state.sessions.len() >= self.limits.max_sessions {
+            return Err(WebConfigError::new("OIDC session capacity is exhausted"));
+        }
+        let cookie_token = random_token()?;
+        let csrf_token = random_token()?;
+        let mut binding_input = Vec::with_capacity(principal.len() + cookie_token.len() + 1);
+        binding_input.extend_from_slice(principal.as_bytes());
+        binding_input.push(0);
+        binding_input.extend_from_slice(cookie_token.as_bytes());
+        let binding = Sha256::digest(&binding_input).into();
+        binding_input.fill(0);
+        state.sessions.insert(
+            cookie_token.clone(),
+            Session {
+                binding,
+                csrf_token,
+                created_at: now,
+                last_seen_at: now,
+            },
+        );
+        drop(state);
+        Ok(EstablishedSession { cookie_token })
     }
 
     pub fn authenticate_csrf(&self, cookie_token: &str, csrf_token: &str) -> Option<SessionView> {

@@ -380,7 +380,7 @@ this is not a non-production shadow, WAN or production claim.
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
 and authenticated loopback folder scan/review library surface are implemented.
-The LAN, release and observability slices stay unsupported until their evidence
+The release and observability slices stay unsupported until their evidence
 gates are green.
 
 Sequential gates are:
@@ -404,7 +404,10 @@ Sequential gates are:
    their plan versions and bounded adapter options. Synthetic ZIP/directory,
    effect, drift and fresh-plan convergence tests do not claim the pending
    external private Apple/Picasa shadow gates;
-7. TLS/OIDC LAN mode against a disposable identity provider;
+7. **Implemented:** direct TLS 1.3 and OIDC authorization-code+PKCE LAN mode
+   against a disposable IdP, with EdDSA verification, role/subject policy,
+   private-CIDR DNS pinning, secure rotation and fail-closed negative coverage.
+   Trusted reverse-proxy termination remains unsupported;
 8. separate five-target native artifact and hardened multiarch OCI service;
 9. aggregate metrics, recovery/operator documentation, accessibility and
    browser regression closeout.

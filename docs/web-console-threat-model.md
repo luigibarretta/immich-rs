@@ -14,7 +14,8 @@ operator sessions and server mutation authority. The relevant boundaries are:
 - configured opaque profiles to local filesystem and outbound HTTPS resources;
 - web job admission to the application facade and executor;
 - in-memory sessions/grants to separate durable history/checkpoint stores;
-- direct TLS clients or a declared trusted proxy to the public-origin policy.
+- direct TLS clients to the public-origin policy. Trusted proxy termination is
+  explicitly unsupported in the implemented LAN slice.
 
 Loopback clients are untrusted until paired and authenticated. Source contents,
 archive names, sidecars, IdP responses, Immich responses, DNS answers and proxy
@@ -30,7 +31,7 @@ headers are untrusted even after authentication.
 | Stored/reflected XSS | Contextual SSR escaping, no raw HTML/`innerHTML`/inline handlers/external assets, restrictive CSP | Render escaped text or reject oversized input |
 | Path traversal or symlink/reparse swap | Opaque configured profiles, canonical containment for every directory/ZIP input, reopen/revalidate identity at use | Fail before source/state access |
 | SSRF, redirects or DNS rebinding | Profile-only exact hostnames, literal-loopback disposable targets, HTTPS for remote reads, redirects forbidden, bounded DNS with every answer inside an explicit per-profile CIDR policy, pinned connections with TLS hostname verification | No outbound connection |
-| Proxy spoofing | Reject forwarded headers unless peer is explicitly trusted; exact reconstructed origin | Reject request/startup |
+| Proxy spoofing | Direct TLS only; reject every forwarded header and require the exact configured Host/Origin | Reject request |
 | Credential disclosure | Secret files only, redacting types, no browser storage/history/logs, private state permissions | Fail closed and emit safe diagnostic |
 | Plan/count/identity substitution | Canonical server-side digest, source/config/server/user/profile/credential/count binding | Grant creation/admission refused |
 | Confirmation replay/race | Single-use in-memory grant consumed atomically with idempotent job admission; bounded spent-receipt tracking | Same job returned or request refused |
@@ -39,7 +40,7 @@ headers are untrusted even after authentication.
 | Resource exhaustion | Numerical HTTP/session/job/SSE/history/plan limits and backpressure | Reject admission or stop cleanly |
 | History leakage/corruption | Separate strict minimal schema, enum/counter-only typed writes, no identifiers/secrets/metadata, private file, transactional migration, bounded pages/WAL/retention and authenticated reads | Refuse newer/corrupt/full store and stop further job admission after a terminal-write failure |
 | OIDC mix-up/replay | Code+PKCE, exact issuer/audience/redirect/signature/alg/exp, single-use state/nonce, role/subject mapping | No session issued |
-| JWKS rotation/outage abuse | Bounded fetch/cache/key set; fail closed on unknown/invalid keys | Existing policy expires; login refused |
+| JWKS rotation/outage abuse | Bounded fresh discovery/JWKS fetch and key set for login and callback; fail closed on outage or unknown/invalid keys | Login refused |
 | Excess privilege | Authz on every object/stream/export/metrics route; executor remains sole effect owner | Deny without disclosing existence |
 | Sensitive metrics | Aggregate low-cardinality allowlist, protected listener, forbidden-label tests | Metric omitted or request denied |
 

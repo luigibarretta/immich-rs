@@ -8,9 +8,11 @@ use axum::{Extension, Router};
 use hyper::server::conn::http1;
 use hyper_util::rt::{TokioIo, TokioTimer};
 use hyper_util::service::TowerToHyperService;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Semaphore, watch};
 use tokio::task::JoinSet;
+use tokio_rustls::TlsAcceptor;
 
 use crate::WebLimits;
 
@@ -18,6 +20,7 @@ pub async fn serve<Shutdown>(
     listener: TcpListener,
     router: Router,
     limits: WebLimits,
+    tls: Option<TlsAcceptor>,
     shutdown: Shutdown,
 ) -> io::Result<()>
 where
@@ -37,12 +40,14 @@ where
                         if let Ok(permit) = Arc::clone(&permits).try_acquire_owned() {
                             let connection_router = router.clone().layer(Extension(ConnectInfo(peer)));
                             let connection_stop = stop_receiver.clone();
-                            connections.spawn(serve_connection(
+                            let connection_tls = tls.clone();
+                            connections.spawn(accept_connection(
                                 stream,
                                 connection_router,
                                 limits,
                                 connection_stop,
                                 permit,
+                                connection_tls,
                             ));
                         }
                     }
@@ -69,13 +74,37 @@ where
     failure.map_or(Ok(()), Err)
 }
 
-async fn serve_connection(
+async fn accept_connection(
     stream: TcpStream,
+    router: Router,
+    limits: WebLimits,
+    shutdown: watch::Receiver<bool>,
+    permit: tokio::sync::OwnedSemaphorePermit,
+    tls: Option<TlsAcceptor>,
+) {
+    if let Some(acceptor) = tls {
+        if let Ok(Ok(stream)) = tokio::time::timeout(
+            Duration::from_secs(limits.header_read_seconds),
+            acceptor.accept(stream),
+        )
+        .await
+        {
+            serve_connection(stream, router, limits, shutdown, permit).await;
+        }
+    } else {
+        serve_connection(stream, router, limits, shutdown, permit).await;
+    }
+}
+
+async fn serve_connection<IO>(
+    stream: IO,
     router: Router,
     limits: WebLimits,
     mut shutdown: watch::Receiver<bool>,
     _permit: tokio::sync::OwnedSemaphorePermit,
-) {
+) where
+    IO: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
     let service = TowerToHyperService::new(router);
     let io = TokioIo::new(stream);
     let mut builder = http1::Builder::new();

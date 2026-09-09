@@ -9,7 +9,7 @@ pub struct WebLimits {
     pub request_header_bytes: usize,
     /// Maximum request-body bytes enforced while streaming the body.
     pub request_body_bytes: usize,
-    /// Maximum number of concurrently accepted loopback connections.
+    /// Maximum number of concurrently accepted console connections.
     pub accepted_connections: usize,
     /// Maximum duration allowed to read request headers.
     pub header_read_seconds: u64,
@@ -57,6 +57,16 @@ pub struct WebLimits {
     pub production_grant_seconds: u64,
     /// Maximum UTF-8 bytes accepted for a backup reference.
     pub backup_reference_bytes: usize,
+    /// Maximum bounded OIDC discovery response bytes.
+    pub oidc_discovery_bytes: usize,
+    /// Maximum bounded OIDC JWKS response bytes.
+    pub oidc_jwks_bytes: usize,
+    /// Maximum OIDC signing keys accepted from one JWKS.
+    pub oidc_signing_keys: usize,
+    /// Maximum age of one single-use OIDC state and nonce.
+    pub oidc_state_seconds: u64,
+    /// Maximum token endpoint response and ID token bytes.
+    pub oidc_token_bytes: usize,
 }
 
 impl Default for WebLimits {
@@ -88,6 +98,11 @@ impl Default for WebLimits {
             dry_run_receipt_seconds: 5 * 60,
             production_grant_seconds: 90,
             backup_reference_bytes: 256,
+            oidc_discovery_bytes: 64 * 1_024,
+            oidc_jwks_bytes: 256 * 1_024,
+            oidc_signing_keys: 8,
+            oidc_state_seconds: 3 * 60,
+            oidc_token_bytes: 32 * 1_024,
         }
     }
 }
@@ -127,6 +142,12 @@ impl WebLimits {
             && (1..=10 * 60).contains(&self.dry_run_receipt_seconds)
             && (1..=120).contains(&self.production_grant_seconds)
             && (1..=256).contains(&self.backup_reference_bytes);
+        let valid = valid
+            && (1..=128 * 1_024).contains(&self.oidc_discovery_bytes)
+            && (1..=512 * 1_024).contains(&self.oidc_jwks_bytes)
+            && (1..=16).contains(&self.oidc_signing_keys)
+            && (1..=5 * 60).contains(&self.oidc_state_seconds)
+            && (1..=64 * 1_024).contains(&self.oidc_token_bytes);
         valid
             .then_some(self)
             .ok_or_else(|| WebConfigError::new("web resource limits are invalid"))
@@ -162,6 +183,11 @@ pub struct RawWebLimits {
     dry_run_receipt_seconds: Option<u64>,
     production_grant_seconds: Option<u64>,
     backup_reference_bytes: Option<usize>,
+    oidc_discovery_bytes: Option<usize>,
+    oidc_jwks_bytes: Option<usize>,
+    oidc_signing_keys: Option<usize>,
+    oidc_state_seconds: Option<u64>,
+    oidc_token_bytes: Option<usize>,
 }
 
 impl RawWebLimits {
@@ -226,6 +252,15 @@ impl RawWebLimits {
             backup_reference_bytes: self
                 .backup_reference_bytes
                 .unwrap_or(defaults.backup_reference_bytes),
+            oidc_discovery_bytes: self
+                .oidc_discovery_bytes
+                .unwrap_or(defaults.oidc_discovery_bytes),
+            oidc_jwks_bytes: self.oidc_jwks_bytes.unwrap_or(defaults.oidc_jwks_bytes),
+            oidc_signing_keys: self.oidc_signing_keys.unwrap_or(defaults.oidc_signing_keys),
+            oidc_state_seconds: self
+                .oidc_state_seconds
+                .unwrap_or(defaults.oidc_state_seconds),
+            oidc_token_bytes: self.oidc_token_bytes.unwrap_or(defaults.oidc_token_bytes),
         }
     }
 }

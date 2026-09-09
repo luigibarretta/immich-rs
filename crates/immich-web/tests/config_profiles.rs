@@ -137,6 +137,11 @@ fn assert_default_limits(config: &WebConfig) {
     assert_eq!(config.limits().sse_replay_events, 128);
     assert_eq!(config.limits().sse_heartbeat_seconds, 15);
     assert_eq!(config.limits().dns_addresses, 4);
+    assert_eq!(config.limits().oidc_discovery_bytes, 64 * 1_024);
+    assert_eq!(config.limits().oidc_jwks_bytes, 256 * 1_024);
+    assert_eq!(config.limits().oidc_signing_keys, 8);
+    assert_eq!(config.limits().oidc_state_seconds, 3 * 60);
+    assert_eq!(config.limits().oidc_token_bytes, 32 * 1_024);
 }
 
 fn assert_profiles(config: &WebConfig, source: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -207,6 +212,11 @@ fn config_rejects_unknown_fields_traversal_and_excess_limits()
         "dry_run_receipt_seconds = 601",
         "production_grant_seconds = 121",
         "backup_reference_bytes = 257",
+        "oidc_discovery_bytes = 131073",
+        "oidc_jwks_bytes = 524289",
+        "oidc_signing_keys = 17",
+        "oidc_state_seconds = 301",
+        "oidc_token_bytes = 65537",
     ] {
         let excessive = configuration(
             &workspace,

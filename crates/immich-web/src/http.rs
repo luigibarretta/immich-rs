@@ -13,6 +13,7 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use serde::Deserialize;
 use tokio::net::TcpListener;
+use tokio_rustls::TlsAcceptor;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::timeout::TimeoutLayer;
 
@@ -24,17 +25,21 @@ use crate::cookies::{
 use crate::grants::GrantStore;
 use crate::job_http;
 use crate::jobs::JobManager;
+use crate::oidc::OidcManager;
+use crate::oidc_http;
 use crate::policy::{RequestPolicy, request_policy};
 use crate::server;
 use crate::state_store::ConsoleStore;
+use crate::tls;
 use crate::{WebConfig, WebConfigError, views};
 
 const STYLESHEET: &str = include_str!("../assets/console.css");
 const JOB_SCRIPT: &str = include_str!("../assets/job.js");
 
-/// Authenticated loopback console assembled from validated operator configuration.
+/// Authenticated operator console assembled from validated loopback or LAN configuration.
 pub struct WebConsole {
     state: ConsoleState,
+    tls: Option<TlsAcceptor>,
 }
 
 #[derive(Clone)]
@@ -44,6 +49,7 @@ pub struct ConsoleState {
     pub jobs: JobManager,
     pub grants: Arc<GrantStore>,
     pub store: Arc<ConsoleStore>,
+    pub(crate) oidc: Option<Arc<OidcManager>>,
 }
 
 #[derive(Deserialize)]
@@ -60,12 +66,20 @@ struct CsrfForm {
 }
 
 impl WebConsole {
-    /// Load the private bootstrap secret and initialize restart-ephemeral auth state.
+    /// Load the configured authentication boundary and initialize ephemeral state.
     pub fn from_config(config: WebConfig) -> Result<Self, WebConfigError> {
-        let auth = AuthStore::load(config.bootstrap_secret_file(), config.limits())?;
+        let auth = match config.bootstrap_secret_file() {
+            Some(bootstrap) => AuthStore::load(bootstrap, config.limits())?,
+            None => AuthStore::oidc(config.limits()),
+        };
+        let tls = config.lan().map(tls::load_acceptor).transpose()?;
         let state_profile = config.history_state()?.resolve()?;
         let store = Arc::new(ConsoleStore::open(&state_profile, config.limits())?);
         let config = Arc::new(config);
+        let oidc = config
+            .lan()
+            .map(|_| OidcManager::new(Arc::clone(&config)).map(Arc::new))
+            .transpose()?;
         let jobs = JobManager::new(Arc::clone(&config), Arc::clone(&store));
         let grants = Arc::new(GrantStore::new(Arc::clone(&config), Arc::clone(&store)));
         Ok(Self {
@@ -75,11 +89,13 @@ impl WebConsole {
                 jobs,
                 grants,
                 store,
+                oidc,
             },
+            tls,
         })
     }
 
-    /// Build the bounded authenticated router for local source-only folder review.
+    /// Build the bounded authenticated operator router.
     pub fn router(&self) -> Router {
         let limits = self.state.config.limits();
         let policy = RequestPolicy::new(&self.state.config);
@@ -89,6 +105,7 @@ impl WebConsole {
             .route("/logout", post(logout))
             .route("/assets/console.css", get(stylesheet))
             .route("/assets/job.js", get(job_script))
+            .merge(oidc_http::routes())
             .merge(job_http::routes())
             .fallback(not_found)
             .layer(RequestBodyLimitLayer::new(limits.request_body_bytes))
@@ -100,7 +117,7 @@ impl WebConsole {
             .with_state(self.state.clone())
     }
 
-    /// Bind the configured loopback address and serve until shutdown is requested.
+    /// Bind the configured address and serve with the required transport until shutdown.
     pub async fn serve<Shutdown>(self, shutdown: Shutdown) -> io::Result<()>
     where
         Shutdown: Future<Output = ()>,
@@ -126,7 +143,7 @@ impl WebConsole {
         }
         let limits = self.state.config.limits();
         let router = self.router();
-        let result = server::serve(listener, router, limits, shutdown).await;
+        let result = server::serve(listener, router, limits, self.tls, shutdown).await;
         let jobs_clean = self.state.jobs.shutdown();
         if !jobs_clean && result.is_ok() {
             return Err(io::Error::other("web job worker failed"));
@@ -143,7 +160,11 @@ async fn index(State(state): State<ConsoleState>, headers: HeaderMap) -> Respons
             state.config.servers(),
         );
     }
-    pairing_response(&state, false)
+    if state.oidc.is_some() {
+        oidc_http::login_response(&state, false)
+    } else {
+        pairing_response(&state, false)
+    }
 }
 
 async fn pair_page(State(state): State<ConsoleState>, headers: HeaderMap) -> Response {
@@ -173,8 +194,12 @@ async fn pair(
                 SESSION_COOKIE,
                 &session.cookie_token,
                 state.config.limits().session_absolute_seconds,
-            ) && append_clear_cookie(&mut response, PAIRING_COOKIE)
-            {
+                state.config.secure_cookies(),
+            ) && append_clear_cookie(
+                &mut response,
+                PAIRING_COOKIE,
+                state.config.secure_cookies(),
+            ) {
                 response
             } else {
                 views::locked(StatusCode::INTERNAL_SERVER_ERROR)
@@ -210,7 +235,7 @@ async fn logout(
     }
     state.grants.revoke_owner(&session.binding);
     let mut response = Redirect::to("/").into_response();
-    if append_clear_cookie(&mut response, SESSION_COOKIE) {
+    if append_clear_cookie(&mut response, SESSION_COOKIE, state.config.secure_cookies()) {
         response
     } else {
         views::locked(StatusCode::INTERNAL_SERVER_ERROR)
@@ -257,6 +282,7 @@ fn pairing_response(state: &ConsoleState, denied: bool) -> Response {
         PAIRING_COOKIE,
         &cookie_token,
         state.config.limits().bootstrap_lifetime_seconds,
+        state.config.secure_cookies(),
     ) {
         response
     } else {

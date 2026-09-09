@@ -89,6 +89,18 @@ fresh-plan duplicate convergence through executor-owned `checkpoint-v2`.
 Synthetic coverage does not satisfy the pending external private Apple/Picasa
 shadow gates.
 
+Direct LAN mode terminates TLS 1.3 in `immich-web` and requires an exact HTTPS
+public origin plus operator-owned certificate/private-key files. It uses OIDC
+authorization code with PKCE, a single-use in-memory state/nonce/verifier, fresh
+bounded discovery and JWKS fetches, server-side token exchange and EdDSA-only ID
+token verification. The exact issuer hostname is resolved to at most the DNS
+address limit; every deduplicated answer must fall within one of 1–32 explicit
+operator CIDRs and is pinned without disabling TLS hostname verification.
+Subject allowlisting and a required `roles` claim are mutually exclusive.
+Sessions are rotated on login, use Secure/HttpOnly/SameSite=Strict cookies and
+retain the existing idle/absolute limits. Forwarded headers and trusted
+reverse-proxy termination are unsupported and rejected.
+
 ## Numeric bounds
 
 | Resource | Default | Hard maximum |

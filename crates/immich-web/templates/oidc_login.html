@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Sign in · immich-rs{% endblock %}
+{% block content %}
+<section class="panel narrow" aria-labelledby="login-title">
+  <p class="eyebrow">LAN authentication</p>
+  <h1 id="login-title">Sign in to the console</h1>
+  <p>The identity provider authenticates you. Tokens and the client secret remain server-side.</p>
+  {% if denied %}<p class="error" role="alert">Sign-in was denied or expired. Start a new attempt.</p>{% endif %}
+  <form method="post" action="/oidc/login">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <button type="submit">Continue to identity provider</button>
+  </form>
+</section>
+{% endblock %}

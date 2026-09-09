@@ -15,6 +15,13 @@ struct PairTemplate<'a> {
 }
 
 #[derive(Template)]
+#[template(path = "oidc_login.html")]
+struct OidcLoginTemplate<'a> {
+    csrf_token: &'a str,
+    denied: bool,
+}
+
+#[derive(Template)]
 #[template(path = "dashboard.html")]
 struct DashboardTemplate<'a> {
     csrf_token: &'a str,
@@ -162,6 +169,10 @@ struct ReceiptTemplate<'a> {
 
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
     render(status, &PairTemplate { csrf_token, denied })
+}
+
+pub fn oidc_login(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
+    render(status, &OidcLoginTemplate { csrf_token, denied })
 }
 
 pub fn dashboard(

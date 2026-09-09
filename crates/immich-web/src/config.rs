@@ -9,6 +9,7 @@ use url::{Position, Url};
 
 use crate::error::WebConfigError;
 use crate::limits::{RawWebLimits, WebLimits};
+use crate::oidc::{LanConfig, RawLanConfig};
 use crate::profiles::{
     RawServerProfile, RawSourceProfile, RawStateProfile, ServerProfile, SourceProfile, StateProfile,
 };
@@ -24,7 +25,8 @@ pub struct WebConfig {
     listen_address: SocketAddr,
     public_origin: String,
     allowed_host: String,
-    bootstrap_secret_file: PathBuf,
+    bootstrap_secret_file: Option<PathBuf>,
+    lan: Option<LanConfig>,
     limits: WebLimits,
     sources: Vec<SourceProfile>,
     servers: Vec<ServerProfile>,
@@ -62,19 +64,16 @@ impl WebConfig {
             .listen_address
             .parse::<SocketAddr>()
             .map_err(|_| WebConfigError::new("invalid web listen address"))?;
-        if !listen_address.ip().is_loopback() {
-            return Err(WebConfigError::new(
-                "loopback mode requires a loopback listen address",
-            ));
-        }
-        let (public_origin, allowed_host) =
-            validate_public_origin(&raw.web.public_origin, listen_address.port())?;
-        if !raw.web.bootstrap_secret_file.is_absolute() {
-            return Err(WebConfigError::new(
-                "bootstrap secret file path must be absolute",
-            ));
-        }
         let limits = raw.web.limits.into_limits().validate()?;
+        let lan = raw
+            .web
+            .lan
+            .map(|value| LanConfig::from_raw(value, &raw.web.public_origin, limits))
+            .transpose()?;
+        let (public_origin, allowed_host) =
+            validate_public_origin(&raw.web.public_origin, listen_address, lan.is_some())?;
+        let bootstrap_secret_file =
+            validate_auth_mode(listen_address, raw.web.bootstrap_secret_file, lan.as_ref())?;
         let sources = validate_sources(raw.sources)?;
         let servers = validate_servers(raw.servers)?;
         let states = validate_states(raw.states)?;
@@ -88,7 +87,8 @@ impl WebConfig {
             listen_address,
             public_origin,
             allowed_host,
-            bootstrap_secret_file: raw.web.bootstrap_secret_file,
+            bootstrap_secret_file,
+            lan,
             limits,
             sources,
             servers,
@@ -117,8 +117,20 @@ impl WebConfig {
 
     /// Operator-configured bootstrap secret file, never supplied by a browser.
     #[must_use]
-    pub fn bootstrap_secret_file(&self) -> &Path {
-        &self.bootstrap_secret_file
+    pub fn bootstrap_secret_file(&self) -> Option<&Path> {
+        self.bootstrap_secret_file.as_deref()
+    }
+
+    /// Complete direct-TLS/OIDC policy when LAN mode is configured.
+    #[must_use]
+    pub(crate) const fn lan(&self) -> Option<&LanConfig> {
+        self.lan.as_ref()
+    }
+
+    /// Whether session cookies must be restricted to HTTPS transport.
+    #[must_use]
+    pub const fn secure_cookies(&self) -> bool {
+        self.lan.is_some()
     }
 
     /// Validated session and bootstrap limits.
@@ -166,7 +178,8 @@ impl WebConfig {
 
 fn validate_public_origin(
     value: &str,
-    listen_port: u16,
+    listen_address: SocketAddr,
+    lan: bool,
 ) -> Result<(String, String), WebConfigError> {
     let url = Url::parse(value).map_err(|_| WebConfigError::new("invalid public origin"))?;
     if !url.username().is_empty()
@@ -174,18 +187,50 @@ fn validate_public_origin(
         || url.query().is_some()
         || url.fragment().is_some()
         || url.path() != "/"
-        || url.scheme() != "http"
-        || url.port_or_known_default() != Some(listen_port)
+        || url.port_or_known_default() != Some(listen_address.port())
     {
         return Err(WebConfigError::new("invalid loopback public origin"));
     }
-    let endpoint = ImmichEndpoint::parse(value)
-        .map_err(|_| WebConfigError::new("invalid loopback public origin"))?;
-    if !endpoint.is_loopback() {
-        return Err(WebConfigError::new("public origin must be loopback"));
+    let expected_scheme = if lan { "https" } else { "http" };
+    if url.scheme() != expected_scheme {
+        return Err(WebConfigError::new("public origin scheme is invalid"));
+    }
+    if !lan {
+        let endpoint = ImmichEndpoint::parse(value)
+            .map_err(|_| WebConfigError::new("invalid loopback public origin"))?;
+        if !endpoint.is_loopback() {
+            return Err(WebConfigError::new("public origin must be loopback"));
+        }
     }
     let authority = url[Position::BeforeHost..Position::AfterPort].to_owned();
     Ok((format!("{}://{authority}", url.scheme()), authority))
+}
+
+fn validate_auth_mode(
+    listen_address: SocketAddr,
+    bootstrap: Option<PathBuf>,
+    lan: Option<&LanConfig>,
+) -> Result<Option<PathBuf>, WebConfigError> {
+    if listen_address.ip().is_loopback() {
+        if lan.is_some() {
+            return Err(WebConfigError::new(
+                "loopback mode cannot configure LAN authentication",
+            ));
+        }
+        let path = bootstrap.ok_or_else(|| WebConfigError::new("bootstrap secret is required"))?;
+        if !path.is_absolute() {
+            return Err(WebConfigError::new(
+                "bootstrap secret file path must be absolute",
+            ));
+        }
+        return Ok(Some(path));
+    }
+    if bootstrap.is_some() || lan.is_none() {
+        return Err(WebConfigError::new(
+            "LAN mode requires only TLS and OIDC authentication",
+        ));
+    }
+    Ok(None)
 }
 
 fn validate_sources(raw: Vec<RawSourceProfile>) -> Result<Vec<SourceProfile>, WebConfigError> {
@@ -249,8 +294,9 @@ struct RawConfig {
 struct RawWeb {
     listen_address: String,
     public_origin: String,
-    bootstrap_secret_file: PathBuf,
+    bootstrap_secret_file: Option<PathBuf>,
     history_state_id: String,
+    lan: Option<RawLanConfig>,
     #[serde(default)]
     limits: RawWebLimits,
 }

@@ -108,6 +108,26 @@ fn idle_session_expires_and_cannot_be_reused() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+#[test]
+fn oidc_session_rotation_expires_and_invalidates_previous_cookie()
+-> Result<(), Box<dyn std::error::Error>> {
+    let limits = WebLimits {
+        session_idle_seconds: 1,
+        ..WebLimits::default()
+    };
+    let store = AuthStore::oidc(limits);
+    let first = store.establish_oidc("issuer\0operator-1", None)?;
+    assert!(store.authenticate(&first.cookie_token).is_some());
+    let second = store.establish_oidc("issuer\0operator-1", Some(&first.cookie_token))?;
+    assert!(store.authenticate(&first.cookie_token).is_none());
+    assert!(store.authenticate(&second.cookie_token).is_some());
+    let restarted = AuthStore::oidc(limits);
+    assert!(restarted.authenticate(&second.cookie_token).is_none());
+    std::thread::sleep(Duration::from_millis(1_050));
+    assert!(store.authenticate(&second.cookie_token).is_none());
+    Ok(())
+}
+
 #[cfg(unix)]
 #[test]
 fn bootstrap_secret_must_be_private_and_not_a_symlink() -> Result<(), Box<dyn std::error::Error>> {

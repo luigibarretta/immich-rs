@@ -4,6 +4,7 @@ use axum::response::Response;
 
 pub const SESSION_COOKIE: &str = "immich_rs_session";
 pub const PAIRING_COOKIE: &str = "immich_rs_pairing";
+pub const OIDC_LOGIN_COOKIE: &str = "immich_rs_oidc_login";
 
 pub fn value(headers: &HeaderMap, name: &str) -> Option<String> {
     let mut found = None;
@@ -22,8 +23,16 @@ pub fn value(headers: &HeaderMap, name: &str) -> Option<String> {
     found
 }
 
-pub fn append(response: &mut Response, name: &str, value: &str, max_age: u64) -> bool {
-    let cookie = format!("{name}={value}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}");
+pub fn append(
+    response: &mut Response,
+    name: &str,
+    value: &str,
+    max_age: u64,
+    secure: bool,
+) -> bool {
+    let protection = if secure { "; Secure" } else { "" };
+    let cookie =
+        format!("{name}={value}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}{protection}");
     let Ok(header) = cookie.parse() else {
         return false;
     };
@@ -31,8 +40,9 @@ pub fn append(response: &mut Response, name: &str, value: &str, max_age: u64) ->
     true
 }
 
-pub fn clear(response: &mut Response, name: &str) -> bool {
-    let cookie = format!("{name}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
+pub fn clear(response: &mut Response, name: &str, secure: bool) -> bool {
+    let protection = if secure { "; Secure" } else { "" };
+    let cookie = format!("{name}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0{protection}");
     let Ok(header) = cookie.parse() else {
         return false;
     };

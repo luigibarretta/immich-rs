@@ -18,6 +18,7 @@ pub struct RequestPolicy {
     public_origin: Arc<str>,
     max_header_bytes: usize,
     max_body_bytes: usize,
+    direct_tls_lan: bool,
 }
 
 impl RequestPolicy {
@@ -27,6 +28,7 @@ impl RequestPolicy {
             public_origin: Arc::from(config.public_origin()),
             max_header_bytes: config.limits().request_header_bytes,
             max_body_bytes: config.limits().request_body_bytes,
+            direct_tls_lan: config.lan().is_some(),
         }
     }
 }
@@ -50,7 +52,7 @@ fn validate_request(policy: &RequestPolicy, request: &Request) -> Option<StatusC
     if request
         .extensions()
         .get::<ConnectInfo<SocketAddr>>()
-        .is_none_or(|peer| !peer.0.ip().is_loopback())
+        .is_none_or(|peer| !policy.direct_tls_lan && !peer.0.ip().is_loopback())
         || headers.get_all(HOST).iter().count() != 1
         || headers.get(HOST).and_then(|value| value.to_str().ok())
             != Some(policy.allowed_host.as_ref())

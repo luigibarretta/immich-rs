@@ -1,6 +1,7 @@
 mod apply;
 mod apply_admission;
 mod dry_run;
+mod metrics;
 mod progress;
 mod source;
 mod subscription;
@@ -19,6 +20,7 @@ use crate::state_store::{
 };
 use crate::{WebConfig, WebLimits};
 
+pub use metrics::JobMetrics;
 pub use subscription::{JobSubscription, SubscribeError, SubscriptionDelivery};
 pub use types::{AdmissionError, JobEvent, JobProgress, JobSnapshot, JobStatus, JobSummary};
 use types::{JobKind, StoredJob, random_job_id};
@@ -307,6 +309,10 @@ impl JobManager {
             clean &= worker.handle.join().is_ok();
         }
         clean
+    }
+
+    pub fn aggregate_metrics(&self) -> Option<JobMetrics> {
+        metrics::collect(self)
     }
 
     #[cfg(test)]

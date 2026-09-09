@@ -15,6 +15,7 @@ mod jobs;
 #[cfg(test)]
 mod jobs_tests;
 mod limits;
+mod metrics;
 mod oidc;
 mod oidc_http;
 mod policy;

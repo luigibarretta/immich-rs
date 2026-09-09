@@ -244,6 +244,13 @@ impl AuthStore {
             .is_some_and(|session| bool::from(session.binding.ct_eq(binding)))
     }
 
+    pub fn active_session_count(&self) -> Option<usize> {
+        let now = Instant::now();
+        let mut state = self.state.lock().ok()?;
+        expire_sessions(&mut state.sessions, now, self.limits);
+        Some(state.sessions.len())
+    }
+
     pub fn logout(&self, cookie_token: &str, csrf_token: &str) -> bool {
         let now = Instant::now();
         let Ok(mut state) = self.state.lock() else {

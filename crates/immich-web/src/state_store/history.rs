@@ -116,6 +116,16 @@ impl HistoryStore {
         records.map_err(db_error)
     }
 
+    pub fn count(&self) -> Result<usize, WebConfigError> {
+        self.check_size()?;
+        let connection = self.connection.lock().map_err(lock_error)?;
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
+            .map_err(db_error)?;
+        drop(connection);
+        usize::try_from(count).map_err(|_| WebConfigError::new("history count is invalid"))
+    }
+
     pub fn maintain(&self, now: i64) -> Result<(), WebConfigError> {
         self.check_size()?;
         let mut connection = self.connection.lock().map_err(lock_error)?;

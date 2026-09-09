@@ -25,6 +25,7 @@ use crate::cookies::{
 use crate::grants::GrantStore;
 use crate::job_http;
 use crate::jobs::JobManager;
+use crate::metrics;
 use crate::oidc::OidcManager;
 use crate::oidc_http;
 use crate::policy::{RequestPolicy, request_policy};
@@ -107,6 +108,7 @@ impl WebConsole {
             .route("/assets/job.js", get(job_script))
             .merge(oidc_http::routes())
             .merge(job_http::routes())
+            .merge(metrics::routes())
             .fallback(not_found)
             .layer(RequestBodyLimitLayer::new(limits.request_body_bytes))
             .layer(TimeoutLayer::with_status_code(
@@ -258,7 +260,7 @@ async fn not_found() -> Response {
     views::locked(StatusCode::NOT_FOUND)
 }
 
-fn authenticated_session(state: &ConsoleState, headers: &HeaderMap) -> Option<SessionView> {
+pub fn authenticated_session(state: &ConsoleState, headers: &HeaderMap) -> Option<SessionView> {
     let cookie_token = cookie_value(headers, SESSION_COOKIE)?;
     state.auth.authenticate(&cookie_token)
 }

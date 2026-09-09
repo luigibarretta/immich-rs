@@ -18,6 +18,7 @@ TARGETS = {
     "x86_64-pc-windows-msvc": "zip",
 }
 VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+-rc\.[1-9][0-9]*")
+PRODUCTS = ("immich-rs", "immich-rs-web")
 
 
 class FinalizeError(RuntimeError):
@@ -54,18 +55,22 @@ def finalize(root: Path, version: str, revision: str, output: Path) -> None:
     if VERSION.fullmatch(version) is None or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
         raise FinalizeError("release version or revision is invalid")
     expected = []
-    for target, extension in TARGETS.items():
-        stem = f"immich-rs-{version}-{target}"
-        expected.extend(
-            (
-                root / f"{stem}.{extension}",
-                root / f"{stem}.sbom.cdx.json",
-                root / f"{stem}.provenance.json",
+    for product in PRODUCTS:
+        for target, extension in TARGETS.items():
+            stem = f"{product}-{version}-{target}"
+            expected.extend(
+                (
+                    root / f"{stem}.{extension}",
+                    root / f"{stem}.sbom.cdx.json",
+                    root / f"{stem}.provenance.json",
+                )
             )
-        )
-    container_archive = root / f"immich-rs-{version}-linux-multiarch.oci.tar"
-    container_report = root / f"immich-rs-{version}-linux-multiarch.container.json"
-    expected.extend((container_archive, container_report))
+    containers = []
+    for product in PRODUCTS:
+        archive = root / f"{product}-{version}-linux-multiarch.oci.tar"
+        report = root / f"{product}-{version}-linux-multiarch.container.json"
+        containers.append((product, archive, report))
+        expected.extend((archive, report))
     if output.exists() or any(not path.is_file() or path.is_symlink() for path in expected):
         raise FinalizeError("release artifacts are missing, linked or output already exists")
     extras = sorted(path.name for path in root.iterdir() if path.is_file() and path not in expected)
@@ -80,24 +85,30 @@ def finalize(root: Path, version: str, revision: str, output: Path) -> None:
                 raise FinalizeError("release SBOM is invalid")
         if path.name.endswith(".provenance.json"):
             value = json.loads(path.read_text(encoding="utf-8"))
+            expected_product = (
+                "immich-rs-web" if path.name.startswith("immich-rs-web-") else "immich-rs"
+            )
             if (
                 not isinstance(value, dict)
                 or value.get("schema") != "immich-rs-build-provenance-v1"
                 or value.get("version") != version
                 or value.get("source_revision") != revision
+                or value.get("product") != expected_product
             ):
                 raise FinalizeError("release provenance identity drift")
-    container = json.loads(container_report.read_text(encoding="utf-8"))
-    if (
-        not isinstance(container, dict)
-        or container.get("schema") != "immich-rs-container-build-v1"
-        or container.get("version") != version
-        or container.get("commit_sha") != revision
-        or container.get("archive_sha256") != sha256(container_archive)
-        or container.get("archive_bytes") != container_archive.stat().st_size
-        or not valid_container_platforms(container)
-    ):
-        raise FinalizeError("multiarch container identity drift")
+    for product, container_archive, container_report in containers:
+        container = json.loads(container_report.read_text(encoding="utf-8"))
+        if (
+            not isinstance(container, dict)
+            or container.get("schema") != "immich-rs-container-build-v1"
+            or container.get("image_title") != product
+            or container.get("version") != version
+            or container.get("commit_sha") != revision
+            or container.get("archive_sha256") != sha256(container_archive)
+            or container.get("archive_bytes") != container_archive.stat().st_size
+            or not valid_container_platforms(container)
+        ):
+            raise FinalizeError("multiarch container identity drift")
     lines = [f"{sha256(path)}  {path.name}" for path in sorted(expected, key=lambda item: item.name)]
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

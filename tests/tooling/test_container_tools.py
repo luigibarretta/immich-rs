@@ -55,6 +55,7 @@ def oci_archive(
                     "Labels": {
                         "org.opencontainers.image.version": "0.0.0",
                         "org.opencontainers.image.revision": revision,
+                        "org.opencontainers.image.title": "immich-rs",
                     },
                 },
             }
@@ -182,26 +183,28 @@ class ContainerToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             archive = Path(temporary) / "image.tar"
             oci_archive(archive, [("linux", "amd64"), ("linux", "arm64")])
-            report = OCI.verify(archive, "a" * 40, "0.0.0")
+            report = OCI.verify(archive, "a" * 40, "0.0.0", "immich-rs")
             self.assertEqual(report["schema"], "immich-rs-container-build-v1")
             self.assertEqual(len(report["platforms"]), 2)
             oci_archive(archive, [("linux", "amd64")])
             with self.assertRaisesRegex(OCI.VerificationError, "both required"):
-                OCI.verify(archive, "a" * 40, "0.0.0")
+                OCI.verify(archive, "a" * 40, "0.0.0", "immich-rs")
             oci_archive(
                 archive,
                 [("linux", "amd64"), ("linux", "arm64")],
                 corrupt_config=True,
             )
             with self.assertRaisesRegex(OCI.VerificationError, "digest drift"):
-                OCI.verify(archive, "a" * 40, "0.0.0")
+                OCI.verify(archive, "a" * 40, "0.0.0", "immich-rs")
             oci_archive(
                 archive,
                 [("linux", "amd64"), ("linux", "arm64")],
                 attested_revision="b" * 40,
             )
             with self.assertRaisesRegex(OCI.VerificationError, "provenance revision"):
-                OCI.verify(archive, "a" * 40, "0.0.0")
+                OCI.verify(archive, "a" * 40, "0.0.0", "immich-rs")
+            with self.assertRaisesRegex(OCI.VerificationError, "labels"):
+                OCI.verify(archive, "a" * 40, "0.0.0", "immich-rs-web")
 
 
 if __name__ == "__main__":

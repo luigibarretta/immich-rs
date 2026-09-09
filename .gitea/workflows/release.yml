@@ -53,26 +53,31 @@ jobs:
           - runner: docker
             target: x86_64-unknown-linux-gnu
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             python: python
             setup_python: true
           - runner: linux-arm64
             target: aarch64-unknown-linux-gnu
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             python: python
             setup_python: true
           - runner: macos-x64
             target: x86_64-apple-darwin
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             python: python3.12
             setup_python: false
           - runner: macos-arm64
             target: aarch64-apple-darwin
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             python: python3.12
             setup_python: false
           - runner: windows-x64
             target: x86_64-pc-windows-msvc
             binary: target/release/immich-rs.exe
+            web_binary: target/release/immich-rs-web.exe
             python: py -3.12
             setup_python: false
     runs-on: ${{ matrix.runner }}
@@ -99,12 +104,17 @@ jobs:
           ${{ matrix.python }} -c 'import sys; assert sys.version_info[:2] == (3, 12)'
           cargo test --locked --workspace --all-targets
           cargo build --locked --release -p immich-rs-cli
+          cargo build --locked --release -p immich-rs-web --bin immich-rs-web
           cargo cyclonedx --manifest-path crates/immich-cli/Cargo.toml --format json --describe binaries --target "${{ matrix.target }}" --spec-version 1.5
-          ${{ matrix.python }} scripts/package-release.py --binary "${{ matrix.binary }}" --sbom crates/immich-cli/immich-rs_bin.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
+          cargo cyclonedx --manifest-path crates/immich-web/Cargo.toml --format json --describe binaries --target "${{ matrix.target }}" --spec-version 1.5
+          ${{ matrix.python }} scripts/package-release.py --product immich-rs --binary "${{ matrix.binary }}" --sbom crates/immich-cli/immich-rs_bin.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
+          ${{ matrix.python }} scripts/package-release.py --product immich-rs-web --binary "${{ matrix.web_binary }}" --sbom crates/immich-web/immich-rs-web_bin.cdx.json --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" --tag "${{ github.ref_name }}" --revision "${{ github.sha }}" --output dist
       - name: Verify the Windows candidate format
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' }}
         shell: powershell
-        run: py -3.12 scripts/check-pe.py "${{ matrix.binary }}"
+        run: |
+          py -3.12 scripts/check-pe.py "${{ matrix.binary }}"
+          py -3.12 scripts/check-pe.py "${{ matrix.web_binary }}"
       - name: Preserve the native candidate
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
@@ -128,8 +138,15 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist
           scripts/build-multiarch-container.sh \
+            --product immich-rs \
             --output "dist/immich-rs-${VERSION}-linux-multiarch.oci.tar" \
             --report "dist/immich-rs-${VERSION}-linux-multiarch.container.json" \
+            --revision "${{ github.sha }}" \
+            --version "$VERSION"
+          scripts/build-multiarch-container.sh \
+            --product immich-rs-web \
+            --output "dist/immich-rs-web-${VERSION}-linux-multiarch.oci.tar" \
+            --report "dist/immich-rs-web-${VERSION}-linux-multiarch.container.json" \
             --revision "${{ github.sha }}" \
             --version "$VERSION"
       - name: Preserve the multiarch candidate

@@ -49,9 +49,14 @@ def validate() -> None:
         "needs: [native, container]",
         "build-multiarch-container.sh",
         "linux-multiarch.oci.tar",
+        "immich-rs-web-${version}-linux-multiarch.oci.tar",
         "cancel-in-progress: false",
         "environment: immich-rs-release",
         "python scripts/package-release.py",
+        "--product immich-rs-web",
+        "cargo build --locked --release -p immich-rs-web --bin immich-rs-web",
+        "crates/immich-web/immich-rs-web_bin.cdx.json",
+        "web_binary: target/release/immich-rs-web.exe",
         'python scripts/check-pe.py "${{ matrix.binary }}"',
         "gh release create",
         "check-production-evidence.py",
@@ -76,6 +81,8 @@ def validate() -> None:
     required_rehearsal = (
         "workflow_dispatch", "cargo test --locked --workspace --all-targets",
         "cargo build --locked --release -p immich-rs-cli", "host: ${{ matrix.target }}",
+        "cargo build --locked --release -p immich-rs-web --bin immich-rs-web",
+        "web_binary: target/release/immich-rs-web.exe",
         "fail-fast: false", "branches: [main]",
     )
     if any(value not in rehearsal for value in required_rehearsal):
@@ -88,6 +95,8 @@ def validate() -> None:
         "docs/migration-from-immich-go.md", "docs/compatibility/phase5-archive.md",
         "docs/compatibility/phase7-production-https.md",
         "docs/compatibility/phase8-google-takeout-import.md",
+        "docs/container.md", "docs/web-console-lan.md",
+        "docs/web-console-resources.md", "docs/web-console-threat-model.md",
     ):
         if f'"{document}"' not in package:
             raise ReleaseCheckError(f"release package omits {document}")
@@ -97,6 +106,8 @@ def validate() -> None:
     for document in (
         "docs/compatibility/phase7-production-https.md",
         "docs/compatibility/phase8-google-takeout-import.md",
+        "docs/container.md", "docs/web-console-lan.md",
+        "docs/web-console-resources.md", "docs/web-console-threat-model.md",
     ):
         if f'"{document}"' not in preflight:
             raise ReleaseCheckError(f"release preflight omits {document}")
@@ -105,8 +116,19 @@ def validate() -> None:
         "SHA256SUMS" not in finalizer
         or "immich-rs-build-provenance-v1" not in finalizer
         or "immich-rs-container-build-v1" not in finalizer
+        or 'PRODUCTS = ("immich-rs", "immich-rs-web")' not in finalizer
     ):
         raise ReleaseCheckError("release checksum or provenance finalizer drifted")
+    legacy_release = read(".gitea/workflows/release.yml")
+    manual_container = read(".gitea/workflows/container.yml")
+    for source, label in (
+        (legacy_release, "legacy release"),
+        (manual_container, "manual container"),
+    ):
+        if "--product immich-rs" not in source or "--product immich-rs-web" not in source:
+            raise ReleaseCheckError(f"{label} omits one release product")
+        if "docker push" in source or "--push" in source or ":latest" in source:
+            raise ReleaseCheckError(f"{label} can publish an ordinary image")
 
 
 def main() -> int:

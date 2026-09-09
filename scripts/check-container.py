@@ -193,6 +193,9 @@ def check(root: Path = REPOSITORY_ROOT) -> list[str]:
         "BINFMT_IMAGE=\"docker.io/tonistiigi/binfmt@sha256:",
         "SBOM_SCANNER=\"docker.io/docker/buildkit-syft-scanner@sha256:",
         "BUILDKIT_IMAGE=\"docker.io/moby/buildkit@sha256:",
+        "--product immich-rs|immich-rs-web",
+        'immich-rs-web) CONTAINERFILE="$ROOT/Containerfile.web"',
+        '--image-title "$PRODUCT"',
     )
     failures.extend(
         f"multiarch builder is missing: {token}"

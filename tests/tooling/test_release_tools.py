@@ -47,49 +47,61 @@ class ReleaseToolTests(unittest.TestCase):
         revision = "a" * 40
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for target, extension in FINALIZE.TARGETS.items():
-                stem = f"immich-rs-{version}-{target}"
-                (root / f"{stem}.{extension}").write_bytes(b"synthetic archive")
-                (root / f"{stem}.sbom.cdx.json").write_text(
-                    json.dumps({"bomFormat": "CycloneDX"}), encoding="utf-8"
-                )
-                (root / f"{stem}.provenance.json").write_text(
+            for product in FINALIZE.PRODUCTS:
+                for target, extension in FINALIZE.TARGETS.items():
+                    stem = f"{product}-{version}-{target}"
+                    (root / f"{stem}.{extension}").write_bytes(b"synthetic archive")
+                    (root / f"{stem}.sbom.cdx.json").write_text(
+                        json.dumps({"bomFormat": "CycloneDX"}), encoding="utf-8"
+                    )
+                    (root / f"{stem}.provenance.json").write_text(
+                        json.dumps(
+                            {
+                                "schema": "immich-rs-build-provenance-v1",
+                                "product": product,
+                                "version": version,
+                                "source_revision": revision,
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                container_archive = root / f"{product}-{version}-linux-multiarch.oci.tar"
+                container_archive.write_bytes(b"synthetic multiarch OCI archive")
+                (root / f"{product}-{version}-linux-multiarch.container.json").write_text(
                     json.dumps(
                         {
-                            "schema": "immich-rs-build-provenance-v1",
+                            "schema": "immich-rs-container-build-v1",
+                            "image_title": product,
                             "version": version,
-                            "source_revision": revision,
+                            "commit_sha": revision,
+                            "archive_sha256": FINALIZE.sha256(container_archive),
+                            "archive_bytes": container_archive.stat().st_size,
+                            "platforms": [
+                                {
+                                    "os": "linux",
+                                    "architecture": architecture,
+                                    "manifest_digest": "sha256:" + digest * 64,
+                                }
+                                for architecture, digest in (("amd64", "1"), ("arm64", "2"))
+                            ],
                         }
                     ),
                     encoding="utf-8",
                 )
-            container_archive = root / f"immich-rs-{version}-linux-multiarch.oci.tar"
-            container_archive.write_bytes(b"synthetic multiarch OCI archive")
-            (root / f"immich-rs-{version}-linux-multiarch.container.json").write_text(
-                json.dumps(
-                    {
-                        "schema": "immich-rs-container-build-v1",
-                        "version": version,
-                        "commit_sha": revision,
-                        "archive_sha256": FINALIZE.sha256(container_archive),
-                        "archive_bytes": container_archive.stat().st_size,
-                        "platforms": [
-                            {
-                                "os": "linux",
-                                "architecture": architecture,
-                                "manifest_digest": "sha256:" + digest * 64,
-                            }
-                            for architecture, digest in (("amd64", "1"), ("arm64", "2"))
-                        ],
-                    }
-                ),
-                encoding="utf-8",
-            )
             output = root / "SHA256SUMS"
             FINALIZE.finalize(root, version, revision, output)
             lines = output.read_text(encoding="utf-8").splitlines()
-            self.assertEqual(len(lines), 17)
+            self.assertEqual(len(lines), 34)
             self.assertEqual(lines, sorted(lines, key=lambda line: line.split("  ", 1)[1]))
+            output.unlink()
+            web_provenance = root / (
+                f"immich-rs-web-{version}-x86_64-unknown-linux-gnu.provenance.json"
+            )
+            value = json.loads(web_provenance.read_text(encoding="utf-8"))
+            value["product"] = "immich-rs"
+            web_provenance.write_text(json.dumps(value), encoding="utf-8")
+            with self.assertRaisesRegex(FINALIZE.FinalizeError, "provenance identity"):
+                FINALIZE.finalize(root, version, revision, output)
 
     def test_native_package_is_byte_reproducible(self) -> None:
         version = "0.1.0-rc.1"
@@ -108,6 +120,7 @@ class ReleaseToolTests(unittest.TestCase):
                 for index in range(2):
                     destination = root / f"dist-{index}"
                     arguments = SimpleNamespace(
+                        product="immich-rs",
                         target=target,
                         runner="ubuntu-24.04",
                         binary=binary,
@@ -119,6 +132,17 @@ class ReleaseToolTests(unittest.TestCase):
                     )
                     outputs.append(PACKAGE.package(arguments)[0].read_bytes())
             self.assertEqual(outputs[0], outputs[1])
+
+    def test_web_package_requires_the_web_binary_name(self) -> None:
+        target = "x86_64-unknown-linux-gnu"
+        arguments = SimpleNamespace(
+            product="immich-rs-web", target=target, runner="ubuntu-24.04",
+            binary=Path("immich-rs"), sbom=Path("missing"), revision="a" * 40,
+            tag="v0.1.0-rc.1", epoch=1_700_000_000, output=Path("missing"),
+        )
+        with mock.patch.object(PACKAGE, "host_target", return_value=target):
+            with self.assertRaisesRegex(PACKAGE.PackageError, "misnamed"):
+                PACKAGE.package(arguments)
 
 
 if __name__ == "__main__":

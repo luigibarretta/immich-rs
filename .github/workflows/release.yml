@@ -61,18 +61,23 @@ jobs:
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
           - runner: macos-15-intel
             target: x86_64-apple-darwin
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
           - runner: macos-15
             target: aarch64-apple-darwin
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             binary: target/release/immich-rs.exe
+            web_binary: target/release/immich-rs-web.exe
     runs-on: ${{ github.server_url == 'https://github.com' && matrix.runner || 'docker' }}
     timeout-minutes: 120
     permissions:
@@ -94,19 +99,32 @@ jobs:
           python -c "import subprocess; assert 'host: ${{ matrix.target }}' in subprocess.check_output(['rustc', '-vV'], text=True)"
           cargo test --locked --workspace --all-targets
           cargo build --locked --release -p immich-rs-cli
+          cargo build --locked --release -p immich-rs-web --bin immich-rs-web
           cargo install cargo-cyclonedx --version 0.5.9 --locked
           cargo cyclonedx --manifest-path crates/immich-cli/Cargo.toml \
             --format json --describe binaries --target "${{ matrix.target }}" \
             --spec-version 1.5
+          cargo cyclonedx --manifest-path crates/immich-web/Cargo.toml \
+            --format json --describe binaries --target "${{ matrix.target }}" \
+            --spec-version 1.5
           python scripts/package-release.py \
+            --product immich-rs \
             --binary "${{ matrix.binary }}" \
             --sbom crates/immich-cli/immich-rs_bin.cdx.json \
+            --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" \
+            --tag "${GITHUB_REF_NAME}" --revision "${GITHUB_SHA}" --output dist
+          python scripts/package-release.py \
+            --product immich-rs-web \
+            --binary "${{ matrix.web_binary }}" \
+            --sbom crates/immich-web/immich-rs-web_bin.cdx.json \
             --target "${{ matrix.target }}" --runner "${{ matrix.runner }}" \
             --tag "${GITHUB_REF_NAME}" --revision "${GITHUB_SHA}" --output dist
       - name: Verify the Windows candidate format
         if: runner.os == 'Windows'
         shell: bash
-        run: python scripts/check-pe.py "${{ matrix.binary }}"
+        run: |
+          python scripts/check-pe.py "${{ matrix.binary }}"
+          python scripts/check-pe.py "${{ matrix.web_binary }}"
       - name: Preserve the native candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -133,8 +151,14 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           mkdir -p dist
           scripts/build-multiarch-container.sh \
+            --product immich-rs \
             --output "dist/immich-rs-${version}-linux-multiarch.oci.tar" \
             --report "dist/immich-rs-${version}-linux-multiarch.container.json" \
+            --revision "${GITHUB_SHA}" --version "$version"
+          scripts/build-multiarch-container.sh \
+            --product immich-rs-web \
+            --output "dist/immich-rs-web-${version}-linux-multiarch.oci.tar" \
+            --report "dist/immich-rs-web-${version}-linux-multiarch.container.json" \
             --revision "${GITHUB_SHA}" --version "$version"
       - name: Preserve the multiarch candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -199,4 +223,4 @@ jobs:
         run: >-
           gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --prerelease
           --title "immich-rs ${GITHUB_REF_NAME#v}"
-          --notes "Signed five-platform release candidate built from ${GITHUB_SHA}."
+          --notes "Signed five-platform CLI and Web Console release candidate built from ${GITHUB_SHA}."

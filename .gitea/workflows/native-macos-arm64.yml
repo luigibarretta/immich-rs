@@ -39,4 +39,6 @@ jobs:
           cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
           cargo test --locked --workspace --all-targets
           cargo build --locked --release -p immich-rs-cli
+          cargo build --locked --release -p immich-rs-web --bin immich-rs-web
           file target/release/immich-rs | grep -F "Mach-O 64-bit executable arm64"
+          file target/release/immich-rs-web | grep -F "Mach-O 64-bit executable arm64"

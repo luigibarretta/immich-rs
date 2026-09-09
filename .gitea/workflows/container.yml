@@ -28,14 +28,20 @@ jobs:
         run: |
           mkdir -p .artifacts/container
           scripts/build-multiarch-container.sh \
+            --product immich-rs \
             --output .artifacts/container/immich-rs-${{ github.sha }}.oci.tar \
-            --report .artifacts/container/report-${{ github.sha }}.json \
+            --report .artifacts/container/immich-rs-report-${{ github.sha }}.json \
+            --revision "${{ github.sha }}"
+          scripts/build-multiarch-container.sh \
+            --product immich-rs-web \
+            --output .artifacts/container/immich-rs-web-${{ github.sha }}.oci.tar \
+            --report .artifacts/container/immich-rs-web-report-${{ github.sha }}.json \
             --revision "${{ github.sha }}"
       - name: Preserve only bounded multiarch evidence
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:
           name: container-multiarch-${{ github.sha }}
-          path: .artifacts/container/report-${{ github.sha }}.json
+          path: .artifacts/container/*-report-${{ github.sha }}.json
           retention-days: 30
       - name: Remove the unsigned OCI archive
         if: always()

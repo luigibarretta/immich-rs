@@ -408,10 +408,11 @@ Sequential gates are:
    against a disposable IdP, with EdDSA verification, role/subject policy,
    private-CIDR DNS pinning, secure rotation and fail-closed negative coverage.
    Trusted reverse-proxy termination remains unsupported;
-8. **In progress:** the standalone binary, separate digest-pinned OCI build,
+8. **Implemented:** the standalone binary, separate digest-pinned OCI build,
    opt-in loopback-published Compose service and deterministic hardened amd64
-   container test are implemented. Five-target native artifacts and the
-   separate attested multiarch release archive remain pending;
+   container test are implemented. The signed-tag pipeline builds both products
+   on all five native targets and admits separate attested amd64/arm64 OCI
+   archives only into one complete signed checksum bundle;
 9. aggregate metrics, recovery/operator documentation, accessibility and
    browser regression closeout.
 

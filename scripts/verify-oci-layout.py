@@ -28,6 +28,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--commit-sha", required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--image-title", choices=("immich-rs", "immich-rs-web"), required=True)
     parser.add_argument("--output", type=Path, required=True)
     return parser.parse_args()
 
@@ -147,10 +148,10 @@ def blob_name(digest: str) -> str:
     return f"blobs/sha256/{digest.removeprefix('sha256:')}"
 
 
-def verify(path: Path, commit_sha: str, version: str) -> dict[str, Any]:
+def verify(path: Path, commit_sha: str, version: str, image_title: str) -> dict[str, Any]:
     if not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
         raise VerificationError("commit SHA must be exact lowercase SHA-1")
-    if VERSION.fullmatch(version) is None:
+    if VERSION.fullmatch(version) is None or image_title not in ("immich-rs", "immich-rs-web"):
         raise VerificationError("container version is invalid")
     if not path.is_file() or path.is_symlink() or path.stat().st_size == 0:
         raise VerificationError("OCI archive must be a non-empty regular file")
@@ -201,6 +202,7 @@ def verify(path: Path, commit_sha: str, version: str) -> dict[str, Any]:
             labels = runtime_config.get("Labels")
             labels_match = (
                 isinstance(labels, dict)
+                and labels.get("org.opencontainers.image.title") == image_title
                 and labels.get("org.opencontainers.image.version") == version
                 and labels.get("org.opencontainers.image.revision") == commit_sha
             )
@@ -269,6 +271,7 @@ def verify(path: Path, commit_sha: str, version: str) -> dict[str, Any]:
         "schema": "immich-rs-container-build-v1",
         "commit_sha": commit_sha,
         "version": version,
+        "image_title": image_title,
         "archive_sha256": archive_hash.hexdigest(),
         "archive_bytes": path.stat().st_size,
         "platforms": [
@@ -287,7 +290,7 @@ def main() -> int:
     try:
         if args.output.exists() or args.output.is_symlink():
             raise VerificationError("OCI report output already exists or is linked")
-        report = verify(args.archive, args.commit_sha, args.version)
+        report = verify(args.archive, args.commit_sha, args.version, args.image_title)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"

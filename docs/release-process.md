@@ -20,9 +20,17 @@ the exact version commit after both main pipelines pass on that commit.
    `ubuntu-24.04-arm`, `macos-15-intel`, `macos-15` and `windows-2025` for the
    exact candidate commit. Ordinary main/PR jobs cannot read release secrets.
 
-The project does not download or redistribute Apple SDKs. Both macOS artifacts
-are built and tested on GitHub's native Apple hosted images. Every hosted job
-installs the same Python 3.12 and Rust 1.88 toolchain contract.
+The project does not download or redistribute Apple SDKs. The `immich-rs` and
+`immich-rs-web` artifacts are both built and tested on every target, including
+GitHub's native Apple hosted images. Every hosted job installs the same Python
+3.12 and Rust 1.88 toolchain contract.
+
+For each product and target, the exact archive basename is
+`<product>-<version>-<target>`. Unix and macOS archives use `.tar.gz`; Windows
+uses `.zip`. Each has adjacent `.sbom.cdx.json` and `.provenance.json` files.
+The OCI basenames are `<product>-<version>-linux-multiarch` with `.oci.tar` and
+`.container.json`. The two products share one signed `SHA256SUMS`; no artifact
+is replaced under an existing tag.
 
 ## Candidate checklist
 
@@ -34,17 +42,18 @@ installs the same Python 3.12 and Rust 1.88 toolchain contract.
 4. Create an annotated signed tag such as `v0.1.0-rc.1`; verify it locally with
    `git verify-tag` against the committed public key.
 5. Push only the signed tag. The release workflow must build/test all five
-   native targets, generate CycloneDX SBOMs, build the attested amd64/arm64 OCI
-   archive, create deterministic native archives and provenance, sign
+   native targets for both products, generate separate CycloneDX SBOMs, build
+   both attested amd64/arm64 OCI archives, create deterministic native archives
+   and provenance, sign
    `SHA256SUMS` and verify the detached signature.
 6. Download the workflow artifact or GitHub prerelease into a new directory.
    Verify the signature, every checksum, SBOM schema, provenance source SHA and
-   `immich-rs --version`; the workflow publishes only after doing the same
-   checksum and signature verification itself.
+   `immich-rs --version` and `immich-rs-web --version`; the workflow publishes
+   only after doing the same checksum and signature verification itself.
 7. Record the exact tag, workflow run and artifact digests in `ROADMAP.md` and
    project memory. Never replace an artifact under an existing tag.
 
-Any missing native or OCI target, signature, SBOM, provenance statement or
-compatibility gate aborts publication. The multiarch archive and its verified
-container report are covered by the signed checksum manifest. `latest`
-aliases are not release evidence.
+Any missing product, native or OCI target, signature, SBOM, provenance statement
+or compatibility gate aborts publication. Both multiarch archives and their
+verified container reports are covered by the signed checksum manifest.
+`latest` aliases are not release evidence.

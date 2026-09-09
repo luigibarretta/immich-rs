@@ -24,22 +24,27 @@ jobs:
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             quality: true
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             quality: false
           - runner: macos-15-intel
             target: x86_64-apple-darwin
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             quality: false
           - runner: macos-15
             target: aarch64-apple-darwin
             binary: target/release/immich-rs
+            web_binary: target/release/immich-rs-web
             quality: false
           - runner: windows-2025
             target: x86_64-pc-windows-msvc
             binary: target/release/immich-rs.exe
+            web_binary: target/release/immich-rs-web.exe
             quality: false
     runs-on: ${{ github.server_url == 'https://github.com' && matrix.runner || 'docker' }}
     timeout-minutes: 90
@@ -72,8 +77,12 @@ jobs:
         run: |
           cargo test --locked --workspace --all-targets
           cargo build --locked --release -p immich-rs-cli
+          cargo build --locked --release -p immich-rs-web --bin immich-rs-web
           test -s "${{ matrix.binary }}"
+          test -s "${{ matrix.web_binary }}"
       - name: Verify the Windows executable format
         if: runner.os == 'Windows'
         shell: bash
-        run: python scripts/check-pe.py "${{ matrix.binary }}"
+        run: |
+          python scripts/check-pe.py "${{ matrix.binary }}"
+          python scripts/check-pe.py "${{ matrix.web_binary }}"

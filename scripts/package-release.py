@@ -21,12 +21,13 @@ from typing import BinaryIO
 
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {
-    "x86_64-unknown-linux-gnu": ("ubuntu-24.04", "immich-rs", "tar.gz"),
-    "aarch64-unknown-linux-gnu": ("ubuntu-24.04-arm", "immich-rs", "tar.gz"),
-    "x86_64-apple-darwin": ("macos-15-intel", "immich-rs", "tar.gz"),
-    "aarch64-apple-darwin": ("macos-15", "immich-rs", "tar.gz"),
-    "x86_64-pc-windows-msvc": ("windows-2025", "immich-rs.exe", "zip"),
+    "x86_64-unknown-linux-gnu": ("ubuntu-24.04", "tar.gz"),
+    "aarch64-unknown-linux-gnu": ("ubuntu-24.04-arm", "tar.gz"),
+    "x86_64-apple-darwin": ("macos-15-intel", "tar.gz"),
+    "aarch64-apple-darwin": ("macos-15", "tar.gz"),
+    "x86_64-pc-windows-msvc": ("windows-2025", "zip"),
 }
+PRODUCTS = ("immich-rs", "immich-rs-web")
 DOCUMENTS = (
     "LICENSE", "NOTICE.md", "README.md", "SECURITY.md", "CHANGELOG.md",
     "docs/migration-from-immich-go.md", "docs/compatibility/phase1-folder.md",
@@ -36,6 +37,8 @@ DOCUMENTS = (
     "docs/compatibility/phase5-archive.md",
     "docs/compatibility/phase7-production-https.md",
     "docs/compatibility/phase8-google-takeout-import.md",
+    "docs/container.md", "docs/web-console-lan.md",
+    "docs/web-console-resources.md", "docs/web-console-threat-model.md",
 )
 
 
@@ -125,13 +128,15 @@ def add_zip_path(
 
 
 def provenance(
-    target: str, runner: str, version: str, revision: str, binary: Path, sbom: Path, epoch: int
+    product: str, target: str, runner: str, version: str, revision: str,
+    binary: Path, sbom: Path, epoch: int,
 ) -> bytes:
     value = {
         "schema": "immich-rs-build-provenance-v1",
         "source_revision": revision,
         "source_date_epoch": epoch,
         "version": version,
+        "product": product,
         "target": target,
         "runner_class": runner,
         "rustc": run(["rustc", "--version"]),
@@ -145,9 +150,11 @@ def provenance(
 
 
 def package(arguments: argparse.Namespace) -> list[Path]:
-    if arguments.target not in TARGETS:
+    if arguments.target not in TARGETS or arguments.product not in PRODUCTS:
         raise PackageError("unsupported release target")
-    runner, binary_name, extension = TARGETS[arguments.target]
+    runner, extension = TARGETS[arguments.target]
+    executable_suffix = ".exe" if extension == "zip" else ""
+    binary_name = f"{arguments.product}{executable_suffix}"
     if arguments.runner != runner or host_target() != arguments.target:
         raise PackageError("native runner label or rustc host target mismatch")
     if not arguments.binary.is_file() or arguments.binary.name != binary_name:
@@ -172,25 +179,25 @@ def package(arguments: argparse.Namespace) -> list[Path]:
     if missing:
         raise PackageError("release package documentation is incomplete")
     arguments.output.mkdir(parents=True, exist_ok=True)
-    stem = f"immich-rs-{version}-{arguments.target}"
+    stem = f"{arguments.product}-{version}-{arguments.target}"
     archive_path = arguments.output / f"{stem}.{extension}"
     sbom_path = arguments.output / f"{stem}.sbom.cdx.json"
     provenance_path = arguments.output / f"{stem}.provenance.json"
     if any(path.exists() for path in (archive_path, sbom_path, provenance_path)):
         raise PackageError("release output already exists")
     provenance_bytes = provenance(
-        arguments.target, runner, version, arguments.revision,
+        arguments.product, arguments.target, runner, version, arguments.revision,
         arguments.binary, arguments.sbom, epoch,
     )
     provenance_path.write_bytes(provenance_bytes)
     shutil.copyfile(arguments.sbom, sbom_path)
-    prefix = f"immich-rs-{version}"
+    prefix = f"{arguments.product}-{version}"
     entries = [(arguments.binary, f"{prefix}/{binary_name}", True)]
     entries.extend((ROOT / name, f"{prefix}/{name}", False) for name in DOCUMENTS)
     entries.extend(((sbom_path, f"{prefix}/sbom.cdx.json", False),))
     if extension == "tar.gz":
         with archive_path.open("xb") as raw:
-            with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=arguments.epoch) as compressed:
+            with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=epoch) as compressed:
                 with tarfile.open(fileobj=compressed, mode="w") as archive:
                     for source, name, executable in entries:
                         add_tar_path(archive, source, name, epoch, executable)
@@ -208,6 +215,7 @@ def package(arguments: argparse.Namespace) -> list[Path]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--product", choices=PRODUCTS, required=True)
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--sbom", type=Path, required=True)
     parser.add_argument("--target", required=True)

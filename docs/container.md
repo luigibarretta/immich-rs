@@ -149,23 +149,32 @@ authorized to use privileged binfmt:
 ```bash
 mkdir -p .artifacts/container
 scripts/build-multiarch-container.sh \
-  --output .artifacts/container/immich-rs.oci.tar \
-  --report .artifacts/container/report.json \
+  --product immich-rs \
+  --output .artifacts/container/immich-rs-0.0.0-linux-multiarch.oci.tar \
+  --report .artifacts/container/immich-rs-0.0.0-linux-multiarch.container.json \
+  --revision "$(git rev-parse HEAD)" \
+  --version 0.0.0
+scripts/build-multiarch-container.sh \
+  --product immich-rs-web \
+  --output .artifacts/container/immich-rs-web-0.0.0-linux-multiarch.oci.tar \
+  --report .artifacts/container/immich-rs-web-0.0.0-linux-multiarch.container.json \
   --revision "$(git rev-parse HEAD)" \
   --version 0.0.0
 ```
 
 The script builds `linux/amd64` and `linux/arm64` from digest-pinned builder,
-runtime, BuildKit, binfmt and SBOM-generator images. It emits one OCI archive
-with per-platform SPDX SBOM and SLSA provenance attestations, then verifies
-platforms, UID/GID, labels and archive digest. It creates a uniquely named
-Buildx builder and removes it on exit. If it installed `qemu-aarch64`, it also
-removes only that registration.
+runtime, BuildKit, binfmt and SBOM-generator images. Each explicit product emits
+its own OCI archive with per-platform SPDX SBOM and SLSA provenance
+attestations, then verifies the exact product label, platforms, UID/GID,
+revision and archive digest. Each invocation creates a uniquely named Buildx
+builder and removes it on exit. If it installed `qemu-aarch64`, it also removes
+only that registration.
 
-The manual Gitea workflow retains only the bounded JSON verification report
-and deletes its unsigned OCI archive. An RC workflow may retain the archive,
-but it enters the final checksum/signature bundle only after all five native
-targets and the maintainer-controlled OpenPGP identity satisfy ADR-0025.
+The manual Gitea workflow retains only both bounded JSON verification reports
+and deletes both unsigned OCI archives. An RC workflow may retain the archives,
+but they enter one final checksum/signature bundle only after both binaries on
+all five native targets and the maintainer-controlled OpenPGP identity satisfy
+ADR-0025 and ADR-0033.
 
 Verify the source contract without a multiarch build:
 

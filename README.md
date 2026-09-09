@@ -596,7 +596,9 @@ native release executable explicitly:
 
 ```powershell
 cargo build --locked --release -p immich-rs-cli
+cargo build --locked --release -p immich-rs-web --bin immich-rs-web
 py -3.12 scripts/check-pe.py target/release/immich-rs.exe
+py -3.12 scripts/check-pe.py target/release/immich-rs-web.exe
 ```
 
 The pinned differential additionally runs:

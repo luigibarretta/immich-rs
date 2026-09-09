@@ -2,6 +2,7 @@ mod apply;
 mod apply_admission;
 mod dry_run;
 mod progress;
+mod source;
 mod subscription;
 mod types;
 mod worker;
@@ -80,7 +81,18 @@ impl JobManager {
     }
 
     pub fn admit(&self, owner: [u8; 32], source_id: &str) -> Result<String, AdmissionError> {
-        self.admit_kind(owner, source_id, JobKind::Scan)
+        let profile = self
+            .inner
+            .config
+            .source(source_id)
+            .ok_or(AdmissionError::UnknownProfile)?;
+        self.admit_kind(
+            owner,
+            source_id,
+            JobKind::Scan {
+                history: source::scan_history(profile.kind()),
+            },
+        )
     }
 
     pub fn admit_plan(
@@ -97,6 +109,13 @@ impl JobManager {
             source_id,
             JobKind::Plan {
                 server_id: server_id.to_owned(),
+                history: source::plan_history(
+                    self.inner
+                        .config
+                        .source(source_id)
+                        .ok_or(AdmissionError::UnknownProfile)?
+                        .kind(),
+                ),
             },
         )
     }
@@ -120,10 +139,18 @@ impl JobManager {
         {
             return Err(AdmissionError::UnknownProfile);
         }
+        let source = self
+            .inner
+            .config
+            .source(&stored.binding.source_profile_id)
+            .ok_or(AdmissionError::UnknownProfile)?;
         self.admit_kind(
             owner,
             &stored.binding.source_profile_id,
-            JobKind::DryRun { reference },
+            JobKind::DryRun {
+                reference,
+                history: source::dry_run_history(source.kind()),
+            },
         )
     }
 
@@ -216,7 +243,7 @@ impl JobManager {
             .get(id)
             .filter(|job| &job.owner == owner && was_queued)
             .and_then(|job| match job.kind {
-                JobKind::Apply { reference } => Some(reference),
+                JobKind::Apply { reference, .. } => Some(reference),
                 _ => None,
             });
         let mut record_cancelled = None;

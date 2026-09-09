@@ -139,7 +139,13 @@ fn validate_terminal(
         .is_some_and(|(reference, schema)| reference == binding.plan_reference && schema > 0);
     if terminal.recorded_unix != binding.completed_unix
         || terminal.status != TerminalStatus::Completed
-        || terminal.kind != HistoryKind::FolderDryRun
+        || !matches!(
+            terminal.kind,
+            HistoryKind::FolderDryRun
+                | HistoryKind::GoogleTakeoutDryRun
+                | HistoryKind::ApplePhotosDryRun
+                | HistoryKind::PicasaDryRun
+        )
         || terminal.counters.max_logical_effects != binding.max_logical_effects
         || !matching_plan
     {

@@ -24,6 +24,7 @@ struct DashboardTemplate<'a> {
 struct SourceView<'a> {
     id: &'a str,
     label: &'a str,
+    kind: &'static str,
     servers: Vec<ServerView<'a>>,
 }
 
@@ -156,6 +157,7 @@ struct ReceiptTemplate<'a> {
     grant_ready: bool,
     idempotency_key: String,
     production: bool,
+    apply_supported: bool,
 }
 
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
@@ -172,6 +174,7 @@ pub fn dashboard(
         .map(|profile| SourceView {
             id: profile.id(),
             label: profile.label(),
+            kind: profile.kind().label(),
             servers: servers
                 .iter()
                 .map(|server| ServerView { id: server.id() })
@@ -252,7 +255,12 @@ pub fn plan(stored: &crate::state_store::StoredUploadPlan, csrf_token: &str) -> 
     )
 }
 
-pub fn receipt(receipt: &DryRunReceipt, csrf_token: &str, grant: Option<&GrantView>) -> Response {
+pub fn receipt(
+    receipt: &DryRunReceipt,
+    csrf_token: &str,
+    grant: Option<&GrantView>,
+    apply_supported: bool,
+) -> Response {
     render(
         StatusCode::OK,
         &ReceiptTemplate {
@@ -269,6 +277,7 @@ pub fn receipt(receipt: &DryRunReceipt, csrf_token: &str, grant: Option<&GrantVi
             grant_ready: grant.is_some(),
             idempotency_key: grant.map_or_else(String::new, |value| value.idempotency_key.clone()),
             production: grant.is_some_and(|value| value.production),
+            apply_supported,
         },
     )
 }

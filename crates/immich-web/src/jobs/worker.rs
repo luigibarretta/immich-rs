@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use immich_rs_application::{
-    ApplicationErrorClass, ApplicationProgressObserver, Cancellation, FolderPlanRequest,
-    FolderUploadPlanRequest, ScanError, UploadPlan, plan_folder, plan_folder_upload,
+    ApplicationErrorClass, ApplicationProgressObserver, Cancellation, ScanError, UploadPlan,
 };
 
 use super::types::JobKind;
-use super::{JobStatus, JobSummary, JobsInner, apply, dry_run, progress::JobObserver, push_event};
+use super::{
+    JobStatus, JobSummary, JobsInner, apply, dry_run, progress::JobObserver, push_event, source,
+};
 use crate::grants::ApplyCapability;
 use crate::state_store::{
     DryRunBinding, HistoryKind, PlanArtifact, SafeCounters, TerminalRecord, TerminalStatus,
@@ -27,7 +28,7 @@ pub fn run(inner: &Arc<JobsInner>, id: &str) {
             id,
             &source_id,
             kind,
-            request,
+            &request,
             capability,
             &cancellation,
         ),
@@ -57,14 +58,9 @@ fn job_inputs(
     Some(inputs)
 }
 
-fn prepare_source(inner: &JobsInner, source_id: &str) -> Result<FolderPlanRequest, ()> {
+fn prepare_source(inner: &JobsInner, source_id: &str) -> Result<crate::ResolvedSourceProfile, ()> {
     let profile = inner.config.source(source_id).ok_or(())?;
-    let resolved = profile.resolve().map_err(|_| ())?;
-    Ok(FolderPlanRequest {
-        root: resolved.root().to_path_buf(),
-        label: resolved.label().to_owned(),
-        config: resolved.config().clone(),
-    })
+    profile.resolve().map_err(|_| ())
 }
 
 fn execute(
@@ -72,7 +68,7 @@ fn execute(
     id: &str,
     source_id: &str,
     kind: JobKind,
-    request: FolderPlanRequest,
+    request: &crate::ResolvedSourceProfile,
     capability: Option<ApplyCapability>,
     cancellation: &immich_rs_application::CancellationToken,
 ) -> WorkerOutcome {
@@ -84,30 +80,31 @@ fn execute(
         id: id.to_owned(),
     };
     match kind {
-        JobKind::Scan => match plan_folder(&request, cancellation, &mut observer) {
+        JobKind::Scan { history } => match source::scan(request, cancellation, &mut observer) {
             Ok(plan) => WorkerOutcome::Completed {
-                kind: HistoryKind::FolderScan,
+                kind: history,
                 summary: normalized_summary(&plan),
                 artifact: None,
                 dry_run: None,
             },
-            Err(ScanError::Cancelled) => WorkerOutcome::Cancelled(HistoryKind::FolderScan),
-            Err(_) => WorkerOutcome::Failed(HistoryKind::FolderScan),
+            Err(ScanError::Cancelled) => WorkerOutcome::Cancelled(history),
+            Err(_) => WorkerOutcome::Failed(history),
         },
-        JobKind::Plan { server_id } => plan_upload(
+        JobKind::Plan { server_id, history } => plan_upload(
             inner,
             source_id,
             &server_id,
             request,
+            history,
             cancellation,
             &mut observer,
         ),
-        JobKind::DryRun { reference } => {
-            dry_run::execute(inner, source_id, reference, &request, cancellation)
+        JobKind::DryRun { reference, history } => {
+            dry_run::execute(inner, source_id, reference, request, history, cancellation)
         }
-        JobKind::Apply { .. } => capability.map_or_else(
-            || WorkerOutcome::Failed(HistoryKind::FolderApply),
-            |value| apply::execute(inner, &request, value, cancellation),
+        JobKind::Apply { history, .. } => capability.map_or_else(
+            || WorkerOutcome::Failed(history),
+            |value| apply::execute(inner, request, value, history, cancellation),
         ),
     }
 }
@@ -116,11 +113,11 @@ fn plan_upload(
     inner: &JobsInner,
     source_id: &str,
     server_id: &str,
-    source: FolderPlanRequest,
+    source: &crate::ResolvedSourceProfile,
+    kind: HistoryKind,
     cancellation: &impl Cancellation,
     observer: &mut impl ApplicationProgressObserver,
 ) -> WorkerOutcome {
-    let kind = HistoryKind::FolderPlan;
     let Some(source_profile) = inner.config.source(source_id) else {
         return WorkerOutcome::Failed(kind);
     };
@@ -136,13 +133,7 @@ fn plan_upload(
     else {
         return WorkerOutcome::Failed(kind);
     };
-    let request = FolderUploadPlanRequest { source };
-    let result = runtime.block_on(plan_folder_upload(
-        &request,
-        &client,
-        cancellation,
-        observer,
-    ));
+    let result = runtime.block_on(source::plan_upload(source, &client, cancellation, observer));
     let plan = match result {
         Ok(plan) => plan,
         Err(error) if error.class() == ApplicationErrorClass::Cancelled => {
@@ -281,7 +272,7 @@ fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
         return;
     };
     let apply_reference = state.jobs.get(id).and_then(|job| match job.kind {
-        JobKind::Apply { reference } => Some(reference),
+        JobKind::Apply { reference, .. } => Some(reference),
         _ => None,
     });
     if let Some(reference) = apply_reference {
@@ -366,7 +357,11 @@ impl WorkerOutcome {
     const fn published_artifact(&self) -> Option<&PlanArtifact> {
         match self {
             Self::Completed {
-                kind: HistoryKind::FolderPlan,
+                kind:
+                    HistoryKind::FolderPlan
+                    | HistoryKind::GoogleTakeoutPlan
+                    | HistoryKind::ApplePhotosPlan
+                    | HistoryKind::PicasaPlan,
                 artifact,
                 ..
             } => artifact.as_ref(),

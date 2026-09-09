@@ -770,6 +770,7 @@ dependencies = [
  "tower",
  "tower-http",
  "url",
+ "zip",
 ]
 
 [[package]]

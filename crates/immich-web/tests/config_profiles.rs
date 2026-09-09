@@ -145,7 +145,10 @@ fn assert_profiles(config: &WebConfig, source: &Path) -> Result<(), Box<dyn std:
         .source("camera_roll")
         .ok_or("source profile missing")?;
     let resolved = profile.resolve()?;
-    assert_eq!(resolved.root(), fs::canonicalize(source)?);
+    assert_eq!(
+        resolved.inputs().first().ok_or("source input missing")?,
+        &fs::canonicalize(source)?
+    );
     assert_eq!(resolved.label(), "Synthetic camera roll");
     assert_eq!(resolved.generation_sha256().len(), 64);
     assert_eq!(resolved.config().buffer_bytes, 4096);

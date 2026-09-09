@@ -26,6 +26,6 @@ pub use error::WebConfigError;
 pub use http::WebConsole;
 pub use limits::WebLimits;
 pub use profiles::{
-    ResolvedSourceProfile, ResolvedStateProfile, ServerMode, ServerProfile, SourceProfile,
-    StateProfile,
+    ResolvedSourceProfile, ResolvedStateProfile, ServerMode, ServerProfile, SourceKind,
+    SourceProfile, SourceSettings, StateProfile,
 };

@@ -216,7 +216,14 @@ async fn inspect_receipt(
             |receipt| {
                 receipt.map_or_else(
                     || views::scan_failed(StatusCode::NOT_FOUND),
-                    |value| views::receipt(&value, &session.csrf_token, None),
+                    |value| {
+                        let supported = state
+                            .store
+                            .plans()
+                            .load(value.binding.plan_reference)
+                            .is_ok_and(|stored| stored.plan.schema_version == 1);
+                        views::receipt(&value, &session.csrf_token, None, supported)
+                    },
                 )
             },
         )
@@ -259,7 +266,7 @@ async fn confirm_apply(
             |receipt| {
                 receipt.map_or_else(
                     || views::scan_failed(StatusCode::NOT_FOUND),
-                    |value| views::receipt(&value, &session.csrf_token, Some(&grant)),
+                    |value| views::receipt(&value, &session.csrf_token, Some(&grant), true),
                 )
             },
         )

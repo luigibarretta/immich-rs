@@ -1,22 +1,20 @@
 use super::worker::WorkerOutcome;
-use super::{JobSummary, JobsInner};
+use super::{JobSummary, JobsInner, source};
 use crate::state_store::{
     ArtifactRef, DryRunBinding, HistoryKind, now_unix, source_configuration_digest,
 };
 use immich_rs_application::{
-    ApplePhotosScanConfig, ApplicationErrorClass, Cancellation, FolderPlanRequest,
-    PicasaScanConfig, TakeoutScanConfig, UploadDryRunReport, UploadDryRunRequest,
-    UploadExecutionConfig, dry_run_upload_plan,
+    ApplicationErrorClass, Cancellation, UploadDryRunReport, dry_run_upload_plan,
 };
 
 pub(super) fn execute(
     inner: &JobsInner,
     source_id: &str,
     reference: ArtifactRef,
-    source: &FolderPlanRequest,
+    source: &crate::ResolvedSourceProfile,
+    kind: HistoryKind,
     cancellation: &impl Cancellation,
 ) -> WorkerOutcome {
-    let kind = HistoryKind::FolderDryRun;
     let Some(source_profile) = inner.config.source(source_id) else {
         return WorkerOutcome::Failed(kind);
     };
@@ -103,45 +101,80 @@ enum OfflineOutcome {
 fn verify_offline(
     inner: &JobsInner,
     plan: &immich_rs_application::UploadPlan,
-    source: &FolderPlanRequest,
+    source: &crate::ResolvedSourceProfile,
     cancellation: &impl Cancellation,
 ) -> OfflineOutcome {
     let Ok(checkpoint) = inner.store.unused_checkpoint() else {
         return OfflineOutcome::Failed;
     };
-    let mut config = UploadExecutionConfig::default();
-    config.scan = source.config.clone();
-    let request = UploadDryRunRequest {
-        inputs: vec![source.root.clone()],
-        checkpoint: checkpoint.clone(),
-        config,
-        takeout: TakeoutScanConfig::default(),
-        apple: ApplePhotosScanConfig::default(),
-        picasa: PicasaScanConfig::default(),
-    };
+    let request = source::dry_run_request(source, checkpoint.clone());
     let report = match dry_run_upload_plan(plan, &request, cancellation) {
-        Ok(UploadDryRunReport::Folder(report)) => report,
+        Ok(report) => report,
         Err(error) if error.class() == ApplicationErrorClass::Cancelled => {
             return OfflineOutcome::Cancelled;
         }
         _ => return OfflineOutcome::Failed,
     };
-    let valid = report.dry_run
-        && !report.cancelled
-        && report.created == 0
-        && report.duplicate == 0
-        && report.retried == 0
-        && report.failed == 0
-        && report.indeterminate == 0
-        && report.planned == report.would_upload.saturating_add(report.resumed)
-        && inner.store.verify_checkpoint_unused(&checkpoint).is_ok();
-    if valid {
-        OfflineOutcome::Completed {
-            schema: report.schema_version,
-            planned: report.planned,
+    offline_report(
+        &report,
+        plan,
+        inner.store.verify_checkpoint_unused(&checkpoint).is_ok(),
+    )
+}
+
+fn offline_report(
+    report: &UploadDryRunReport,
+    plan: &immich_rs_application::UploadPlan,
+    checkpoint_unused: bool,
+) -> OfflineOutcome {
+    match report {
+        UploadDryRunReport::Folder(report) => {
+            let valid = report.dry_run
+                && !report.cancelled
+                && report.created == 0
+                && report.duplicate == 0
+                && report.retried == 0
+                && report.failed == 0
+                && report.indeterminate == 0
+                && report.planned == report.would_upload.saturating_add(report.resumed)
+                && checkpoint_unused;
+            if valid {
+                OfflineOutcome::Completed {
+                    schema: report.schema_version,
+                    planned: report.planned,
+                }
+            } else {
+                OfflineOutcome::Failed
+            }
         }
-    } else {
-        OfflineOutcome::Failed
+        UploadDryRunReport::Import(report) => {
+            let valid = report.dry_run
+                && !report.cancelled
+                && report.created == 0
+                && report.duplicate == 0
+                && report.metadata_updated == 0
+                && report.albums_created == 0
+                && report.albums_reused == 0
+                && report.album_memberships_updated == 0
+                && report.resumed_effects == 0
+                && report.retried == 0
+                && report.failed == 0
+                && report.indeterminate == 0
+                && report.planned == plan.summary
+                && report.would_upload == report.planned.operations
+                && report.would_update_metadata == report.planned.metadata_updates
+                && report.would_create_albums == report.planned.album_creates
+                && report.would_add_album_memberships == report.planned.album_memberships
+                && checkpoint_unused;
+            if valid {
+                OfflineOutcome::Completed {
+                    schema: report.schema_version,
+                    planned: report.planned.operations,
+                }
+            } else {
+                OfflineOutcome::Failed
+            }
+        }
     }
 }
 

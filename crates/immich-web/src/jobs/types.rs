@@ -84,19 +84,30 @@ pub enum AdmissionError {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum JobKind {
-    Scan,
-    Plan { server_id: String },
-    DryRun { reference: ArtifactRef },
-    Apply { reference: ArtifactRef },
+    Scan {
+        history: HistoryKind,
+    },
+    Plan {
+        server_id: String,
+        history: HistoryKind,
+    },
+    DryRun {
+        reference: ArtifactRef,
+        history: HistoryKind,
+    },
+    Apply {
+        reference: ArtifactRef,
+        history: HistoryKind,
+    },
 }
 
 impl JobKind {
     pub(super) const fn history_kind(&self) -> HistoryKind {
         match self {
-            Self::Scan => HistoryKind::FolderScan,
-            Self::Plan { .. } => HistoryKind::FolderPlan,
-            Self::DryRun { .. } => HistoryKind::FolderDryRun,
-            Self::Apply { .. } => HistoryKind::FolderApply,
+            Self::Scan { history }
+            | Self::Plan { history, .. }
+            | Self::DryRun { history, .. }
+            | Self::Apply { history, .. } => *history,
         }
     }
 }

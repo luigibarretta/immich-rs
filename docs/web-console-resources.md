@@ -8,16 +8,16 @@ allowed; exceeding a hard maximum is a startup or request error.
 | Surface | Read/plan | Dry-run | Apply | Current implemented status |
 |---|---:|---:|---:|---|
 | Folder source | Implemented | Implemented | Implemented with exact grant | Disposable loopback apply through the executor |
-| Google Takeout | Planned | Planned | Planned with exact grant | Not implemented |
-| Apple Photos | Planned | Planned | Planned with exact grant | Not implemented |
-| Picasa | Planned | Planned | Planned with exact grant | Not implemented |
+| Google Takeout | Implemented | Implemented | Planned with exact grant | Synthetic split-ZIP read/dry-run evidence; apply disabled |
+| Apple Photos | Implemented | Implemented | Planned with exact grant | Synthetic directory read/dry-run evidence; private shadow pending |
+| Picasa | Implemented | Implemented | Planned with exact grant | Synthetic directory read/dry-run evidence; private shadow pending |
 | Immich archive | Display may be added read-only | Not applicable | No web write | Not implemented |
 | Immich migration | Display may be added read-only | No web apply | Unsupported, including production | Not implemented |
 | Delete/replace/trash/tags/people/stacks/maintenance | No | No | Unsupported | Unsupported |
 | Gallery, media preview/serving and photo management | No | No | Unsupported | Unsupported |
 
-Source-import rows cannot be described as supported until their implementation
-and evidence gate is green.
+Source-import apply cannot be described as supported until its separate
+implementation and evidence gate is green.
 
 Configured state roots are required now and must resolve to private directories;
 their canonical identity is revalidated at each use. A disposable server profile
@@ -28,8 +28,8 @@ configured DNS-address limit, requires every answer to match the profile policy,
 deduplicates and pins the complete set, preserves TLS verification of the exact
 hostname, and forbids redirects. This deliberately permits explicitly
 configured private LAN/VPN ranges without granting a browser general SSRF
-authority. Only an authenticated folder planning job can construct this read
-capability; source-only scan and offline dry-run paths cannot construct it.
+authority. Only an authenticated server-bound planning job can construct this
+read capability; source-only scan and offline dry-run paths cannot construct it.
 
 The implemented `console-history-v1.sqlite3` store is separate from executor
 checkpoints. It uses a transactional strict schema, full-synchronous WAL with a
@@ -39,15 +39,16 @@ schema/corruption/size handling. Only terminal workflow/status enums, aggregate
 counters and opaque plan references are admitted by its typed write API; the
 authenticated fixed-size history page does not expose internal sequences. Its
 transactional schema v2 migration expands the workflow enum without renaming
-the distinct `console-history-v1.sqlite3` format family. A completed folder
-dry-run atomically writes its terminal row and a random opaque receipt binding
+the distinct `console-history-v1.sqlite3` format family. A completed dry-run
+atomically writes its terminal row and a random opaque receipt binding
 the canonical plan, combined source-profile/configuration identity,
 authenticated server identity, server profile and credential generation, exact
 logical-effect maximum and completion time. Receipt inspection is authenticated
 and informational; a receipt is neither a checkpoint nor a grant.
 
-Completed folder upload plans are pretty-JSON application artifacts stored in
-private create-new files under random 128-bit opaque references. A separate
+Completed folder and source-import upload plans are pretty-JSON application
+artifacts stored in private create-new files under random 128-bit opaque
+references. A separate
 private binding contains only the plan digest, opaque source/server profile IDs,
 their generation digests, credential generation, authenticated server identity
 digest and exact logical-effect count. Publication uses bounded streaming
@@ -79,8 +80,12 @@ server. Checkpoint creation marks the start of a run; after cancellation or
 restart, only a later completed dry-run receipt may authorize checkpoint resume.
 Tests cover replay races, expiry, logout, restart, drift, cancellation, resume,
 repeated cancellation and bounded before/after-commit recovery against a
-synthetic loopback server. Google Takeout, Apple Photos and Picasa remain
-unsupported in the console until the next separately gated slice.
+synthetic loopback server. Source-import scan, plan and offline dry-run retain
+the established `normalized-plan-v2/v3/v4` and `upload-plan-v2` contracts and
+operator-configured archive, album and executor budgets. Import receipt
+confirmation is refused until the next separately gated apply slice. Synthetic
+coverage does not satisfy the pending external private Apple/Picasa shadow
+gates.
 
 ## Numeric bounds
 
@@ -114,6 +119,7 @@ unsupported in the console until the next separately gated slice.
 | Production grant lifetime | 90 s | 120 s |
 | Backup reference UTF-8 bytes | 256 | 256 |
 | Configured source profiles | 32 | 64 |
+| Relative inputs per import source profile | adapter default | 64 |
 | Configured state/destination profiles | 16 | 32 |
 | Configured server profiles | 16 | 32 |
 | Address CIDR ranges per server profile | 32 | 32 |

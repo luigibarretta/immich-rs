@@ -26,7 +26,7 @@
     <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
     <button type="submit">Admit executor apply job</button>
   </form>
-  {% else %}
+  {% else if apply_supported %}
   <h2>Create a short-lived single-use grant</h2>
   <p>Type the exact digest and logical-effect maximum shown above. Production profiles also require the bounded backup reference; disposable profiles require it to remain empty.</p>
   <form method="post" action="/receipts/{{ reference }}/confirm">
@@ -37,6 +37,9 @@
     <label><input name="acknowledge" value="apply" type="checkbox" required> I authorize only this exact plan and count.</label>
     <button type="submit">Create single-use grant</button>
   </form>
+  {% else %}
+  <h2>Apply unavailable</h2>
+  <p>This source-import receipt is read-only in the current console release.</p>
   {% endif %}
   <p class="eyebrow">Opaque receipt {{ reference }}</p>
 </section>

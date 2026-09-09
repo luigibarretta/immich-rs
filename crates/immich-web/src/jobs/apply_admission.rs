@@ -21,6 +21,12 @@ impl JobManager {
         else {
             return Err(AdmissionError::UnknownProfile);
         };
+        let history = self
+            .inner
+            .config
+            .source(&source_id)
+            .map(|profile| super::source::apply_history(profile.kind()))
+            .ok_or(AdmissionError::UnknownProfile)?;
         let Ok(id) = random_job_id() else {
             return Err(AdmissionError::Unavailable);
         };
@@ -51,7 +57,7 @@ impl JobManager {
             owner,
             source_id,
             source_label,
-            JobKind::Apply { reference },
+            JobKind::Apply { reference, history },
             event_sender,
             self.inner.limits.sse_replay_events,
         );

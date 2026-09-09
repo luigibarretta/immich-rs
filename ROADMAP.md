@@ -399,7 +399,10 @@ Sequential gates are:
 5. **Implemented:** exact single-use folder apply grants against disposable
    loopback, with private executor checkpoints, bounded replay/fault recovery
    and mandatory fresh dry-run confirmation for resume;
-6. Google Takeout, Apple Photos and Picasa source-only, dry-run and gated apply;
+6. **Partially implemented:** Google Takeout, Apple Photos and Picasa
+   source-only, server-bound plan and offline dry-run preserve their plan
+   versions and bounded adapter options; exact-grant apply remains disabled
+   until its separate gate;
 7. TLS/OIDC LAN mode against a disposable identity provider;
 8. separate five-target native artifact and hardened multiarch OCI service;
 9. aggregate metrics, recovery/operator documentation, accessibility and

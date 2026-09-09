@@ -158,9 +158,12 @@ revision.
 ## Current capabilities
 
 The optional operator Web Console now has a tested loopback library surface for
-one-time bootstrap pairing, restart-ephemeral sessions, source-only folder
-scan/review and server-bound folder upload planning through opaque
-operator-configured profiles. Work runs as bounded,
+one-time bootstrap pairing, restart-ephemeral sessions, source-only folder,
+Google Takeout, Apple Photos and Picasa scan/review plus server-bound immutable
+upload planning through opaque operator-configured profiles. Import profiles
+select exactly one contained directory or a bounded contained split-ZIP set;
+their adapter, archive, album and execution options are operator-owned and
+bound into the profile generation. Work runs as bounded,
 owned in-memory jobs with authenticated polling, cooperative cancellation and
 joined shutdown; bounded authenticated SSE provides isolated replay with a
 polling fallback, and terminal summaries are published only after a complete
@@ -178,8 +181,9 @@ references and aggregate counters, never job/user identifiers or source data.
 Server-bound planning uses a strictly bounded private secret loader and the
 address-pinned read client. Completed plans are published atomically under
 opaque references in private state, revalidated on every authenticated
-inspection, and exported with bounded streaming. Authenticated folder dry-run
-reopens and verifies that artifact entirely offline, rejects source, state,
+inspection, and exported with bounded streaming. Authenticated folder and
+source-import dry-run reopens and verifies that artifact entirely offline,
+rejects source, state,
 server-profile or credential-generation drift, creates no checkpoint, and
 atomically records a versioned receipt with terminal history. Tests remove the
 server credential and stop the disposable server before dry-run while proving
@@ -190,8 +194,10 @@ apply performs another offline source/checkpoint verification before creating a
 write-capable client, writes a private plan-bound checkpoint, and requires a
 fresh dry-run receipt and confirmation after cancellation or restart. Replay,
 expiry, logout, drift and bounded before/after-commit fault tests use only a
-synthetic loopback server. Source-import apply and media-serving routes remain
-unsupported. A
+synthetic loopback server. Import tests exercise a synthetic Takeout ZIP plus
+Apple and Picasa directories; the external private Apple/Picasa shadow evidence
+remains pending and is not claimed. Source-import apply and media-serving
+routes remain unsupported. A
 standalone web binary, native artifact and container are not yet supported. The
 CLI remains the canonical complete interface. See the
 [threat model](docs/web-console-threat-model.md) and

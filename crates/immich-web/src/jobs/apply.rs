@@ -1,21 +1,23 @@
 use immich_rs_application::{
-    ApplePhotosScanConfig, ApplicationErrorClass, PicasaScanConfig, TakeoutScanConfig,
-    UploadApplyReport, UploadApplyRequest, UploadDryRunReport, UploadDryRunRequest,
-    UploadExecutionConfig, apply_prepared_upload, dry_run_upload_plan,
+    ApplicationErrorClass, UploadApplyReport, UploadDryRunReport, apply_prepared_upload,
+    dry_run_upload_plan,
 };
 
 use super::worker::WorkerOutcome;
-use super::{JobSummary, JobsInner};
+use super::{JobSummary, JobsInner, source};
 use crate::grants::{ApplyCapability, binding_is_current};
 use crate::state_store::{HistoryKind, PlanArtifact};
 
 pub fn execute(
     inner: &JobsInner,
-    source: &immich_rs_application::FolderPlanRequest,
+    source: &crate::ResolvedSourceProfile,
     capability: ApplyCapability,
+    kind: HistoryKind,
     cancellation: &immich_rs_application::CancellationToken,
 ) -> WorkerOutcome {
-    let kind = HistoryKind::FolderApply;
+    if source.settings().kind() != crate::SourceKind::Folder {
+        return WorkerOutcome::Failed(kind);
+    }
     if !binding_is_current(&inner.config, &inner.store, &capability.binding) {
         return WorkerOutcome::Failed(kind);
     }
@@ -34,16 +36,7 @@ pub fn execute(
     let Ok(client) = server.read_client(inner.limits.dns_addresses) else {
         return WorkerOutcome::Failed(kind);
     };
-    let mut config = UploadExecutionConfig::default();
-    config.scan = source.config.clone();
-    let request = UploadApplyRequest {
-        inputs: vec![source.root.clone()],
-        checkpoint,
-        config,
-        takeout: TakeoutScanConfig::default(),
-        apple: ApplePhotosScanConfig::default(),
-        picasa: PicasaScanConfig::default(),
-    };
+    let request = source::apply_request(source, checkpoint);
     let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -98,7 +91,7 @@ pub fn execute(
 
 fn verify_source_offline(
     inner: &JobsInner,
-    source: &immich_rs_application::FolderPlanRequest,
+    source: &crate::ResolvedSourceProfile,
     capability: &ApplyCapability,
     cancellation: &immich_rs_application::CancellationToken,
 ) -> bool {
@@ -115,16 +108,7 @@ fn verify_source_offline(
     else {
         return false;
     };
-    let mut config = UploadExecutionConfig::default();
-    config.scan = source.config.clone();
-    let request = UploadDryRunRequest {
-        inputs: vec![source.root.clone()],
-        checkpoint,
-        config,
-        takeout: TakeoutScanConfig::default(),
-        apple: ApplePhotosScanConfig::default(),
-        picasa: PicasaScanConfig::default(),
-    };
+    let request = source::dry_run_request(source, checkpoint);
     matches!(
         dry_run_upload_plan(&stored.plan, &request, cancellation),
         Ok(UploadDryRunReport::Folder(_))

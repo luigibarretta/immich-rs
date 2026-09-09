@@ -8,6 +8,7 @@
 //! use immich_rs_application::ImmichUploadClient;
 //! ```
 
+mod archive;
 mod error;
 mod folder;
 mod progress;
@@ -16,9 +17,11 @@ mod upload_apply;
 mod upload_execution;
 mod upload_plans;
 
+pub use archive::{apply_archive_manifest, plan_archive};
 pub use error::{ApplicationError, ApplicationErrorClass};
 pub use folder::{FolderPlanRequest, plan_folder};
 pub use immich_rs_core::{Cancellation, CancellationToken, NormalizedPlan, ProgressStage};
+pub use immich_rs_executor::{ArchivePlanningConfig, ArchiveSelection};
 pub use immich_rs_sources::{ApplePhotosScanConfig, PicasaScanConfig, TakeoutScanConfig};
 pub use immich_rs_sources::{FolderScanConfig, ScanError};
 pub use progress::{

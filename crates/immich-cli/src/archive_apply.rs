@@ -1,5 +1,4 @@
-use immich_rs_core::CancellationToken;
-use immich_rs_executor::apply_archive;
+use immich_rs_application::{CancellationToken, apply_archive_manifest};
 
 use crate::args::ArchiveApplyRequest;
 use crate::failure::CliFailure;
@@ -14,18 +13,8 @@ pub async fn run(request: ArchiveApplyRequest) -> Result<(), CliFailure> {
     )?;
     let cancellation = CancellationToken::default();
     signal::install(cancellation.clone())?;
-    let negotiated = client
-        .probe(&cancellation)
+    let report = apply_archive_manifest(&manifest, &request.destination, &client, &cancellation)
         .await
-        .map_err(CliFailure::from_client)?;
-    let report = apply_archive(
-        &manifest,
-        &request.destination,
-        &client,
-        &negotiated,
-        &cancellation,
-    )
-    .await
-    .map_err(CliFailure::from_executor)?;
+        .map_err(|error| CliFailure::from_application(&error))?;
     output::write_json(&report, "archive apply report")
 }

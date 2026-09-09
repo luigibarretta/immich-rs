@@ -39,6 +39,8 @@ pub enum ApplicationError {
     Executor(ExecutorError),
     /// Frontend-independent invalid request.
     InvalidRequest(&'static str),
+    /// Frontend-neutral invariant failure retaining its established message.
+    Invariant(&'static str),
     /// An executor report confirmed cooperative cancellation.
     Cancelled,
 }
@@ -49,7 +51,9 @@ impl ApplicationError {
     pub const fn class(&self) -> ApplicationErrorClass {
         match self {
             Self::Cancelled | Self::Scan(ScanError::Cancelled) => ApplicationErrorClass::Cancelled,
-            Self::Scan(ScanError::InvalidPlan(_)) => ApplicationErrorClass::Invariant,
+            Self::Invariant(_) | Self::Scan(ScanError::InvalidPlan(_)) => {
+                ApplicationErrorClass::Invariant
+            }
             Self::Scan(_) => ApplicationErrorClass::Source,
             Self::Client(error) => match error.class() {
                 ClientErrorClass::Authentication => ApplicationErrorClass::Authentication,
@@ -79,7 +83,9 @@ impl Display for ApplicationError {
             Self::Scan(error) => Display::fmt(error, formatter),
             Self::Client(error) => Display::fmt(error, formatter),
             Self::Executor(error) => Display::fmt(error, formatter),
-            Self::InvalidRequest(message) => formatter.write_str(message),
+            Self::InvalidRequest(message) | Self::Invariant(message) => {
+                formatter.write_str(message)
+            }
             Self::Cancelled => formatter.write_str("operation cancelled cleanly"),
         }
     }

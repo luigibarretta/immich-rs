@@ -18,7 +18,7 @@ use import_support::{
     wait_terminal,
 };
 use mock::start_mock;
-use support::{HOST, ORIGIN, TestWorkspace, send};
+use support::{HOST, TestWorkspace, send};
 
 struct Session {
     cookie: String,
@@ -27,8 +27,6 @@ struct Session {
 
 struct Planned {
     reference: String,
-    digest: String,
-    effects: u64,
 }
 
 #[tokio::test]
@@ -118,14 +116,14 @@ async fn plan_sources(
         .await?;
         assert_eq!(inspection.status, StatusCode::OK);
         assert!(!inspection.body.contains(origin));
-        plans.push(Planned {
-            reference,
-            digest: between(
-                &inspection.body,
-                "<h2>Canonical plan digest</h2>\n  <p><code>",
-            )?,
-            effects: definition(&inspection.body, "Maximum logical effects")?.parse()?,
-        });
+        let digest = between(
+            &inspection.body,
+            "<h2>Canonical plan digest</h2>\n  <p><code>",
+        )?;
+        let effects = definition(&inspection.body, "Maximum logical effects")?.parse::<u64>()?;
+        assert_eq!(digest.len(), 64);
+        assert!(effects > 0);
+        plans.push(Planned { reference });
     }
     Ok(plans)
 }
@@ -155,21 +153,8 @@ async fn verify_offline_dry_runs(
             "",
         )
         .await?;
-        assert!(page.body.contains("Apply unavailable"));
-        let confirm = send(
-            router,
-            Method::POST,
-            &format!("/receipts/{receipt}/confirm"),
-            Some(HOST),
-            Some(ORIGIN),
-            Some(&session.cookie),
-            &format!(
-                "csrf={}&plan_sha256={}&max_logical_effects={}&backup_reference=&acknowledge=apply",
-                session.csrf, plan.digest, plan.effects
-            ),
-        )
-        .await?;
-        assert_eq!(confirm.status, StatusCode::FORBIDDEN);
+        assert!(page.body.contains("Create a short-lived single-use grant"));
+        assert!(!page.body.contains("Apply unavailable"));
     }
     Ok(())
 }

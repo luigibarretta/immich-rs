@@ -187,16 +187,17 @@ rejects source, state,
 server-profile or credential-generation drift, creates no checkpoint, and
 atomically records a versioned receipt with terminal history. Tests remove the
 server credential and stop the disposable server before dry-run while proving
-the request counter does not increase. Folder apply requires a second exact
+the request counter does not increase. Folder and source-import apply require a second exact
 digest/count confirmation and a short-lived session-bound single-use grant.
 Grant consumption and job admission are atomic and idempotent; executor-owned
 apply performs another offline source/checkpoint verification before creating a
 write-capable client, writes a private plan-bound checkpoint, and requires a
 fresh dry-run receipt and confirmation after cancellation or restart. Replay,
 expiry, logout, drift and bounded before/after-commit fault tests use only a
-synthetic loopback server. Import tests exercise a synthetic Takeout ZIP plus
-Apple and Picasa directories; the external private Apple/Picasa shadow evidence
-remains pending and is not claimed. Source-import apply and media-serving
+synthetic loopback server. Import tests exercise executor-owned apply and
+fresh-plan duplicate convergence for a synthetic Takeout ZIP plus Apple and
+Picasa directories, including metadata and album effects. The external private
+Apple/Picasa shadow evidence remains pending and is not claimed. Media-serving
 routes remain unsupported. A
 standalone web binary, native artifact and container are not yet supported. The
 CLI remains the canonical complete interface. See the

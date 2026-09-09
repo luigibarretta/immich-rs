@@ -230,7 +230,7 @@ impl GrantStore {
             .plans()
             .load(receipt.binding.plan_reference)
             .map_err(|_| GrantError::Invalid)?;
-        if stored.plan.schema_version != 1 {
+        if !matches!(stored.plan.schema_version, 1 | 2) {
             return Err(GrantError::Invalid);
         }
         if !self

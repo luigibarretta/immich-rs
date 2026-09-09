@@ -26,8 +26,8 @@ pub use immich_rs_client::{
     ImmichReadClient, PinnedEndpointAddresses, TlsRootCertificates, upload_plan_sha256,
 };
 pub use immich_rs_core::{
-    ArchiveManifest, Cancellation, CancellationToken, MigrationPlan, NormalizedPlan, ProgressStage,
-    UploadPlan,
+    ApplyReport, ArchiveManifest, Cancellation, CancellationToken, ImportApplyReport,
+    MigrationPlan, NormalizedPlan, ProgressStage, UploadPlan,
 };
 pub use immich_rs_executor::{
     ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, MigrationPlanningConfig,

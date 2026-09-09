@@ -221,7 +221,7 @@ async fn inspect_receipt(
                             .store
                             .plans()
                             .load(value.binding.plan_reference)
-                            .is_ok_and(|stored| stored.plan.schema_version == 1);
+                            .is_ok_and(|stored| matches!(stored.plan.schema_version, 1 | 2));
                         views::receipt(&value, &session.csrf_token, None, supported)
                     },
                 )

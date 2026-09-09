@@ -380,8 +380,8 @@ this is not a non-production shadow, WAN or production claim.
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
 and authenticated loopback folder scan/review library surface are implemented.
-The remaining server, durable-state, apply, source-import, LAN, release and
-observability slices stay unsupported until their evidence gates are green.
+The LAN, release and observability slices stay unsupported until their evidence
+gates are green.
 
 Sequential gates are:
 
@@ -399,10 +399,11 @@ Sequential gates are:
 5. **Implemented:** exact single-use folder apply grants against disposable
    loopback, with private executor checkpoints, bounded replay/fault recovery
    and mandatory fresh dry-run confirmation for resume;
-6. **Partially implemented:** Google Takeout, Apple Photos and Picasa
-   source-only, server-bound plan and offline dry-run preserve their plan
-   versions and bounded adapter options; exact-grant apply remains disabled
-   until its separate gate;
+6. **Implemented:** Google Takeout, Apple Photos and Picasa source-only,
+   server-bound plan, offline dry-run and exact-grant executor apply preserve
+   their plan versions and bounded adapter options. Synthetic ZIP/directory,
+   effect, drift and fresh-plan convergence tests do not claim the pending
+   external private Apple/Picasa shadow gates;
 7. TLS/OIDC LAN mode against a disposable identity provider;
 8. separate five-target native artifact and hardened multiarch OCI service;
 9. aggregate metrics, recovery/operator documentation, accessibility and

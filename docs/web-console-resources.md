@@ -8,16 +8,16 @@ allowed; exceeding a hard maximum is a startup or request error.
 | Surface | Read/plan | Dry-run | Apply | Current implemented status |
 |---|---:|---:|---:|---|
 | Folder source | Implemented | Implemented | Implemented with exact grant | Disposable loopback apply through the executor |
-| Google Takeout | Implemented | Implemented | Planned with exact grant | Synthetic split-ZIP read/dry-run evidence; apply disabled |
-| Apple Photos | Implemented | Implemented | Planned with exact grant | Synthetic directory read/dry-run evidence; private shadow pending |
-| Picasa | Implemented | Implemented | Planned with exact grant | Synthetic directory read/dry-run evidence; private shadow pending |
+| Google Takeout | Implemented | Implemented | Implemented with exact grant | Synthetic split-ZIP apply and convergence evidence |
+| Apple Photos | Implemented | Implemented | Implemented with exact grant | Synthetic directory apply; private shadow pending |
+| Picasa | Implemented | Implemented | Implemented with exact grant | Synthetic directory apply; private shadow pending |
 | Immich archive | Display may be added read-only | Not applicable | No web write | Not implemented |
 | Immich migration | Display may be added read-only | No web apply | Unsupported, including production | Not implemented |
 | Delete/replace/trash/tags/people/stacks/maintenance | No | No | Unsupported | Unsupported |
 | Gallery, media preview/serving and photo management | No | No | Unsupported | Unsupported |
 
-Source-import apply cannot be described as supported until its separate
-implementation and evidence gate is green.
+Source-import apply uses the same grant and admission boundary as folder apply;
+it does not widen the adapter-specific immutable plans or effect budgets.
 
 Configured state roots are required now and must resolve to private directories;
 their canonical identity is revalidated at each use. A disposable server profile
@@ -66,7 +66,7 @@ unchanged, proving neither the secret loader nor client construction path was
 reached. Source-content drift and server-profile binding drift fail without a
 network request or receipt.
 
-Folder apply requires an authenticated second confirmation that retypes the
+Folder and supported source-import apply require an authenticated second confirmation that retypes the
 exact canonical plan digest and maximum logical-effect count. The in-memory
 grant is bound to the session, receipt, plan, source/configuration, server/user
 identity, profile and credential generations, count and monotonic deadline.
@@ -80,12 +80,14 @@ server. Checkpoint creation marks the start of a run; after cancellation or
 restart, only a later completed dry-run receipt may authorize checkpoint resume.
 Tests cover replay races, expiry, logout, restart, drift, cancellation, resume,
 repeated cancellation and bounded before/after-commit recovery against a
-synthetic loopback server. Source-import scan, plan and offline dry-run retain
-the established `normalized-plan-v2/v3/v4` and `upload-plan-v2` contracts and
-operator-configured archive, album and executor budgets. Import receipt
-confirmation is refused until the next separately gated apply slice. Synthetic
-coverage does not satisfy the pending external private Apple/Picasa shadow
-gates.
+synthetic loopback server. Google Takeout, Apple Photos and Picasa scan, plan,
+offline dry-run and apply retain the established `normalized-plan-v2/v3/v4`
+and `upload-plan-v2` contracts and operator-configured archive, album and
+executor budgets. The import gate covers a real synthetic ZIP, directory
+sources, metadata/album effects, single-use admission, source drift and
+fresh-plan duplicate convergence through executor-owned `checkpoint-v2`.
+Synthetic coverage does not satisfy the pending external private Apple/Picasa
+shadow gates.
 
 ## Numeric bounds
 

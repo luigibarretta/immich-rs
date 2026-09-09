@@ -49,6 +49,8 @@ pub struct WebLimits {
     pub history_store_bytes: u64,
     /// Maximum immutable plan artifact bytes.
     pub plan_file_bytes: u64,
+    /// Maximum aggregate immutable plan-store bytes.
+    pub plan_store_bytes: u64,
 }
 
 impl Default for WebLimits {
@@ -76,6 +78,7 @@ impl Default for WebLimits {
             history_retention_days: 30,
             history_store_bytes: 32 * 1_024 * 1_024,
             plan_file_bytes: 128 * 1_024 * 1_024,
+            plan_store_bytes: 512 * 1_024 * 1_024,
         }
     }
 }
@@ -109,6 +112,9 @@ impl WebLimits {
             && (1..=90).contains(&self.history_retention_days)
             && (1_024 * 1_024..=64 * 1_024 * 1_024).contains(&self.history_store_bytes)
             && (1_024 * 1_024..=256 * 1_024 * 1_024).contains(&self.plan_file_bytes);
+        let valid = valid
+            && self.plan_store_bytes >= self.plan_file_bytes.saturating_add(16 * 1_024)
+            && self.plan_store_bytes <= 4 * 1_024 * 1_024 * 1_024;
         valid
             .then_some(self)
             .ok_or_else(|| WebConfigError::new("web resource limits are invalid"))
@@ -140,6 +146,7 @@ pub struct RawWebLimits {
     history_retention_days: Option<u64>,
     history_store_bytes: Option<u64>,
     plan_file_bytes: Option<u64>,
+    plan_store_bytes: Option<u64>,
 }
 
 impl RawWebLimits {
@@ -194,6 +201,7 @@ impl RawWebLimits {
                 .history_store_bytes
                 .unwrap_or(defaults.history_store_bytes),
             plan_file_bytes: self.plan_file_bytes.unwrap_or(defaults.plan_file_bytes),
+            plan_store_bytes: self.plan_store_bytes.unwrap_or(defaults.plan_store_bytes),
         }
     }
 }

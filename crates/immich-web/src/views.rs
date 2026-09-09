@@ -2,9 +2,9 @@ use askama::Template;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
-use crate::SourceProfile;
 use crate::jobs::{JobSnapshot, JobStatus};
 use crate::state_store::StoredHistory;
+use crate::{ServerProfile, SourceProfile};
 
 #[derive(Template)]
 #[template(path = "pair.html")]
@@ -23,6 +23,11 @@ struct DashboardTemplate<'a> {
 struct SourceView<'a> {
     id: &'a str,
     label: &'a str,
+    servers: Vec<ServerView<'a>>,
+}
+
+struct ServerView<'a> {
+    id: &'a str,
 }
 
 #[derive(Template)]
@@ -49,6 +54,7 @@ pub struct JobView<'a> {
     pub bytes_read: u64,
     pub warnings: usize,
     pub errors: usize,
+    pub plan_ref: String,
 }
 
 impl<'a> JobView<'a> {
@@ -83,6 +89,10 @@ impl<'a> JobView<'a> {
             bytes_read: summary.bytes_read,
             warnings: summary.warnings,
             errors: summary.errors,
+            plan_ref: snapshot
+                .artifact
+                .as_ref()
+                .map_or_else(String::new, |artifact| artifact.reference.encode()),
         }
     }
 }
@@ -106,18 +116,42 @@ struct HistoryRow {
     bytes_read: u64,
     warnings: u64,
     errors: u64,
+    has_plan: bool,
+    plan_ref: String,
+}
+
+#[derive(Template)]
+#[template(path = "plan.html")]
+struct PlanTemplate<'a> {
+    reference: String,
+    schema_version: u32,
+    plan_sha256: &'a str,
+    source_profile_id: &'a str,
+    server_profile_id: &'a str,
+    operations: u64,
+    media_bytes: u64,
+    sidecars: u64,
+    max_logical_effects: u64,
 }
 
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
     render(status, &PairTemplate { csrf_token, denied })
 }
 
-pub fn dashboard(csrf_token: &str, profiles: &[SourceProfile]) -> Response {
+pub fn dashboard(
+    csrf_token: &str,
+    profiles: &[SourceProfile],
+    servers: &[ServerProfile],
+) -> Response {
     let sources = profiles
         .iter()
         .map(|profile| SourceView {
             id: profile.id(),
             label: profile.label(),
+            servers: servers
+                .iter()
+                .map(|server| ServerView { id: server.id() })
+                .collect(),
         })
         .collect();
     render(
@@ -166,9 +200,31 @@ pub fn history(records: &[StoredHistory]) -> Response {
             bytes_read: stored.record.counters.bytes_read,
             warnings: stored.record.counters.warnings,
             errors: stored.record.counters.errors,
+            has_plan: stored.record.plan.is_some(),
+            plan_ref: stored
+                .record
+                .plan
+                .map_or_else(String::new, |(reference, _)| reference.encode()),
         })
         .collect();
     render(StatusCode::OK, &HistoryTemplate { rows })
+}
+
+pub fn plan(stored: &crate::state_store::StoredUploadPlan) -> Response {
+    render(
+        StatusCode::OK,
+        &PlanTemplate {
+            reference: stored.reference.encode(),
+            schema_version: stored.plan.schema_version,
+            plan_sha256: &stored.binding.plan_sha256,
+            source_profile_id: &stored.binding.source_profile_id,
+            server_profile_id: &stored.binding.server_profile_id,
+            operations: stored.plan.summary.operations,
+            media_bytes: stored.plan.summary.media_bytes,
+            sidecars: stored.plan.summary.xmp_sidecars,
+            max_logical_effects: stored.binding.max_logical_effects,
+        },
+    )
 }
 
 fn render<T: Template>(status: StatusCode, template: &T) -> Response {

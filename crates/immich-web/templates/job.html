@@ -22,6 +22,9 @@
     <div><dt>Blocking errors</dt><dd>{{ errors }}</dd></div>
   </dl>
   {% endif %}
+  {% if !plan_ref.is_empty() %}
+  <p><a href="/plans/{{ plan_ref }}">Inspect immutable plan</a></p>
+  {% endif %}
   {% if cancellable %}
   <form method="post" action="/jobs/{{ id }}/cancel">
     <input type="hidden" name="csrf" value="{{ csrf_token }}">

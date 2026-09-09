@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Plan inspection · immich-rs{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="plan-title">
+  <p class="eyebrow">Authenticated immutable artifact</p>
+  <h1 id="plan-title">Upload plan inspection</h1>
+  <p>This browser summary is informational and cannot authorize a mutation.</p>
+  <dl class="summary-grid">
+    <div><dt>Plan schema</dt><dd>{{ schema_version }}</dd></div>
+    <div><dt>Source profile</dt><dd><code>{{ source_profile_id }}</code></dd></div>
+    <div><dt>Server profile</dt><dd><code>{{ server_profile_id }}</code></dd></div>
+    <div><dt>Operations</dt><dd>{{ operations }}</dd></div>
+    <div><dt>Media bytes</dt><dd>{{ media_bytes }}</dd></div>
+    <div><dt>Sidecars</dt><dd>{{ sidecars }}</dd></div>
+    <div><dt>Maximum logical effects</dt><dd>{{ max_logical_effects }}</dd></div>
+  </dl>
+  <h2>Canonical plan digest</h2>
+  <p><code>{{ plan_sha256 }}</code></p>
+  <p><a href="/plans/{{ reference }}/export">Export validated plan JSON</a> · <a href="/history">History</a></p>
+</section>
+{% endblock %}

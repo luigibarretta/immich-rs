@@ -133,7 +133,11 @@ impl WebConsole {
 
 async fn index(State(state): State<ConsoleState>, headers: HeaderMap) -> Response {
     if let Some(session) = authenticated_session(&state, &headers) {
-        return views::dashboard(&session.csrf_token, state.config.sources());
+        return views::dashboard(
+            &session.csrf_token,
+            state.config.sources(),
+            state.config.servers(),
+        );
     }
     pairing_response(&state, false)
 }

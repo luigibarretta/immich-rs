@@ -158,23 +158,28 @@ revision.
 ## Current capabilities
 
 The optional operator Web Console now has a tested loopback library surface for
-one-time bootstrap pairing, restart-ephemeral sessions and source-only folder
-scan/review through opaque operator-configured profiles. Scans run as bounded,
+one-time bootstrap pairing, restart-ephemeral sessions, source-only folder
+scan/review and server-bound folder upload planning through opaque
+operator-configured profiles. Work runs as bounded,
 owned in-memory jobs with authenticated polling, cooperative cancellation and
 joined shutdown; bounded authenticated SSE provides isolated replay with a
 polling fallback, and terminal summaries are published only after a complete
 plan. It applies exact Host/Origin/CSRF policy, contextual SSR escaping, private
 response headers and bounded connections, headers, bodies and deadlines.
-Operator configuration now also validates private state roots and exact server
+Operator configuration validates private state roots and exact server
 profiles. Disposable profiles require a literal loopback address; remote
 read-only HTTPS profiles require an explicit per-profile IP/CIDR allowlist, and
 every bounded DNS answer must match it before addresses can be pinned without
 weakening TLS hostname verification. Terminal scan history is now persisted in
 a distinct bounded `console-history-v1` SQLite store under the private operator
 state profile and exposed only to an
-authenticated session; it contains only workflow/status enums and aggregate
-counters, never job/user identifiers or source data. Server planning, immutable
-plan export, dry-run, apply and media-serving routes are not yet exposed. A
+authenticated session; it contains only workflow/status enums, opaque plan
+references and aggregate counters, never job/user identifiers or source data.
+Server-bound planning uses a strictly bounded private secret loader and the
+address-pinned read client. Completed plans are published atomically under
+opaque references in private state, revalidated on every authenticated
+inspection, and exported with bounded streaming. Dry-run, apply and
+media-serving routes are not yet exposed. A
 standalone web binary, native artifact and container are not yet supported. The
 CLI remains the canonical complete interface. See the
 [threat model](docs/web-console-threat-model.md) and

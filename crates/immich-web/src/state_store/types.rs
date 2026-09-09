@@ -1,13 +1,65 @@
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use immich_rs_application::UploadPlan;
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ArtifactRef(pub(super) [u8; 16]);
 
 impl ArtifactRef {
+    pub(super) fn random() -> Result<Self, crate::WebConfigError> {
+        let mut bytes = [0_u8; 16];
+        getrandom::fill(&mut bytes)
+            .map_err(|_| crate::WebConfigError::new("plan reference generation failed"))?;
+        Ok(Self(bytes))
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        let bytes = URL_SAFE_NO_PAD.decode(value).ok()?;
+        let reference = bytes.try_into().ok().map(Self)?;
+        (reference.encode() == value).then_some(reference)
+    }
+
+    #[must_use]
+    pub fn encode(self) -> String {
+        URL_SAFE_NO_PAD.encode(self.0)
+    }
+
     pub(super) fn from_vec(bytes: Vec<u8>) -> rusqlite::Result<Self> {
         bytes
             .try_into()
             .map(Self)
             .map_err(|_| rusqlite::Error::InvalidQuery)
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlanBinding {
+    pub schema_version: u32,
+    pub plan_sha256: String,
+    pub source_profile_id: String,
+    pub source_profile_sha256: String,
+    pub server_profile_id: String,
+    pub server_profile_sha256: String,
+    pub credential_generation: u64,
+    pub server_identity_sha256: String,
+    pub max_logical_effects: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PlanArtifact {
+    pub reference: ArtifactRef,
+    pub schema_version: u32,
+    pub plan_sha256: String,
+    pub max_logical_effects: u64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StoredUploadPlan {
+    pub reference: ArtifactRef,
+    pub plan: UploadPlan,
+    pub binding: PlanBinding,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

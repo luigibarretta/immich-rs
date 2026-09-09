@@ -392,9 +392,9 @@ Sequential gates are:
 3. **Implemented:** bounded authenticated SSE and polling, isolated replay,
    cooperative cancellation and owned shutdown;
 4. **In progress:** private state-root, exact-host/CIDR-pinned server profile
-   policy, and separate bounded terminal-history persistence are implemented;
-   server-bound probe planning, immutable inspection/export and offline dry-run
-   receipts remain gated;
+   policy, separate bounded terminal-history persistence, server-bound folder
+   probe/planning and immutable authenticated inspection/streaming export are
+   implemented; mandatory offline dry-run receipts remain gated;
 5. exact single-use folder apply grants against disposable loopback/HTTPS;
 6. Google Takeout, Apple Photos and Picasa source-only, dry-run and gated apply;
 7. TLS/OIDC LAN mode against a disposable identity provider;

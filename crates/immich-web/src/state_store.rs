@@ -1,4 +1,6 @@
 mod history;
+mod plan_io;
+mod plan_store;
 #[cfg(test)]
 mod tests;
 mod types;
@@ -8,7 +10,11 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use history::HistoryStore;
-pub use types::{HistoryKind, SafeCounters, StoredHistory, TerminalRecord, TerminalStatus};
+use plan_store::PlanStore;
+pub use types::{
+    ArtifactRef, HistoryKind, PlanArtifact, PlanBinding, SafeCounters, StoredHistory,
+    StoredUploadPlan, TerminalRecord, TerminalStatus,
+};
 
 use crate::{ResolvedStateProfile, WebConfigError, WebLimits};
 
@@ -19,9 +25,9 @@ const CHECKPOINTS_DIRECTORY: &str = "checkpoints";
 /// Fixed private state layout owned by the Web Console.
 pub struct ConsoleStore {
     history: HistoryStore,
-    _plans: PathBuf,
+    plans: PlanStore,
     _checkpoints: PathBuf,
-    _state_generation_sha256: String,
+    state_generation_sha256: String,
 }
 
 impl ConsoleStore {
@@ -36,16 +42,35 @@ impl ConsoleStore {
             limits.history_retention_days,
             now,
         )?;
+        let plans = PlanStore::new(
+            plans,
+            limits.plan_file_bytes,
+            limits.plan_store_bytes,
+            limits
+                .history_retained_rows
+                .saturating_mul(2)
+                .saturating_add(16),
+        );
+        plans.validate()?;
         Ok(Self {
             history,
-            _plans: plans,
+            plans,
             _checkpoints: checkpoints,
-            _state_generation_sha256: state.generation_sha256().to_owned(),
+            state_generation_sha256: state.generation_sha256().to_owned(),
         })
     }
 
     pub const fn history(&self) -> &HistoryStore {
         &self.history
+    }
+
+    pub const fn plans(&self) -> &PlanStore {
+        &self.plans
+    }
+
+    pub fn matches_state(&self, state: &ResolvedStateProfile) -> bool {
+        state.generation_sha256() == self.state_generation_sha256
+            && self.plans.is_below(state.root())
     }
 }
 

@@ -7,7 +7,7 @@ allowed; exceeding a hard maximum is a startup or request error.
 
 | Surface | Read/plan | Dry-run | Apply | Current status at ADR acceptance |
 |---|---:|---:|---:|---|
-| Folder source | Planned | Planned | Planned with exact grant | Not implemented |
+| Folder source | Implemented | Planned | Planned with exact grant | Authenticated scan and server-bound immutable plan |
 | Google Takeout | Planned | Planned | Planned with exact grant | Not implemented |
 | Apple Photos | Planned | Planned | Planned with exact grant | Not implemented |
 | Picasa | Planned | Planned | Planned with exact grant | Not implemented |
@@ -29,17 +29,28 @@ configured DNS-address limit, requires every answer to match the profile policy,
 deduplicates and pins the complete set, preserves TLS verification of the exact
 hostname, and forbids redirects. This deliberately permits explicitly
 configured private LAN/VPN ranges without granting a browser general SSRF
-authority. No server connection is exposed by the current slice.
+authority. Only an authenticated folder planning job can construct this read
+capability; source-only scan and later offline dry-run paths cannot construct it.
 
 The implemented `console-history-v1.sqlite3` store is separate from executor
 checkpoints. It uses a transactional strict schema, full-synchronous WAL with a
 bounded page count and post-write truncating checkpoints, age/count eviction,
 private state permissions, startup integrity validation, and fail-closed newer
 schema/corruption/size handling. Only terminal workflow/status enums, aggregate
-counters and future opaque plan references are admitted by its typed write API;
+counters and opaque plan references are admitted by its typed write API;
 the authenticated fixed-size history page does not expose internal sequences.
 Dry-run receipt persistence is reserved in schema v1 but is not yet exposed or
 written.
+
+Completed folder upload plans are pretty-JSON application artifacts stored in
+private create-new files under random 128-bit opaque references. A separate
+private binding contains only the plan digest, opaque source/server profile IDs,
+their generation digests, credential generation, authenticated server identity
+digest and exact logical-effect count. Publication uses bounded streaming
+serialization, synchronized files and atomic same-directory renames. Every
+inspection and streaming export revalidates the state-root identity, file type,
+permissions, size, identity, plan schema and all binding digests. It exposes no
+server origin or source path in the HTML summary.
 
 ## Numeric bounds
 
@@ -67,6 +78,7 @@ written.
 | History retention | 30 days | 90 days |
 | History database plus WAL | 32 MiB | 64 MiB |
 | Immutable plan file | 128 MiB | 256 MiB |
+| Aggregate immutable plan store | 512 MiB | 4 GiB |
 | Plan export response | 128 MiB | 256 MiB |
 | Dry-run receipt age for confirmation | 5 min | 10 min |
 | Production grant lifetime | 90 s | 120 s |

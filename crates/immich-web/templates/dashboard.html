@@ -21,6 +21,12 @@
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
         <button class="secondary" type="submit">Scan and review</button>
       </form>
+      {% for server in source.servers %}
+      <form method="post" action="/sources/{{ source.id }}/servers/{{ server.id }}/plan">
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <button type="submit">Plan for {{ server.id }}</button>
+      </form>
+      {% endfor %}
     </li>
   {% endfor %}
   </ul>

@@ -145,6 +145,12 @@ impl WebConfig {
         self.servers.iter().find(|profile| profile.id() == id)
     }
 
+    /// Configured server profiles in stable operator order.
+    #[must_use]
+    pub fn servers(&self) -> &[ServerProfile] {
+        &self.servers
+    }
+
     /// Resolve one opaque private state profile ID.
     #[must_use]
     pub fn state(&self, id: &str) -> Option<&StateProfile> {

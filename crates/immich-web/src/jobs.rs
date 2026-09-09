@@ -1,13 +1,11 @@
 mod subscription;
+mod types;
 mod worker;
 
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use immich_rs_application::{CancellationToken, ProgressStage};
 use tokio::sync::broadcast;
 
 use crate::state_store::{
@@ -16,118 +14,32 @@ use crate::state_store::{
 use crate::{WebConfig, WebLimits};
 
 pub use subscription::{JobSubscription, SubscribeError, SubscriptionDelivery};
-
-const JOB_ID_BYTES: usize = 16;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum JobStatus {
-    Queued,
-    Running,
-    Completed,
-    Failed,
-    Cancelled,
-}
-
-impl JobStatus {
-    #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Queued => "Queued",
-            Self::Running => "Running",
-            Self::Completed => "Completed",
-            Self::Failed => "Failed",
-            Self::Cancelled => "Cancelled",
-        }
-    }
-
-    #[must_use]
-    pub const fn terminal(self) -> bool {
-        matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct JobProgress {
-    pub sequence: u64,
-    pub stage: Option<ProgressStage>,
-    pub assets_observed: u64,
-    pub bytes_read: u64,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct JobSummary {
-    pub schema_version: u32,
-    pub assets: u64,
-    pub sidecars: u64,
-    pub bytes_read: u64,
-    pub warnings: usize,
-    pub errors: usize,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct JobSnapshot {
-    pub id: String,
-    pub source_label: String,
-    pub status: JobStatus,
-    pub cancellation_requested: bool,
-    pub progress: JobProgress,
-    pub summary: Option<JobSummary>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct JobEvent {
-    pub sequence: u64,
-    pub status: JobStatus,
-    pub cancellation_requested: bool,
-    pub progress: JobProgress,
-    pub summary: Option<JobSummary>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum AdmissionError {
-    Full,
-    UnknownProfile,
-    Unavailable,
-}
+pub use types::{AdmissionError, JobEvent, JobProgress, JobSnapshot, JobStatus, JobSummary};
+use types::{JobKind, StoredJob, random_job_id};
 
 #[derive(Clone)]
 pub struct JobManager {
     inner: Arc<JobsInner>,
 }
 
-pub struct JobsInner {
-    pub config: Arc<WebConfig>,
-    pub store: Arc<ConsoleStore>,
-    pub limits: WebLimits,
-    pub state: Mutex<JobsState>,
-    pub worker_available: Condvar,
+struct JobsInner {
+    config: Arc<WebConfig>,
+    store: Arc<ConsoleStore>,
+    limits: WebLimits,
+    state: Mutex<JobsState>,
+    worker_available: Condvar,
 }
 
-pub struct JobsState {
-    pub jobs: BTreeMap<String, StoredJob>,
+struct JobsState {
+    jobs: BTreeMap<String, StoredJob>,
     order: VecDeque<String>,
     handles: Vec<OwnedWorker>,
-    pub running: usize,
-    pub queued: usize,
-    pub shutting_down: bool,
+    running: usize,
+    queued: usize,
+    shutting_down: bool,
     worker_failed: bool,
     subscribers: usize,
     subscribers_by_owner: BTreeMap<[u8; 32], usize>,
-}
-
-pub struct StoredJob {
-    pub id: String,
-    pub owner: [u8; 32],
-    pub source_id: String,
-    pub source_label: String,
-    pub status: JobStatus,
-    pub cancellation_requested: bool,
-    pub cancellation: CancellationToken,
-    pub progress: JobProgress,
-    pub summary: Option<JobSummary>,
-    pub events: VecDeque<JobEvent>,
-    pub event_sender: broadcast::Sender<JobEvent>,
-    next_event_sequence: u64,
 }
 
 struct OwnedWorker {
@@ -159,6 +71,33 @@ impl JobManager {
     }
 
     pub fn admit(&self, owner: [u8; 32], source_id: &str) -> Result<String, AdmissionError> {
+        self.admit_kind(owner, source_id, JobKind::FolderScan)
+    }
+
+    pub fn admit_plan(
+        &self,
+        owner: [u8; 32],
+        source_id: &str,
+        server_id: &str,
+    ) -> Result<String, AdmissionError> {
+        if self.inner.config.server(server_id).is_none() {
+            return Err(AdmissionError::UnknownProfile);
+        }
+        self.admit_kind(
+            owner,
+            source_id,
+            JobKind::FolderPlan {
+                server_id: server_id.to_owned(),
+            },
+        )
+    }
+
+    fn admit_kind(
+        &self,
+        owner: [u8; 32],
+        source_id: &str,
+        kind: JobKind,
+    ) -> Result<String, AdmissionError> {
         let source_label = self
             .inner
             .config
@@ -189,21 +128,15 @@ impl JobManager {
             return Err(AdmissionError::Full);
         }
         let (event_sender, _receiver) = broadcast::channel(self.inner.limits.sse_replay_events);
-        let cancellation = CancellationToken::default();
-        let mut stored = StoredJob {
-            id: id.clone(),
+        let mut stored = StoredJob::new(
+            id.clone(),
             owner,
-            source_id: source_id.to_owned(),
+            source_id.to_owned(),
             source_label,
-            status: JobStatus::Queued,
-            cancellation_requested: false,
-            cancellation,
-            progress: JobProgress::default(),
-            summary: None,
-            events: VecDeque::with_capacity(self.inner.limits.sse_replay_events),
+            kind,
             event_sender,
-            next_event_sequence: 0,
-        };
+            self.inner.limits.sse_replay_events,
+        );
         push_event(&mut stored, self.inner.limits.sse_replay_events);
         state.jobs.insert(id.clone(), stored);
         state.order.push_back(id.clone());
@@ -243,7 +176,7 @@ impl JobManager {
             .get(id)
             .filter(|job| &job.owner == owner)
             .is_some_and(|job| job.status == JobStatus::Queued);
-        let mut record_cancelled = false;
+        let mut record_cancelled = None;
         {
             let job = state.jobs.get_mut(id).filter(|job| &job.owner == owner)?;
             if !job.status.terminal() && !job.cancellation_requested {
@@ -251,7 +184,7 @@ impl JobManager {
                 job.cancellation.cancel();
                 if was_queued {
                     job.status = JobStatus::Cancelled;
-                    record_cancelled = true;
+                    record_cancelled = Some(job.kind.history_kind());
                 }
                 push_event(job, self.inner.limits.sse_replay_events);
                 self.inner.worker_available.notify_all();
@@ -263,7 +196,7 @@ impl JobManager {
         let job = state.jobs.get(id).filter(|job| &job.owner == owner)?;
         let snapshot = snapshot_job(job);
         drop(state);
-        if record_cancelled && record_cancelled_scan(&self.inner).is_err() {
+        if record_cancelled.is_some_and(|kind| record_cancelled_job(&self.inner, kind).is_err()) {
             if let Ok(mut state) = self.inner.state.lock() {
                 state.worker_failed = true;
             }
@@ -312,10 +245,10 @@ impl JobManager {
     }
 }
 
-fn record_cancelled_scan(inner: &JobsInner) -> Result<(), crate::WebConfigError> {
+fn record_cancelled_job(inner: &JobsInner, kind: HistoryKind) -> Result<(), crate::WebConfigError> {
     inner.store.history().record_terminal(&TerminalRecord {
         recorded_unix: now_unix()?,
-        kind: HistoryKind::FolderScan,
+        kind,
         status: TerminalStatus::Cancelled,
         plan: None,
         counters: SafeCounters::default(),
@@ -323,7 +256,7 @@ fn record_cancelled_scan(inner: &JobsInner) -> Result<(), crate::WebConfigError>
     Ok(())
 }
 
-pub fn push_event(job: &mut StoredJob, replay_limit: usize) {
+fn push_event(job: &mut StoredJob, replay_limit: usize) {
     job.next_event_sequence = job.next_event_sequence.saturating_add(1);
     let event = JobEvent {
         sequence: job.next_event_sequence,
@@ -347,6 +280,7 @@ fn snapshot_job(job: &StoredJob) -> JobSnapshot {
         cancellation_requested: job.cancellation_requested,
         progress: job.progress,
         summary: job.summary,
+        artifact: job.artifact.clone(),
     }
 }
 
@@ -377,12 +311,4 @@ fn evict_terminal(state: &mut JobsState, retained: usize) {
             state.jobs.remove(&id);
         }
     }
-}
-
-fn random_job_id() -> Result<String, ()> {
-    let mut bytes = [0_u8; JOB_ID_BYTES];
-    getrandom::fill(&mut bytes).map_err(|_| ())?;
-    let id = URL_SAFE_NO_PAD.encode(bytes);
-    bytes.fill(0);
-    Ok(id)
 }

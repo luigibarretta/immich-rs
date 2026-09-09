@@ -1,6 +1,5 @@
 use immich_rs_application::{ApplicationError, ApplicationErrorClass};
 use immich_rs_client::{ClientError, ClientErrorClass};
-use immich_rs_executor::{ExecutorError, ExecutorErrorClass};
 use immich_rs_sources::ScanError;
 
 const USAGE_EXIT: u8 = 2;
@@ -44,13 +43,6 @@ impl CliFailure {
         }
     }
 
-    pub fn cancelled() -> Self {
-        Self {
-            exit_code: CANCELLED_EXIT,
-            message: "operation cancelled cleanly".to_owned(),
-        }
-    }
-
     pub fn from_scan(error: &ScanError) -> Self {
         let exit_code = match error {
             ScanError::Cancelled => CANCELLED_EXIT,
@@ -70,23 +62,6 @@ impl CliFailure {
             ClientErrorClass::Cancelled => CANCELLED_EXIT,
             ClientErrorClass::Protocol => INVARIANT_EXIT,
             _ => NETWORK_EXIT,
-        };
-        Self {
-            exit_code,
-            message: error.to_string(),
-        }
-    }
-
-    pub fn from_executor(error: ExecutorError) -> Self {
-        let exit_code = match error.class() {
-            ExecutorErrorClass::Cancelled => CANCELLED_EXIT,
-            ExecutorErrorClass::Checkpoint => CHECKPOINT_EXIT,
-            ExecutorErrorClass::Destination => DESTINATION_EXIT,
-            ExecutorErrorClass::SourceChanged
-            | ExecutorErrorClass::SourceDiagnostics
-            | ExecutorErrorClass::UnsupportedMetadata => SOURCE_EXIT,
-            ExecutorErrorClass::Client => NETWORK_EXIT,
-            _ => INVARIANT_EXIT,
         };
         Self {
             exit_code,

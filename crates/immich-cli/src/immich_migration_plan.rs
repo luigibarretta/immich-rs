@@ -1,5 +1,4 @@
-use immich_rs_core::CancellationToken;
-use immich_rs_executor::create_migration_plan;
+use immich_rs_application::{CancellationToken, plan_migration};
 
 use crate::args::MigrationPlanRequest;
 use crate::failure::CliFailure;
@@ -10,22 +9,8 @@ pub async fn run(request: MigrationPlanRequest) -> Result<(), CliFailure> {
     signal::install(cancellation.clone())?;
     let (source, destination) =
         network::migration_read_clients(&request.source_server, &request.destination_server)?;
-    let source_server = source
-        .probe(&cancellation)
+    let plan = plan_migration(&source, &destination, request.config, &cancellation)
         .await
-        .map_err(CliFailure::from_client)?;
-    let destination_server = destination
-        .probe(&cancellation)
-        .await
-        .map_err(CliFailure::from_client)?;
-    let plan = create_migration_plan(
-        &source,
-        &source_server,
-        &destination_server,
-        request.config,
-        &cancellation,
-    )
-    .await
-    .map_err(CliFailure::from_executor)?;
+        .map_err(|error| CliFailure::from_application(&error))?;
     output::write_json(&plan, "migration plan")
 }

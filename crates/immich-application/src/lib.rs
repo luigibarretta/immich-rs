@@ -11,6 +11,7 @@
 mod archive;
 mod error;
 mod folder;
+mod migration;
 mod progress;
 mod source_plans;
 mod upload_apply;
@@ -21,9 +22,10 @@ pub use archive::{apply_archive_manifest, plan_archive};
 pub use error::{ApplicationError, ApplicationErrorClass};
 pub use folder::{FolderPlanRequest, plan_folder};
 pub use immich_rs_core::{Cancellation, CancellationToken, NormalizedPlan, ProgressStage};
-pub use immich_rs_executor::{ArchivePlanningConfig, ArchiveSelection};
+pub use immich_rs_executor::{ArchivePlanningConfig, ArchiveSelection, MigrationPlanningConfig};
 pub use immich_rs_sources::{ApplePhotosScanConfig, PicasaScanConfig, TakeoutScanConfig};
 pub use immich_rs_sources::{FolderScanConfig, ScanError};
+pub use migration::{apply_migration_plan, dry_run_migration_plan, plan_migration};
 pub use progress::{
     APPLICATION_PROGRESS_SCHEMA_VERSION, ApplicationNoProgress, ApplicationProgressEvent,
     ApplicationProgressObserver,

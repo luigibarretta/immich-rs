@@ -1,5 +1,4 @@
-use immich_rs_core::CancellationToken;
-use immich_rs_executor::{MigrationApplyContext, apply_migration, dry_run_migration};
+use immich_rs_application::{CancellationToken, apply_migration_plan, dry_run_migration_plan};
 
 use crate::args::MigrationApplyRequest;
 use crate::failure::CliFailure;
@@ -10,8 +9,8 @@ pub async fn run(request: MigrationApplyRequest) -> Result<(), CliFailure> {
     let cancellation = CancellationToken::default();
     signal::install(cancellation.clone())?;
     if request.dry_run {
-        let report = dry_run_migration(&plan, &request.config, &cancellation)
-            .map_err(CliFailure::from_executor)?;
+        let report = dry_run_migration_plan(&plan, &request.config, &cancellation)
+            .map_err(|error| CliFailure::from_application(&error))?;
         return output::write_json(&report, "migration dry-run report");
     }
     let checkpoint = request
@@ -27,35 +26,15 @@ pub async fn run(request: MigrationApplyRequest) -> Result<(), CliFailure> {
         .as_deref()
         .ok_or_else(|| CliFailure::usage("--destination-server is required for apply"))?;
     let (source, destination) = network::migration_read_clients(source_origin, destination_origin)?;
-    let source_server = source
-        .probe(&cancellation)
-        .await
-        .map_err(CliFailure::from_client)?;
-    let destination_server = destination
-        .probe(&cancellation)
-        .await
-        .map_err(CliFailure::from_client)?;
-    if source_server.migration_server() != plan.source_server
-        || destination_server.migration_server() != plan.destination_server
-    {
-        return Err(CliFailure::usage(
-            "migration servers do not match the immutable plan",
-        ));
-    }
-    let destination = destination
-        .authorize_import(destination_server.clone())
-        .map_err(CliFailure::from_client)?;
-    let report = apply_migration(
+    let report = apply_migration_plan(
         &plan,
         checkpoint,
         &request.config,
-        MigrationApplyContext::new(&source, &source_server, &destination, &destination_server),
+        &source,
+        destination,
         &cancellation,
     )
     .await
-    .map_err(CliFailure::from_executor)?;
-    if report.cancelled {
-        return Err(CliFailure::cancelled());
-    }
+    .map_err(|error| CliFailure::from_application(&error))?;
     output::write_json(&report, "migration apply report")
 }

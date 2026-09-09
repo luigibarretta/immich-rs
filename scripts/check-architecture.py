@@ -169,6 +169,18 @@ def check() -> list[str]:
     forbidden_archive_tokens = ("authorize_upload", "immichuploadclient", "apply_upload")
     if any(token in archive_sources for token in forbidden_archive_tokens):
         failures.append("archive workflow can construct a server mutation capability")
+    for migration_name in ("immich_migration_plan.rs", "immich_migration_apply.rs"):
+        migration_frontend = (
+            REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / migration_name
+        ).read_text(encoding="utf-8")
+        if (
+            "immich_rs_application" not in migration_frontend
+            or any(
+                token in migration_frontend
+                for token in ("immich_rs_client", "immich_rs_core", "immich_rs_executor")
+            )
+        ):
+            failures.append(f"{migration_name}: CLI bypasses the application workflow facade")
     client_root = REPOSITORY_ROOT / "crates" / "immich-client" / "src"
     client_source = (client_root / "lib.rs").read_text(encoding="utf-8")
     upload_source = (client_root / "upload.rs").read_text(encoding="utf-8")

@@ -15,6 +15,20 @@ body {
   background: radial-gradient(circle at top left, #18264c 0, #0b1020 45%);
 }
 
+.skip-link {
+  position: absolute;
+  z-index: 1;
+  top: -4rem;
+  left: 1rem;
+  padding: 0.75rem 1rem;
+  background: #ffd36b;
+  color: #07101f;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
 .site-header {
   display: flex;
   align-items: baseline;
@@ -91,7 +105,7 @@ input[type="password"] {
 button {
   margin-top: 1rem;
   padding: 0.7rem 1rem;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 0.5rem;
   background: #7ab8ff;
   color: #07101f;
@@ -182,6 +196,7 @@ a {
 
 code {
   color: #9cd4ff;
+  overflow-wrap: anywhere;
 }
 
 .table-scroll {
@@ -211,5 +226,16 @@ th {
   .source-list li {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -4,7 +4,7 @@
 <section class="panel" aria-labelledby="job-title" data-events-url="/jobs/{{ id }}/events" data-terminal="{{ terminal }}">
   <p class="eyebrow">Bounded operator job</p>
   <h1 id="job-title">{{ label }}</h1>
-  <p id="job-status" class="job-status" role="status" aria-live="polite">{{ status }} · {{ stage }}</p>
+  <p id="job-status" class="job-status" role="status" aria-live="polite" aria-atomic="true">{{ status }} · {{ stage }}</p>
   {% if cancellation_requested %}<p>Cooperative cancellation requested.</p>{% endif %}
   <dl class="summary-grid">
     <div><dt>Assets observed</dt><dd id="assets-observed">{{ assets_observed }}</dd></div>

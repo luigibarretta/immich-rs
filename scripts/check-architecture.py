@@ -56,6 +56,20 @@ def check() -> list[str]:
         or "scan_folder(" in folder_frontend
     ):
         failures.append("folder CLI does not use only the application workflow facade")
+    for source_name, direct_token in (
+        ("google_takeout.rs", "scan_google_takeout_inputs"),
+        ("apple_photos.rs", "scan_apple_photos_inputs"),
+        ("picasa.rs", "scan_picasa_inputs"),
+    ):
+        source_frontend = (
+            REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / source_name
+        ).read_text(encoding="utf-8")
+        if (
+            "immich_rs_application" not in source_frontend
+            or "immich_rs_sources" in source_frontend
+            or direct_token in source_frontend
+        ):
+            failures.append(f"{source_name}: CLI bypasses the application workflow facade")
     application_source = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (REPOSITORY_ROOT / "crates" / "immich-application" / "src").glob("*.rs")

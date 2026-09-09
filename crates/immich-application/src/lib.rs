@@ -21,10 +21,22 @@ mod upload_plans;
 pub use archive::{apply_archive_manifest, plan_archive};
 pub use error::{ApplicationError, ApplicationErrorClass};
 pub use folder::{FolderPlanRequest, plan_folder};
-pub use immich_rs_core::{Cancellation, CancellationToken, NormalizedPlan, ProgressStage};
-pub use immich_rs_executor::{ArchivePlanningConfig, ArchiveSelection, MigrationPlanningConfig};
-pub use immich_rs_sources::{ApplePhotosScanConfig, PicasaScanConfig, TakeoutScanConfig};
-pub use immich_rs_sources::{FolderScanConfig, ScanError};
+pub use immich_rs_client::{
+    ApiKey, ClientConfig, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint,
+    ImmichReadClient, TlsRootCertificates, upload_plan_sha256,
+};
+pub use immich_rs_core::{
+    ArchiveManifest, Cancellation, CancellationToken, MigrationPlan, NormalizedPlan, ProgressStage,
+    UploadPlan,
+};
+pub use immich_rs_executor::{
+    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, MigrationPlanningConfig,
+    PicasaImportConfig, TakeoutImportConfig, UploadExecutionConfig,
+};
+pub use immich_rs_sources::{
+    AlbumMode, ApplePhotosScanConfig, FolderScanConfig, PicasaScanConfig, ScanError,
+    TakeoutScanConfig,
+};
 pub use migration::{apply_migration_plan, dry_run_migration_plan, plan_migration};
 pub use progress::{
     APPLICATION_PROGRESS_SCHEMA_VERSION, ApplicationNoProgress, ApplicationProgressEvent,

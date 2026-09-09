@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::io::{self, BufReader, Write};
 use std::path::Path;
 
-use immich_rs_core::{ArchiveManifest, MigrationPlan, UploadPlan};
+use immich_rs_application::{ArchiveManifest, MigrationPlan, UploadPlan};
 
 use crate::failure::CliFailure;
 

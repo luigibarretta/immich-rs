@@ -566,9 +566,7 @@ version = "0.1.0-rc.1"
 dependencies = [
  "ctrlc",
  "immich-rs-application",
- "immich-rs-client",
  "immich-rs-core",
- "immich-rs-executor",
  "immich-rs-sources",
  "serde",
  "serde_json",

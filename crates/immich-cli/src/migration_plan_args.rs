@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use immich_rs_executor::MigrationPlanningConfig;
+use immich_rs_application::MigrationPlanningConfig;
 
 use crate::args::{self, MigrationPlanRequest};
 use crate::config::EffectiveConfig;

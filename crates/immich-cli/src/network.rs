@@ -1,4 +1,4 @@
-use immich_rs_client::{
+use immich_rs_application::{
     ApiKey, ClientConfig, EndpointAccess, ImmichEndpoint, ImmichReadClient, TlsRootCertificates,
 };
 

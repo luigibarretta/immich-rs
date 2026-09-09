@@ -2,12 +2,10 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use immich_rs_executor::{
-    ApplePhotosImportConfig, ArchivePlanningConfig, ArchiveSelection, MigrationPlanningConfig,
-    PicasaImportConfig, TakeoutImportConfig, UploadExecutionConfig,
-};
-use immich_rs_sources::{
-    AlbumMode, ApplePhotosScanConfig, FolderScanConfig, PicasaScanConfig, TakeoutScanConfig,
+use immich_rs_application::{
+    AlbumMode, ApplePhotosImportConfig, ApplePhotosScanConfig, ArchivePlanningConfig,
+    ArchiveSelection, FolderScanConfig, MigrationPlanningConfig, PicasaImportConfig,
+    PicasaScanConfig, TakeoutImportConfig, TakeoutScanConfig, UploadExecutionConfig,
 };
 
 use crate::config::EffectiveConfig;

@@ -23,13 +23,7 @@ ALLOWED_INTERNAL = {
         "immich-rs-executor",
         "immich-rs-sources",
     },
-    "immich-rs-cli": {
-        "immich-rs-application",
-        "immich-rs-client",
-        "immich-rs-core",
-        "immich-rs-executor",
-        "immich-rs-sources",
-    },
+    "immich-rs-cli": {"immich-rs-application"},
     "immich-rs-client": {"immich-rs-core"},
     "immich-rs-core": set(),
     "immich-rs-executor": {"immich-rs-client", "immich-rs-core", "immich-rs-sources"},
@@ -52,6 +46,20 @@ def check() -> list[str]:
         unexpected = actual - ALLOWED_INTERNAL[package]
         if unexpected:
             failures.append(f"{package}: forbidden internal dependencies: {sorted(unexpected)}")
+    cli_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (REPOSITORY_ROOT / "crates" / "immich-cli" / "src").glob("*.rs")
+    )
+    if any(
+        token in cli_source
+        for token in (
+            "immich_rs_client",
+            "immich_rs_core",
+            "immich_rs_executor",
+            "immich_rs_sources",
+        )
+    ):
+        failures.append("CLI production source bypasses the application crate")
     folder_frontend = (
         REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "folder.rs"
     ).read_text(encoding="utf-8")

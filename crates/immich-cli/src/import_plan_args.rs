@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use immich_rs_executor::{ApplePhotosImportConfig, TakeoutImportConfig};
+use immich_rs_application::{ApplePhotosImportConfig, TakeoutImportConfig};
 
 use crate::args::{self, UploadApplePhotosRequest, UploadTakeoutRequest};
 use crate::config::EffectiveConfig;

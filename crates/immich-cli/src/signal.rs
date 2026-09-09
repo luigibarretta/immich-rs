@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
 
-use immich_rs_core::CancellationToken;
+use immich_rs_application::CancellationToken;
 
 use crate::failure::CliFailure;
 

@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use immich_rs_executor::PicasaImportConfig;
+use immich_rs_application::PicasaImportConfig;
 
 use crate::args::{self, PicasaRequest, UploadPicasaRequest};
 use crate::config::EffectiveConfig;

@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use immich_rs_sources::FolderScanConfig;
+use immich_rs_application::FolderScanConfig;
 
 use crate::args::{
     self, ApplePhotosRequest, ArchivePlanRequest, FolderRequest, TakeoutRequest,

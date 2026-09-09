@@ -1,6 +1,6 @@
-use immich_rs_application::{ApplicationError, ApplicationErrorClass};
-use immich_rs_client::{ClientError, ClientErrorClass};
-use immich_rs_sources::ScanError;
+use immich_rs_application::{
+    ApplicationError, ApplicationErrorClass, ClientError, ClientErrorClass, ScanError,
+};
 
 const USAGE_EXIT: u8 = 2;
 const SOURCE_EXIT: u8 = 4;

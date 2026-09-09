@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use immich_rs_client::upload_plan_sha256;
+use immich_rs_application::upload_plan_sha256;
 use serde::Serialize;
 
 use crate::config::EffectiveConfig;

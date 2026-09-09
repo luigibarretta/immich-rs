@@ -1,8 +1,9 @@
 use std::ffi::OsString;
 use std::time::Duration;
 
-use immich_rs_executor::UploadExecutionConfig;
-use immich_rs_sources::{ApplePhotosScanConfig, PicasaScanConfig, TakeoutScanConfig};
+use immich_rs_application::{
+    ApplePhotosScanConfig, PicasaScanConfig, TakeoutScanConfig, UploadExecutionConfig,
+};
 
 use crate::args::{self, ApplyRequest, ArchiveApplyRequest, ProductionWriteRequest};
 use crate::config::EffectiveConfig;

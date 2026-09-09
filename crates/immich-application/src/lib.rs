@@ -12,6 +12,7 @@ mod error;
 mod folder;
 mod progress;
 mod source_plans;
+mod upload_apply;
 mod upload_execution;
 mod upload_plans;
 
@@ -25,6 +26,10 @@ pub use progress::{
     ApplicationProgressObserver,
 };
 pub use source_plans::{SourcePlanRequest, plan_apple_photos, plan_google_takeout, plan_picasa};
+pub use upload_apply::{
+    PreparedUploadApply, ProductionWriteRequest, UploadApplyReport, UploadApplyRequest,
+    apply_prepared_upload, prepare_upload_apply,
+};
 pub use upload_execution::{UploadDryRunReport, UploadDryRunRequest, dry_run_upload_plan};
 pub use upload_plans::{
     FolderUploadPlanRequest, SourceUploadPlanRequest, plan_apple_photos_upload, plan_folder_upload,

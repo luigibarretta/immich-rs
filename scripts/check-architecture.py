@@ -128,6 +128,17 @@ def check() -> list[str]:
         for token in ("immich_rs_client", "api_key", "server", "authorize_upload")
     ):
         failures.append("application dry-run can construct a server capability")
+    upload_apply_source = (
+        REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "upload_apply.rs"
+    ).read_text(encoding="utf-8")
+    if (
+        "immich_rs_application" not in upload_apply_source
+        or any(
+            token in upload_apply_source
+            for token in ("immich_rs_client", "immich_rs_core", "immich_rs_executor")
+        )
+    ):
+        failures.append("upload apply CLI bypasses the application workflow facade")
     takeout_source = (
         REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "google_takeout.rs"
     ).read_text(encoding="utf-8")

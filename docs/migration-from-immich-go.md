@@ -4,9 +4,11 @@ No supported immich-rs release is published yet. A source-built client from an
 exact green revision may use only the proven production surface: verified
 remote HTTPS, read-only archive and immutable plan-bound folder, Google
 Takeout, Apple Photos and Picasa imports. Every remote read/write
-acknowledgement is CLI-only; no
-configuration file, environment variable or Compose file can silently enable
-production. Immich-to-Immich migration remains disposable-loopback only.
+acknowledgement remains explicit. The existing CLI flags are unchanged; the
+optional Web Console can authorize the same folder and source-import effects
+only after authenticated plan review, offline dry-run and an exact single-use
+grant. No configuration file, environment variable or Compose file can silently
+enable production. Immich-to-Immich migration remains disposable-loopback only.
 Delete, replace, trash and independent maintenance remain absent.
 
 ## Compare without mutation
@@ -56,7 +58,7 @@ endpoint with production.
 1. Verify an Immich backup or restore point independently and retain its
    bounded operator reference.
 2. Create a temporary least-privilege API key for only the selected plan. A
-   A source-aware import may require asset upload/read/update and album
+   source-aware import may require asset upload/read/update and album
    read/create/membership permissions; it never requires delete or trash.
 3. Create and inspect the immutable server-bound plan, preserve its SHA-256 and
    maximum mutation count, then run `apply upload --dry-run` without a key.
@@ -74,6 +76,18 @@ The periodic homelab immich-go smoke remains unchanged. See the
 [Phase 9 Apple](compatibility/phase9-apple-photos-import.md) or
 [Phase 10 Picasa](compatibility/phase10-picasa-import.md) matrix before
 cutover. Immich-to-Immich production cutover is intentionally absent.
+
+For the optional Web Console, configure only opaque source, state and
+`production_read` server profiles, including the exact HTTPS hostname, allowed
+address CIDRs and credential generation. Authenticate, create and inspect the
+server-bound plan, then complete its offline dry-run. Only afterward retype the
+exact canonical digest and maximum logical-effect count plus the independently
+verified backup reference. The resulting grant is session-, process-boot-,
+profile-, credential-, receipt- and job-bound, expires quickly and is consumed
+atomically with admission. Logout or restart invalidates unused authority;
+cancelled or interrupted checkpoint resume requires another dry-run and
+confirmation. The Web Console tests use only synthetic/disposable endpoints and
+do not replace the pending external Apple/Picasa private-export evidence.
 
 ## Rollback
 

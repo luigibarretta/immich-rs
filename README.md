@@ -157,8 +157,8 @@ revision.
 
 ## Current capabilities
 
-The optional operator Web Console now has a tested loopback and direct-TLS LAN
-library surface. Loopback uses one-time bootstrap pairing; LAN mode uses OIDC
+The optional operator Web Console now has tested loopback and direct-TLS LAN
+interfaces. Loopback uses one-time bootstrap pairing; LAN mode uses OIDC
 authorization code with PKCE and restart-ephemeral sessions. Source-only folder,
 Google Takeout, Apple Photos and Picasa scan/review plus server-bound immutable
 upload planning through opaque operator-configured profiles. Import profiles
@@ -210,6 +210,20 @@ native release artifact has been published yet. The CLI remains the canonical
 complete interface. See the [container guide](docs/container.md),
 [threat model](docs/web-console-threat-model.md) and
 [capability/resource matrix](docs/web-console-resources.md).
+
+The console exposes nine fixed, label-free aggregate gauges at authenticated
+`GET /metrics` on the same listener. It has no separate bearer credential or
+network exception: exact Host, session, direct-TLS and OIDC policy continue to
+apply. Keyboard skip navigation, landmarks, scoped history headings, live job
+status, polling fallback, reduced-motion CSS and safe DOM updates are covered
+by SSR assertions and a synthetic loopback headless-browser gate. Metrics SHA
+`f079f16433e75f7417b4988e964575c08b41cb33` is green in Gitea
+[run 6461](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6461),
+and browser/accessibility SHA
+`42c8a98c0a6907c16e4204a309e38397a83a7f23` is green in
+[run 6463](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6463).
+See the [operator and recovery guide](docs/web-console-operations.md) before
+retaining or restoring console state.
 
 - deterministic recursive folder discovery with bounded entry and path limits;
 - one-file-at-a-time SHA-256 streaming through a configurable bounded buffer;
@@ -487,9 +501,11 @@ environment variables or Compose. See the
 - The migration source capability has no mutation methods, its key must differ
   from the destination key and the current transport accepts only two distinct
   disposable loopback origins.
-- Disposable transport accepts only literal loopback origins. Production
-  transport accepts only verified remote HTTPS and requires explicit CLI-only
-  read authorization; upload also requires the exact write confirmation set.
+- Disposable transport accepts only literal loopback origins. CLI production
+  transport accepts only verified remote HTTPS and retains its explicit
+  CLI-only read/write confirmations. The optional console instead requires an
+  authenticated profile-bound dry-run receipt and exact single-use grant; it
+  cannot weaken the CLI contract.
 - API keys exist only in `IMMICH_RS_API_KEY` or the bounded regular file named
   by `IMMICH_RS_API_KEY_FILE` and are redacted from outputs.
 - Committed fixture media, API responses, credentials and identities are

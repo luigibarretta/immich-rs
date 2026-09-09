@@ -101,6 +101,35 @@ Sessions are rotated on login, use Secure/HttpOnly/SameSite=Strict cookies and
 retain the existing idle/absolute limits. Forwarded headers and trusted
 reverse-proxy termination are unsupported and rejected.
 
+## Aggregate metrics
+
+Authenticated `GET /metrics` returns a fixed Prometheus text payload on the
+same configured console listener. Exact Host and session checks apply in
+loopback and direct-TLS LAN modes; LAN authentication is still OIDC, TLS is
+still mandatory, and forwarded headers remain rejected. There is no separate
+metrics listener, bearer token or browser-configurable network target.
+
+The complete metric allowlist is:
+
+- `immich_rs_web_sessions_active`;
+- `immich_rs_web_jobs_queued`;
+- `immich_rs_web_jobs_running`;
+- `immich_rs_web_jobs_completed`;
+- `immich_rs_web_jobs_failed`;
+- `immich_rs_web_jobs_cancelled`;
+- `immich_rs_web_jobs_retained`;
+- `immich_rs_web_sse_subscribers`;
+- `immich_rs_web_history_rows`.
+
+All are instantaneous aggregate gauges with no labels. They are not durable
+counters. Filenames, paths, plan/profile/source hashes, origins, job, user or
+session identifiers, and media metadata are absent by construction and by
+forbidden-value tests. Session/job lock failure or history-store failure returns
+503 instead of partial metrics. A logged-out or expired session receives 401.
+Automated bearer-token scraping is unsupported in this version; an operator
+must deliberately supply a current protected console session under the same
+network policy.
+
 ## Numeric bounds
 
 | Resource | Default | Hard maximum |
@@ -150,4 +179,7 @@ never used as a substitute for the immutable plan's maximum logical effects.
 
 History eviction removes oldest terminal rows in bounded transactions. Active
 jobs are never evicted. Reaching a disk, plan, job or database hard bound fails
-closed without truncating an authoritative artifact.
+closed without truncating an authoritative artifact. Immutable plans and apply
+checkpoints are not automatically pruned in this version; the safe rollover
+procedure is documented in the
+[operator and recovery guide](web-console-operations.md).

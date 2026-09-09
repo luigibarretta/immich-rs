@@ -186,3 +186,64 @@ Production authorization is intentionally not configurable. The read and write
 acknowledgements, exact plan digest, operation budget and verified-backup
 reference exist only as explicit CLI options on the invocation that uses them.
 They have no TOML or environment equivalents and are not persisted verbatim.
+
+## Web Console configuration namespace
+
+`immich-rs-web` uses a separate strict schema-v1 TOML. Select it with
+`--config /absolute/path/to/immich-rs-web.toml` or, for the standalone binary,
+`IMMICH_RS_WEB_CONFIG`; the command-line selector wins. No other
+`IMMICH_RS_WEB_*` environment variable is accepted. Unknown keys, sections,
+profile kinds and schema versions fail startup closed, and the bounded config
+file must be regular and non-symlink.
+
+This minimal loopback configuration enables authenticated folder scan/review
+without constructing a server client:
+
+```toml
+schema_version = 1
+
+[web]
+listen_address = "127.0.0.1:2285"
+public_origin = "http://127.0.0.1:2285"
+bootstrap_secret_file = "/run/secrets/console-bootstrap"
+history_state_id = "console"
+
+[[sources]]
+id = "camera-roll"
+label = "Camera roll"
+allowed_root = "/sources"
+relative_root = "."
+generation = 1
+
+[[states]]
+id = "console"
+label = "Console state"
+allowed_root = "/state"
+relative_root = "."
+generation = 1
+```
+
+The bootstrap value is a private regular UTF-8 file containing 16–256 bytes,
+with at most one trailing line ending. On Unix, bootstrap, API-key, OIDC-client
+and TLS-private-key files require owner-only permissions; the state root
+requires private directory permissions. Browser requests carry only opaque
+profile IDs. Absolute source/state paths, secret paths, server origins and
+adapter limits remain operator-owned TOML.
+
+A folder profile uses exactly one contained `relative_root`. A
+`google_takeout`, `apple_photos` or `picasa` profile instead uses one contained
+directory or a bounded `relative_inputs` array of contained ZIP files. Its
+`[sources.scan]`, `[sources.options]` and `[sources.upload]` values form the
+source generation binding. Server profiles are either literal-loopback
+`disposable` targets or exact-hostname HTTPS `production_read` targets with an
+explicit private/public IPv4/IPv6 CIDR policy, credential generation and
+optional private CA file. See the
+[capability/resource matrix](web-console-resources.md) and
+[direct-TLS LAN example](web-console-lan.md) for the complete boundaries.
+
+Increment the affected source, state, server or `credential_generation` value
+whenever its operator-owned input changes. Existing plans, receipts and unused
+grants then fail binding checks; do not reuse a generation number to conceal
+drift. Production confirmation remains an authenticated, short-lived browser
+action bound to an already completed dry-run, never a TOML or environment
+setting.

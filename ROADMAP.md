@@ -379,9 +379,8 @@ this is not a non-production shadow, WAN or production claim.
 
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
-and authenticated loopback folder scan/review library surface are implemented.
-The release-bundle and observability closeout slices stay unsupported until
-their evidence gates are green.
+and all nine sequential implementation gates below are complete. No Web Console
+release artifact has been published.
 
 Sequential gates are:
 
@@ -413,8 +412,10 @@ Sequential gates are:
    container test are implemented. The signed-tag pipeline builds both products
    on all five native targets and admits separate attested amd64/arm64 OCI
    archives only into one complete signed checksum bundle;
-9. aggregate metrics, recovery/operator documentation, accessibility and
-   browser regression closeout.
+9. **Implemented:** authenticated label-free aggregate metrics, bounded
+   retention and fail-closed recovery guidance, semantic SSR improvements and
+   a synthetic loopback headless-browser regression gate. The metrics and
+   browser tranches are green in exact-SHA Gitea runs 6461 and 6463.
 
 Production Immich-to-Immich migration, gallery/media serving, arbitrary path or
 URL input, and delete/replace/trash/tag/people/stack/maintenance operations are

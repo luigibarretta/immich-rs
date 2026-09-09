@@ -38,6 +38,11 @@ Semantic Versioning.
 - Authenticated `immich-rs-web` operator binary with a separate hardened local
   OCI image, opt-in loopback-published Compose profile, five-target native
   artifacts and an attested multiarch image in the signed release bundle.
+- Label-free authenticated aggregate Web Console metrics, bounded terminal
+  history, immutable private plans and fail-closed recovery guidance.
+- Keyboard-accessible server-rendered console navigation, semantic history and
+  live-status markup, reduced-motion CSS and a synthetic loopback headless
+  browser regression gate.
 
 This is the first signed release candidate. Production migration, destructive
 maintenance and compatibility beyond the documented Immich v3.1.x surfaces

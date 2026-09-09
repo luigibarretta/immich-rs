@@ -115,7 +115,10 @@ and use container paths in the strict TOML:
 - `/sources` for the read-only configured source root;
 - `/run/secrets` for read-only API keys, TLS identity, OIDC secret and CA files;
 - `/state` for the private bounded history, plans and executor checkpoints;
-- `/staging` for bounded executor staging when an import profile needs it.
+- `/staging` as a separate writable reservation. The current import executor
+  creates its short-lived staging beside the private checkpoint under
+  `/state/checkpoints` and removes it, so application-written bytes in the
+  reserved mount remain zero.
 
 Prepare the source/config/secret paths with permissions readable by UID 65532,
 then build and start only the optional profile:
@@ -139,7 +142,9 @@ are read-only binds. The PID limit, temporary filesystem and shutdown grace
 period are explicit. Set `IMMICH_RS_WEB_IMAGE` to an immutable version or digest
 for a published candidate; `latest` is unsupported. Rootless engines still
 require the operator bind paths and published port to be accessible through
-their user namespace.
+their user namespace. Back up and restore the complete state volume only while
+the service is stopped; see the
+[Web Console operator and recovery guide](web-console-operations.md).
 
 ## Verified multiarch OCI archive
 

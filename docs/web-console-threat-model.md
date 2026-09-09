@@ -44,6 +44,12 @@ headers are untrusted even after authentication.
 | Excess privilege | Authz on every object/stream/export/metrics route; executor remains sole effect owner | Deny without disclosing existence |
 | Sensitive metrics | Aggregate low-cardinality allowlist, protected listener, forbidden-label tests | Metric omitted or request denied |
 
+The implemented metrics surface uses only nine fixed names and no labels. It
+shares the console listener, direct-TLS/OIDC or loopback-session boundary,
+exact Host validation and private no-store response policy. A dedicated
+machine bearer, unauthenticated scrape path and forwarded-header exception are
+not implemented.
+
 ## Explicitly excluded validation targets
 
 Tests must not use a production endpoint or credential, personal media, live

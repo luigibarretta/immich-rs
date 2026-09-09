@@ -108,9 +108,26 @@ def check() -> list[str]:
     dry_run_source = (REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "upload_dry_run.rs").read_text(
         encoding="utf-8"
     )
-    forbidden_dry_run_tokens = ("immich_rs_client", "api_key", "server", "authorize_upload")
-    if any(token in dry_run_source.casefold() for token in forbidden_dry_run_tokens):
-        failures.append("dry-run source can reach a server or upload capability")
+    forbidden_dry_run_tokens = (
+        "immich_rs_client",
+        "immich_rs_executor",
+        "api_key",
+        "server",
+        "authorize_upload",
+    )
+    if (
+        "immich_rs_application" not in dry_run_source
+        or any(token in dry_run_source.casefold() for token in forbidden_dry_run_tokens)
+    ):
+        failures.append("dry-run CLI bypasses the offline application facade")
+    application_dry_run = (
+        REPOSITORY_ROOT / "crates" / "immich-application" / "src" / "upload_execution.rs"
+    ).read_text(encoding="utf-8").casefold()
+    if any(
+        token in application_dry_run
+        for token in ("immich_rs_client", "api_key", "server", "authorize_upload")
+    ):
+        failures.append("application dry-run can construct a server capability")
     takeout_source = (
         REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / "google_takeout.rs"
     ).read_text(encoding="utf-8")

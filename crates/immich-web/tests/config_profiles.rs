@@ -105,6 +105,11 @@ fn strict_config_resolves_only_opaque_operator_profiles() -> Result<(), Box<dyn 
     assert_eq!(config.listen_address().to_string(), "127.0.0.1:2285");
     assert_eq!(config.public_origin(), "http://127.0.0.1:2285");
     assert_eq!(config.allowed_host(), "127.0.0.1:2285");
+    assert_eq!(config.limits().request_header_bytes, 16 * 1024);
+    assert_eq!(config.limits().request_body_bytes, 16 * 1024);
+    assert_eq!(config.limits().accepted_connections, 16);
+    assert_eq!(config.limits().header_read_seconds, 5);
+    assert_eq!(config.limits().response_seconds, 15);
     assert_eq!(config.sources().len(), 1);
     let profile = config
         .source("camera_roll")

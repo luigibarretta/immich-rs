@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Authentication required · immich-rs{% endblock %}
+{% block content %}
+<section class="panel narrow" aria-labelledby="locked-title">
+  <p class="eyebrow">Authentication required</p>
+  <h1 id="locked-title">Console locked</h1>
+  <p>The pairing window is closed or this browser session is no longer valid. Restart the local console to begin a new pairing window.</p>
+</section>
+{% endblock %}

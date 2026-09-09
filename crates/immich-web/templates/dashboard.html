@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Sources · immich-rs{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="sources-title">
+  <div class="heading-row">
+    <div>
+      <p class="eyebrow">Authenticated local operator</p>
+      <h1 id="sources-title">Configured sources</h1>
+    </div>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <button class="secondary" type="submit">Log out</button>
+    </form>
+  </div>
+  <p>This console is read-only. Paths and credentials stay in operator configuration and are never sent to the browser.</p>
+  <ul class="source-list">
+  {% for source in sources %}
+    <li><span>{{ source.label }}</span><code>{{ source.id }}</code></li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}

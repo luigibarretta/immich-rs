@@ -18,6 +18,16 @@ const MAX_SERVER_PROFILES: usize = 32;
 /// Validated Web Console resource bounds configurable only below hard maxima.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct WebLimits {
+    /// Maximum aggregate request-header bytes after HTTP parsing.
+    pub request_header_bytes: usize,
+    /// Maximum request-body bytes enforced while streaming the body.
+    pub request_body_bytes: usize,
+    /// Maximum number of concurrently accepted loopback connections.
+    pub accepted_connections: usize,
+    /// Maximum duration allowed to read request headers.
+    pub header_read_seconds: u64,
+    /// Maximum duration of one non-streaming response.
+    pub response_seconds: u64,
     /// Maximum in-memory authenticated sessions.
     pub max_sessions: usize,
     /// Idle session lifetime in seconds.
@@ -31,6 +41,11 @@ pub struct WebLimits {
 impl Default for WebLimits {
     fn default() -> Self {
         Self {
+            request_header_bytes: 16 * 1_024,
+            request_body_bytes: 16 * 1_024,
+            accepted_connections: 16,
+            header_read_seconds: 5,
+            response_seconds: 15,
             max_sessions: 8,
             session_idle_seconds: 30 * 60,
             session_absolute_seconds: 8 * 60 * 60,
@@ -41,7 +56,12 @@ impl Default for WebLimits {
 
 impl WebLimits {
     fn validate(self) -> Result<Self, WebConfigError> {
-        let valid = (1..=16).contains(&self.max_sessions)
+        let valid = (1..=32 * 1_024).contains(&self.request_header_bytes)
+            && (1..=64 * 1_024).contains(&self.request_body_bytes)
+            && (1..=32).contains(&self.accepted_connections)
+            && (1..=10).contains(&self.header_read_seconds)
+            && (1..=30).contains(&self.response_seconds)
+            && (1..=16).contains(&self.max_sessions)
             && (1..=60 * 60).contains(&self.session_idle_seconds)
             && (1..=12 * 60 * 60).contains(&self.session_absolute_seconds)
             && self.session_idle_seconds <= self.session_absolute_seconds
@@ -245,6 +265,11 @@ struct RawWeb {
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 struct RawWebLimits {
+    request_header_bytes: Option<usize>,
+    request_body_bytes: Option<usize>,
+    accepted_connections: Option<usize>,
+    header_read_seconds: Option<u64>,
+    response_seconds: Option<u64>,
     max_sessions: Option<usize>,
     session_idle_seconds: Option<u64>,
     session_absolute_seconds: Option<u64>,
@@ -255,6 +280,19 @@ impl RawWebLimits {
     fn into_limits(self) -> WebLimits {
         let defaults = WebLimits::default();
         WebLimits {
+            request_header_bytes: self
+                .request_header_bytes
+                .unwrap_or(defaults.request_header_bytes),
+            request_body_bytes: self
+                .request_body_bytes
+                .unwrap_or(defaults.request_body_bytes),
+            accepted_connections: self
+                .accepted_connections
+                .unwrap_or(defaults.accepted_connections),
+            header_read_seconds: self
+                .header_read_seconds
+                .unwrap_or(defaults.header_read_seconds),
+            response_seconds: self.response_seconds.unwrap_or(defaults.response_seconds),
             max_sessions: self.max_sessions.unwrap_or(defaults.max_sessions),
             session_idle_seconds: self
                 .session_idle_seconds

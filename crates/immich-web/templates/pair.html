@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Pair console · immich-rs{% endblock %}
+{% block content %}
+<section class="panel narrow" aria-labelledby="pair-title">
+  <p class="eyebrow">First-start authentication</p>
+  <h1 id="pair-title">Pair this browser</h1>
+  <p>Enter the bootstrap secret from the operator-managed secret file. It is accepted once and is never stored by the console.</p>
+  {% if denied %}<p class="error" role="alert">Pairing was denied. Check the secret and try again.</p>{% endif %}
+  <form method="post" action="/pair">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label for="secret">Bootstrap secret</label>
+    <input id="secret" name="secret" type="password" minlength="16" maxlength="256" autocomplete="off" required autofocus>
+    <button type="submit">Pair browser</button>
+  </form>
+</section>
+{% endblock %}

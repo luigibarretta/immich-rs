@@ -2,15 +2,22 @@ use std::collections::BTreeSet;
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 
-use immich_rs_application::{ImmichEndpoint, PinnedEndpointAddresses};
+use immich_rs_application::{
+    ClientConfig, ImmichEndpoint, ImmichReadClient, PinnedEndpointAddresses,
+};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use url::{Host, Url};
 
+use super::protected_file;
 use super::{update_path_digest, validate_id};
 use crate::WebConfigError;
 
 const MAX_ADDRESS_RANGES: usize = 32;
+
+#[cfg(test)]
+static CLIENT_CONSTRUCTIONS: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
 
 /// Explicit operator-selected server access mode.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -133,6 +140,49 @@ impl ServerProfile {
         PinnedEndpointAddresses::new(&endpoint, addresses)
             .map_err(|_| WebConfigError::new("server profile address pinning failed"))
     }
+
+    /// Revalidate policy, load server-side credentials and construct a pinned read client.
+    pub fn read_client(
+        &self,
+        maximum_addresses: usize,
+    ) -> Result<ImmichReadClient, WebConfigError> {
+        #[cfg(test)]
+        CLIENT_CONSTRUCTIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+        let endpoint = ImmichEndpoint::parse(&self.origin)
+            .map_err(|_| WebConfigError::new("server profile origin changed"))?;
+        let addresses = self.resolve_addresses(maximum_addresses)?;
+        let roots = protected_file::root_certificates(self.ca_certificate_file())?;
+        let key = protected_file::api_key(self.api_key_file())?;
+        let result = match self.mode {
+            ServerMode::Disposable => ImmichReadClient::new_pinned(
+                endpoint,
+                key,
+                ClientConfig::default(),
+                roots,
+                addresses,
+            ),
+            ServerMode::ProductionRead => ImmichReadClient::new_production_read_pinned(
+                endpoint,
+                key,
+                ClientConfig::default(),
+                true,
+                roots,
+                addresses,
+            ),
+        };
+        result.map_err(|_| WebConfigError::new("server read client construction failed"))
+    }
+}
+
+#[cfg(test)]
+pub(super) fn reset_client_construction_count() {
+    CLIENT_CONSTRUCTIONS.store(0, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(test)]
+pub(super) fn client_construction_count() -> usize {
+    CLIENT_CONSTRUCTIONS.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 #[derive(Deserialize)]
@@ -294,28 +344,5 @@ const fn mask_v6(prefix: u8) -> u128 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn private_ranges_allow_exact_policy_and_deny_mixed_rebinding()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let ranges = parse_ranges(&["fd42::/64".to_owned()])?;
-        let allowed = vec!["[fd42::5]:443".parse()?, "[fd42::6]:443".parse()?];
-        assert_eq!(
-            validate_addresses(ServerMode::ProductionRead, &ranges, 4, allowed)?.len(),
-            2
-        );
-        let mixed = vec!["[fd42::5]:443".parse()?, "192.0.2.8:443".parse()?];
-        assert!(validate_addresses(ServerMode::ProductionRead, &ranges, 4, mixed).is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn zero_prefixes_match_their_address_family() -> Result<(), Box<dyn std::error::Error>> {
-        assert!(AddressRange::parse("0.0.0.0/0")?.contains("203.0.113.8".parse()?));
-        assert!(AddressRange::parse("::/0")?.contains("2001:db8::5".parse()?));
-        assert!(!AddressRange::parse("192.0.2.0/24")?.contains("::1".parse()?));
-        Ok(())
-    }
-}
+#[path = "server_tests.rs"]
+mod tests;

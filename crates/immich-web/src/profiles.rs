@@ -10,6 +10,8 @@ use crate::error::WebConfigError;
 const MAX_ID_BYTES: usize = 64;
 const MAX_LABEL_BYTES: usize = 128;
 
+#[path = "profiles/secret.rs"]
+mod protected_file;
 mod server;
 mod state;
 

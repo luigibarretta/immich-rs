@@ -157,6 +157,12 @@ revision.
 
 ## Current capabilities
 
+An optional authenticated operator Web Console is accepted in ADR-0033 but is
+not implemented at this revision. The current supported interface remains the
+CLI. See the [threat model](docs/web-console-threat-model.md) and
+[capability/resource matrix](docs/web-console-resources.md); no web route,
+binary, artifact or container is currently supported.
+
 - deterministic recursive folder discovery with bounded entry and path limits;
 - one-file-at-a-time SHA-256 streaming through a configurable bounded buffer;
 - NFC portable paths, case and Unicode collision diagnostics;
@@ -495,6 +501,10 @@ Picasa execution and Immich-to-Immich migration are recorded in the
   checkpoint and atomic-file orchestration;
 - `immich-sources`: bounded folder, Google Takeout, Apple Photos and Picasa discovery
   and reconciliation.
+
+ADR-0033 accepts future `immich-application` and `immich-web` crates, but neither
+exists at this revision. Their implementation must preserve the current CLI and
+executor contracts.
 
 The crate boundaries are dependency rules, not microservices. See
 [ADR-0004](docs/adr/ADR-0004-modular-workspace-architecture.md).

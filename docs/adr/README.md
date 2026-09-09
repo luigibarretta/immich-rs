@@ -49,6 +49,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0030](ADR-0030-apple-photos-import.md) | Apple Photos import | Accepted |
 | [0031](ADR-0031-picasa-import.md) | Picasa import | Accepted |
 | [0032](ADR-0032-immich-migration.md) | Immich-to-Immich migration | Accepted |
+| [0033](ADR-0033-optional-operator-web-console.md) | Optional authenticated operator Web Console | Accepted |
 
 ## Template
 

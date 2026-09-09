@@ -374,3 +374,28 @@ non-production export shadow remains pending. Production migration is not
 authorized by ADR-0032. On the exact synthetic 64 MiB two-server corpus,
 immich-rs median wall time is 98.9% lower and all retained ranges are disjoint;
 this is not a non-production shadow, WAN or production claim.
+
+## Optional Web Console
+
+ADR-0033 accepts a separate authenticated operator console without changing
+the supported CLI or authorizing production migration. At ADR acceptance no
+web crate, route, binary, native artifact or image exists, so the entire console
+is unsupported until each bounded slice is implemented and evidence-enforced.
+
+Planned gates are:
+
+1. thin `immich-application` facade with byte- and exit-compatible CLI use;
+2. authenticated loopback folder scan/review with opaque configured profiles;
+3. bounded SSE, polling, cancellation and owned shutdown;
+4. server-bound probe planning, immutable inspection/export, offline dry-run
+   receipts and separate bounded history;
+5. exact single-use folder apply grants against disposable loopback/HTTPS;
+6. Google Takeout, Apple Photos and Picasa source-only, dry-run and gated apply;
+7. TLS/OIDC LAN mode against a disposable identity provider;
+8. separate five-target native artifact and hardened multiarch OCI service;
+9. aggregate metrics, recovery/operator documentation, accessibility and
+   browser regression closeout.
+
+Production Immich-to-Immich migration, gallery/media serving, arbitrary path or
+URL input, and delete/replace/trash/tag/people/stack/maintenance operations are
+not part of this roadmap.

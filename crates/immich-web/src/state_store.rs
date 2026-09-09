@@ -11,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use history::HistoryStore;
 use plan_store::PlanStore;
+use sha2::{Digest, Sha256};
 pub use types::{
     ArtifactRef, DryRunBinding, DryRunReceipt, HistoryKind, PlanArtifact, PlanBinding, ReceiptRef,
     SafeCounters, StoredHistory, StoredUploadPlan, TerminalRecord, TerminalStatus,
@@ -102,6 +103,77 @@ impl ConsoleStore {
             _ => Err(WebConfigError::new("dry-run checkpoint path is invalid")),
         }
     }
+
+    pub fn apply_checkpoint(&self, reference: ArtifactRef) -> Result<PathBuf, WebConfigError> {
+        let path = self.apply_checkpoint_candidate(reference)?;
+        match fs::symlink_metadata(&path) {
+            Ok(metadata)
+                if metadata.is_file()
+                    && !metadata.file_type().is_symlink()
+                    && is_private(&path)? =>
+            {
+                Ok(path)
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                create_private_file(&path)?;
+                Ok(path)
+            }
+            _ => Err(WebConfigError::new("apply checkpoint is invalid")),
+        }
+    }
+
+    pub fn apply_checkpoint_candidate(
+        &self,
+        reference: ArtifactRef,
+    ) -> Result<PathBuf, WebConfigError> {
+        let path = self
+            .checkpoints
+            .join(format!("apply-{}.sqlite3", reference.encode()));
+        match fs::symlink_metadata(&path) {
+            Ok(metadata)
+                if metadata.is_file()
+                    && !metadata.file_type().is_symlink()
+                    && is_private(&path)? =>
+            {
+                Ok(path)
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(path),
+            _ => Err(WebConfigError::new("apply checkpoint is invalid")),
+        }
+    }
+
+    pub fn receipt_is_newer_than_checkpoint(
+        &self,
+        reference: ArtifactRef,
+        completed_unix: i64,
+    ) -> Result<bool, WebConfigError> {
+        let path = self
+            .checkpoints
+            .join(format!("apply-{}.sqlite3", reference.encode()));
+        let metadata = match fs::symlink_metadata(&path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(true),
+            Ok(metadata)
+                if metadata.is_file()
+                    && !metadata.file_type().is_symlink()
+                    && is_private(&path)? =>
+            {
+                metadata
+            }
+            _ => return Err(WebConfigError::new("apply checkpoint is invalid")),
+        };
+        let modified = metadata
+            .modified()
+            .and_then(|value| {
+                value
+                    .duration_since(UNIX_EPOCH)
+                    .map_err(std::io::Error::other)
+            })
+            .map_err(|_| WebConfigError::new("apply checkpoint time is invalid"))?
+            .as_secs();
+        let completed = u64::try_from(completed_unix)
+            .map_err(|_| WebConfigError::new("dry-run receipt time is invalid"))?;
+        Ok(completed > modified)
+    }
 }
 
 pub fn now_unix() -> Result<i64, WebConfigError> {
@@ -110,6 +182,15 @@ pub fn now_unix() -> Result<i64, WebConfigError> {
         .map_err(|_| WebConfigError::new("system clock is invalid"))?
         .as_secs();
     i64::try_from(now).map_err(|_| WebConfigError::new("system clock is out of range"))
+}
+
+pub fn source_configuration_digest(source: &str, configuration: &str) -> String {
+    let mut digest = Sha256::new();
+    digest.update(b"immich-rs-web-source-configuration-v1\0");
+    digest.update(source.as_bytes());
+    digest.update([0]);
+    digest.update(configuration.as_bytes());
+    format!("{:x}", digest.finalize())
 }
 
 fn private_directory(root: &Path, name: &str) -> Result<PathBuf, WebConfigError> {
@@ -144,6 +225,28 @@ fn create_private(path: &Path) -> Result<(), WebConfigError> {
     builder
         .create(path)
         .map_err(|_| WebConfigError::new("cannot create console state directory"))
+}
+
+#[cfg(unix)]
+fn create_private_file(path: &Path) -> Result<(), WebConfigError> {
+    use std::os::unix::fs::OpenOptionsExt;
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .map(|_| ())
+        .map_err(|_| WebConfigError::new("cannot create apply checkpoint"))
+}
+
+#[cfg(windows)]
+fn create_private_file(path: &Path) -> Result<(), WebConfigError> {
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map(|_| ())
+        .map_err(|_| WebConfigError::new("cannot create apply checkpoint"))
 }
 
 #[cfg(windows)]

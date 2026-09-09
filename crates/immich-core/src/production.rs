@@ -3,7 +3,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 
 const MAX_BACKUP_REFERENCE_BYTES: usize = 256;
 
-/// CLI-originated confirmation required before remote production writes.
+/// Operator-originated confirmation required before remote production writes.
 pub struct ProductionWriteConfirmation {
     plan_sha256: String,
     expected_operations: u64,

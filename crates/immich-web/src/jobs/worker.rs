@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use immich_rs_application::{
-    ApplicationErrorClass, ApplicationProgressEvent, ApplicationProgressObserver, Cancellation,
-    FolderPlanRequest, FolderUploadPlanRequest, ScanError, UploadPlan, plan_folder,
-    plan_folder_upload,
+    ApplicationErrorClass, ApplicationProgressObserver, Cancellation, FolderPlanRequest,
+    FolderUploadPlanRequest, ScanError, UploadPlan, plan_folder, plan_folder_upload,
 };
 
 use super::types::JobKind;
-use super::{JobProgress, JobStatus, JobSummary, JobsInner, dry_run, push_event};
+use super::{JobStatus, JobSummary, JobsInner, apply, dry_run, progress::JobObserver, push_event};
+use crate::grants::ApplyCapability;
 use crate::state_store::{
     DryRunBinding, HistoryKind, PlanArtifact, SafeCounters, TerminalRecord, TerminalStatus,
     now_unix,
@@ -17,12 +17,20 @@ pub fn run(inner: &Arc<JobsInner>, id: &str) {
     if !begin(inner, id) {
         return;
     }
-    let Some((source_id, kind, cancellation)) = job_inputs(inner, id) else {
+    let Some((source_id, kind, cancellation, capability)) = job_inputs(inner, id) else {
         return;
     };
     let history_kind = kind.history_kind();
     let outcome = match prepare_source(inner, &source_id) {
-        Ok(request) => execute(inner, id, &source_id, kind, request, &cancellation),
+        Ok(request) => execute(
+            inner,
+            id,
+            &source_id,
+            kind,
+            request,
+            capability,
+            &cancellation,
+        ),
         Err(()) => WorkerOutcome::Failed(history_kind),
     };
     finish(inner, id, outcome);
@@ -31,13 +39,19 @@ pub fn run(inner: &Arc<JobsInner>, id: &str) {
 fn job_inputs(
     inner: &JobsInner,
     id: &str,
-) -> Option<(String, JobKind, immich_rs_application::CancellationToken)> {
-    let state = inner.state.lock().ok()?;
+) -> Option<(
+    String,
+    JobKind,
+    immich_rs_application::CancellationToken,
+    Option<ApplyCapability>,
+)> {
+    let mut state = inner.state.lock().ok()?;
     let job = state.jobs.get(id)?;
     let inputs = (
         job.source_id.clone(),
         job.kind.clone(),
         job.cancellation.clone(),
+        state.apply_capabilities.remove(id),
     );
     drop(state);
     Some(inputs)
@@ -59,7 +73,8 @@ fn execute(
     source_id: &str,
     kind: JobKind,
     request: FolderPlanRequest,
-    cancellation: &impl Cancellation,
+    capability: Option<ApplyCapability>,
+    cancellation: &immich_rs_application::CancellationToken,
 ) -> WorkerOutcome {
     if cancellation.is_cancelled() {
         return WorkerOutcome::Cancelled(kind.history_kind());
@@ -90,6 +105,10 @@ fn execute(
         JobKind::DryRun { reference } => {
             dry_run::execute(inner, source_id, reference, &request, cancellation)
         }
+        JobKind::Apply { .. } => capability.map_or_else(
+            || WorkerOutcome::Failed(HistoryKind::FolderApply),
+            |value| apply::execute(inner, &request, value, cancellation),
+        ),
     }
 }
 
@@ -261,6 +280,14 @@ fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
     let Ok(mut state) = inner.state.lock() else {
         return;
     };
+    let apply_reference = state.jobs.get(id).and_then(|job| match job.kind {
+        JobKind::Apply { reference } => Some(reference),
+        _ => None,
+    });
+    if let Some(reference) = apply_reference {
+        state.active_checkpoints.remove(&reference);
+    }
+    state.apply_capabilities.remove(id);
     if !history_ok {
         state.worker_failed = true;
     }
@@ -316,31 +343,6 @@ fn history_record(outcome: &WorkerOutcome) -> Result<TerminalRecord, ()> {
         plan,
         counters,
     })
-}
-
-struct JobObserver {
-    inner: Arc<JobsInner>,
-    id: String,
-}
-
-impl ApplicationProgressObserver for JobObserver {
-    fn observe(&mut self, event: ApplicationProgressEvent) {
-        let ApplicationProgressEvent::Scan { event, .. } = event else {
-            return;
-        };
-        let Ok(mut state) = self.inner.state.lock() else {
-            return;
-        };
-        if let Some(job) = state.jobs.get_mut(&self.id) {
-            job.progress = JobProgress {
-                sequence: event.sequence,
-                stage: Some(event.stage),
-                assets_observed: event.assets_observed,
-                bytes_read: event.bytes_read,
-            };
-            push_event(job, self.inner.limits.sse_replay_events);
-        }
-    }
 }
 
 pub(super) enum WorkerOutcome {

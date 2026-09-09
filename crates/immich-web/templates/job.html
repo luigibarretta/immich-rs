@@ -2,7 +2,7 @@
 {% block title %}Scan status · immich-rs{% endblock %}
 {% block content %}
 <section class="panel" aria-labelledby="job-title" data-events-url="/jobs/{{ id }}/events" data-terminal="{{ terminal }}">
-  <p class="eyebrow">Bounded read-only scan</p>
+  <p class="eyebrow">Bounded operator job</p>
   <h1 id="job-title">{{ label }}</h1>
   <p id="job-status" class="job-status" role="status" aria-live="polite">{{ status }} · {{ stage }}</p>
   {% if cancellation_requested %}<p>Cooperative cancellation requested.</p>{% endif %}
@@ -11,7 +11,7 @@
     <div><dt>Bytes streamed</dt><dd id="progress-bytes">{{ progress_bytes }}</dd></div>
   </dl>
   {% if has_summary %}
-  <h2>Completed plan summary</h2>
+  <h2>Completed plan summary or execution report</h2>
   <p>This browser summary is informational and cannot authorize a later job.</p>
   <dl class="summary-grid">
     <div><dt>Plan schema</dt><dd>{{ schema_version }}</dd></div>
@@ -31,7 +31,7 @@
   {% if cancellable %}
   <form method="post" action="/jobs/{{ id }}/cancel">
     <input type="hidden" name="csrf" value="{{ csrf_token }}">
-    <button class="secondary" type="submit">Cancel scan</button>
+    <button class="secondary" type="submit">Cancel job</button>
   </form>
   {% endif %}
   <p id="polling-fallback"><a href="/jobs/{{ id }}">Refresh status</a> · <a href="/">Configured sources</a></p>

@@ -396,7 +396,9 @@ Sequential gates are:
    probe/planning and immutable authenticated inspection/streaming export are
    implemented together with mandatory offline dry-run, atomic versioned
    receipts and source/profile/state drift refusal;
-5. exact single-use folder apply grants against disposable loopback/HTTPS;
+5. **Implemented:** exact single-use folder apply grants against disposable
+   loopback, with private executor checkpoints, bounded replay/fault recovery
+   and mandatory fresh dry-run confirmation for resume;
 6. Google Takeout, Apple Photos and Picasa source-only, dry-run and gated apply;
 7. TLS/OIDC LAN mode against a disposable identity provider;
 8. separate five-target native artifact and hardened multiarch OCI service;

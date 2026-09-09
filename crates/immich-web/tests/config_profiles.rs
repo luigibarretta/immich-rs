@@ -201,6 +201,9 @@ fn config_rejects_unknown_fields_traversal_and_excess_limits()
         "history_page_rows = 20\nhistory_retained_rows = 10",
         "history_store_bytes = 67108865",
         "plan_file_bytes = 268435457",
+        "dry_run_receipt_seconds = 601",
+        "production_grant_seconds = 121",
+        "backup_reference_bytes = 257",
     ] {
         let excessive = configuration(
             &workspace,

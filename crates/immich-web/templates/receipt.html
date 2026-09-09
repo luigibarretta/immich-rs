@@ -18,6 +18,26 @@
     <div><dt>Server profile digest</dt><dd><code>{{ server_profile_sha256 }}</code></dd></div>
   </dl>
   <p><a href="/plans/{{ plan_reference }}">Inspect immutable plan</a> · <a href="/history">History</a></p>
+  {% if grant_ready %}
+  <h2>Single-use confirmation accepted</h2>
+  {% if production %}<p>The backup reference was hashed into this short-lived production grant and is not displayed or persisted.</p>{% endif %}
+  <form method="post" action="/receipts/{{ reference }}/apply">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+    <button type="submit">Admit executor apply job</button>
+  </form>
+  {% else %}
+  <h2>Create a short-lived single-use grant</h2>
+  <p>Type the exact digest and logical-effect maximum shown above. Production profiles also require the bounded backup reference; disposable profiles require it to remain empty.</p>
+  <form method="post" action="/receipts/{{ reference }}/confirm">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label>Exact plan digest <input name="plan_sha256" required maxlength="64" autocomplete="off"></label>
+    <label>Exact maximum logical effects <input name="max_logical_effects" required type="number" min="1"></label>
+    <label>Backup reference (production only) <input name="backup_reference" maxlength="256" autocomplete="off"></label>
+    <label><input name="acknowledge" value="apply" type="checkbox" required> I authorize only this exact plan and count.</label>
+    <button type="submit">Create single-use grant</button>
+  </form>
+  {% endif %}
   <p class="eyebrow">Opaque receipt {{ reference }}</p>
 </section>
 {% endblock %}

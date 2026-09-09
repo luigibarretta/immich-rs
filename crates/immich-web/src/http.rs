@@ -21,6 +21,7 @@ use crate::cookies::{
     PAIRING_COOKIE, SESSION_COOKIE, append as append_cookie, clear as append_clear_cookie,
     value as cookie_value,
 };
+use crate::grants::GrantStore;
 use crate::job_http;
 use crate::jobs::JobManager;
 use crate::policy::{RequestPolicy, request_policy};
@@ -41,6 +42,7 @@ pub struct ConsoleState {
     pub config: Arc<WebConfig>,
     pub auth: Arc<AuthStore>,
     pub jobs: JobManager,
+    pub grants: Arc<GrantStore>,
     pub store: Arc<ConsoleStore>,
 }
 
@@ -65,11 +67,13 @@ impl WebConsole {
         let store = Arc::new(ConsoleStore::open(&state_profile, config.limits())?);
         let config = Arc::new(config);
         let jobs = JobManager::new(Arc::clone(&config), Arc::clone(&store));
+        let grants = Arc::new(GrantStore::new(Arc::clone(&config), Arc::clone(&store)));
         Ok(Self {
             state: ConsoleState {
                 config,
                 auth: Arc::new(auth),
                 jobs,
+                grants,
                 store,
             },
         })
@@ -198,9 +202,13 @@ async fn logout(
     let Some(cookie_token) = cookie_value(&headers, SESSION_COOKIE) else {
         return views::locked(StatusCode::UNAUTHORIZED);
     };
+    let Some(session) = state.auth.authenticate_csrf(&cookie_token, &form.csrf) else {
+        return views::locked(StatusCode::FORBIDDEN);
+    };
     if !state.auth.logout(&cookie_token, &form.csrf) {
         return views::locked(StatusCode::FORBIDDEN);
     }
+    state.grants.revoke_owner(&session.binding);
     let mut response = Redirect::to("/").into_response();
     if append_clear_cookie(&mut response, SESSION_COOKIE) {
         response

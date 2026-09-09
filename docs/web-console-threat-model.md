@@ -33,8 +33,8 @@ headers are untrusted even after authentication.
 | Proxy spoofing | Reject forwarded headers unless peer is explicitly trusted; exact reconstructed origin | Reject request/startup |
 | Credential disclosure | Secret files only, redacting types, no browser storage/history/logs, private state permissions | Fail closed and emit safe diagnostic |
 | Plan/count/identity substitution | Canonical server-side digest, source/config/server/user/profile/credential/count binding | Grant creation/admission refused |
-| Confirmation replay/race | Single-use in-memory grant consumed atomically with idempotent job admission | Same job returned or request refused |
-| Restart/logout/cancel ambiguity | Unused grants invalidated; admitted run is executor-owned and checkpointed; resume needs new dry-run | Never reconstruct authority |
+| Confirmation replay/race | Single-use in-memory grant consumed atomically with idempotent job admission; bounded spent-receipt tracking | Same job returned or request refused |
+| Restart/logout/cancel ambiguity | Unused grants invalidated; admitted run is executor-owned and checkpointed; checkpoint time and process-local receipt use require a later dry-run before resume | Never reconstruct authority |
 | Slow client or SSE disconnect | Bounded replay/subscribers, owned tasks, polling fallback; disconnect does not cancel | Drop subscriber, preserve job |
 | Resource exhaustion | Numerical HTTP/session/job/SSE/history/plan limits and backpressure | Reject admission or stop cleanly |
 | History leakage/corruption | Separate strict minimal schema, enum/counter-only typed writes, no identifiers/secrets/metadata, private file, transactional migration, bounded pages/WAL/retention and authenticated reads | Refuse newer/corrupt/full store and stop further job admission after a terminal-write failure |

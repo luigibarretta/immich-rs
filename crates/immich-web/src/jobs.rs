@@ -1,14 +1,18 @@
+mod apply;
+mod apply_admission;
 mod dry_run;
+mod progress;
 mod subscription;
 mod types;
 mod worker;
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 
 use tokio::sync::broadcast;
 
+use crate::grants::ApplyCapability;
 use crate::state_store::{
     ArtifactRef, ConsoleStore, HistoryKind, SafeCounters, TerminalRecord, TerminalStatus, now_unix,
 };
@@ -41,6 +45,8 @@ struct JobsState {
     worker_failed: bool,
     subscribers: usize,
     subscribers_by_owner: BTreeMap<[u8; 32], usize>,
+    apply_capabilities: BTreeMap<String, ApplyCapability>,
+    active_checkpoints: BTreeSet<crate::state_store::ArtifactRef>,
 }
 
 struct OwnedWorker {
@@ -65,6 +71,8 @@ impl JobManager {
                     worker_failed: false,
                     subscribers: 0,
                     subscribers_by_owner: BTreeMap::new(),
+                    apply_capabilities: BTreeMap::new(),
+                    active_checkpoints: BTreeSet::new(),
                 }),
                 worker_available: Condvar::new(),
             }),
@@ -203,6 +211,14 @@ impl JobManager {
             .get(id)
             .filter(|job| &job.owner == owner)
             .is_some_and(|job| job.status == JobStatus::Queued);
+        let queued_apply = state
+            .jobs
+            .get(id)
+            .filter(|job| &job.owner == owner && was_queued)
+            .and_then(|job| match job.kind {
+                JobKind::Apply { reference } => Some(reference),
+                _ => None,
+            });
         let mut record_cancelled = None;
         {
             let job = state.jobs.get_mut(id).filter(|job| &job.owner == owner)?;
@@ -219,6 +235,10 @@ impl JobManager {
         }
         if was_queued {
             state.queued = state.queued.saturating_sub(1);
+            state.apply_capabilities.remove(id);
+            if let Some(reference) = queued_apply {
+                state.active_checkpoints.remove(&reference);
+            }
         }
         let job = state.jobs.get(id).filter(|job| &job.owner == owner)?;
         let snapshot = snapshot_job(job);

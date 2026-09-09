@@ -3,7 +3,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use immich_rs_application::UploadPlan;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ArtifactRef(pub(super) [u8; 16]);
 
 impl ArtifactRef {
@@ -33,7 +33,7 @@ impl ArtifactRef {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ReceiptRef(pub(super) [u8; 16]);
 
 impl ReceiptRef {

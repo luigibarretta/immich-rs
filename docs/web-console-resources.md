@@ -5,9 +5,9 @@ allowed; exceeding a hard maximum is a startup or request error.
 
 ## Capability matrix
 
-| Surface | Read/plan | Dry-run | Apply | Current status at ADR acceptance |
+| Surface | Read/plan | Dry-run | Apply | Current implemented status |
 |---|---:|---:|---:|---|
-| Folder source | Implemented | Implemented | Planned with exact grant | Authenticated immutable plan and offline receipt |
+| Folder source | Implemented | Implemented | Implemented with exact grant | Disposable loopback apply through the executor |
 | Google Takeout | Planned | Planned | Planned with exact grant | Not implemented |
 | Apple Photos | Planned | Planned | Planned with exact grant | Not implemented |
 | Picasa | Planned | Planned | Planned with exact grant | Not implemented |
@@ -16,9 +16,8 @@ allowed; exceeding a hard maximum is a startup or request error.
 | Delete/replace/trash/tags/people/stacks/maintenance | No | No | Unsupported | Unsupported |
 | Gallery, media preview/serving and photo management | No | No | Unsupported | Unsupported |
 
-The first executable slice is authenticated loopback folder scan/review. Later
-rows cannot be described as supported until their implementation and evidence
-gate is green.
+Source-import rows cannot be described as supported until their implementation
+and evidence gate is green.
 
 Configured state roots are required now and must resolve to private directories;
 their canonical identity is revalidated at each use. A disposable server profile
@@ -66,6 +65,23 @@ unchanged, proving neither the secret loader nor client construction path was
 reached. Source-content drift and server-profile binding drift fail without a
 network request or receipt.
 
+Folder apply requires an authenticated second confirmation that retypes the
+exact canonical plan digest and maximum logical-effect count. The in-memory
+grant is bound to the session, receipt, plan, source/configuration, server/user
+identity, profile and credential generations, count and monotonic deadline.
+Production profiles additionally bind the SHA-256 of a raw backup reference
+that is never persisted or displayed. Grant consumption and bounded job
+admission share one lock-protected transition; a duplicate admission returns
+the same job. A bounded process-local spent-receipt set prevents a receipt from
+authorizing resume twice. The executor-owned worker verifies the source and any
+existing private checkpoint offline before loading a credential or probing the
+server. Checkpoint creation marks the start of a run; after cancellation or
+restart, only a later completed dry-run receipt may authorize checkpoint resume.
+Tests cover replay races, expiry, logout, restart, drift, cancellation, resume,
+repeated cancellation and bounded before/after-commit recovery against a
+synthetic loopback server. Google Takeout, Apple Photos and Picasa remain
+unsupported in the console until the next separately gated slice.
+
 ## Numeric bounds
 
 | Resource | Default | Hard maximum |
@@ -96,7 +112,7 @@ network request or receipt.
 | Plan export response | 128 MiB | 256 MiB |
 | Dry-run receipt age for confirmation | 5 min | 10 min |
 | Production grant lifetime | 90 s | 120 s |
-| Backup reference UTF-8 bytes | 256 | 512 |
+| Backup reference UTF-8 bytes | 256 | 256 |
 | Configured source profiles | 32 | 64 |
 | Configured state/destination profiles | 16 | 32 |
 | Configured server profiles | 16 | 32 |

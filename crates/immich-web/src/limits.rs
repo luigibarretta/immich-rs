@@ -51,6 +51,12 @@ pub struct WebLimits {
     pub plan_file_bytes: u64,
     /// Maximum aggregate immutable plan-store bytes.
     pub plan_store_bytes: u64,
+    /// Maximum age of a dry-run receipt accepted for confirmation.
+    pub dry_run_receipt_seconds: u64,
+    /// Maximum monotonic lifetime of one in-memory production grant.
+    pub production_grant_seconds: u64,
+    /// Maximum UTF-8 bytes accepted for a backup reference.
+    pub backup_reference_bytes: usize,
 }
 
 impl Default for WebLimits {
@@ -79,6 +85,9 @@ impl Default for WebLimits {
             history_store_bytes: 32 * 1_024 * 1_024,
             plan_file_bytes: 128 * 1_024 * 1_024,
             plan_store_bytes: 512 * 1_024 * 1_024,
+            dry_run_receipt_seconds: 5 * 60,
+            production_grant_seconds: 90,
+            backup_reference_bytes: 256,
         }
     }
 }
@@ -114,7 +123,10 @@ impl WebLimits {
             && (1_024 * 1_024..=256 * 1_024 * 1_024).contains(&self.plan_file_bytes);
         let valid = valid
             && self.plan_store_bytes >= self.plan_file_bytes.saturating_add(16 * 1_024)
-            && self.plan_store_bytes <= 4 * 1_024 * 1_024 * 1_024;
+            && self.plan_store_bytes <= 4 * 1_024 * 1_024 * 1_024
+            && (1..=10 * 60).contains(&self.dry_run_receipt_seconds)
+            && (1..=120).contains(&self.production_grant_seconds)
+            && (1..=256).contains(&self.backup_reference_bytes);
         valid
             .then_some(self)
             .ok_or_else(|| WebConfigError::new("web resource limits are invalid"))
@@ -147,6 +159,9 @@ pub struct RawWebLimits {
     history_store_bytes: Option<u64>,
     plan_file_bytes: Option<u64>,
     plan_store_bytes: Option<u64>,
+    dry_run_receipt_seconds: Option<u64>,
+    production_grant_seconds: Option<u64>,
+    backup_reference_bytes: Option<usize>,
 }
 
 impl RawWebLimits {
@@ -202,6 +217,15 @@ impl RawWebLimits {
                 .unwrap_or(defaults.history_store_bytes),
             plan_file_bytes: self.plan_file_bytes.unwrap_or(defaults.plan_file_bytes),
             plan_store_bytes: self.plan_store_bytes.unwrap_or(defaults.plan_store_bytes),
+            dry_run_receipt_seconds: self
+                .dry_run_receipt_seconds
+                .unwrap_or(defaults.dry_run_receipt_seconds),
+            production_grant_seconds: self
+                .production_grant_seconds
+                .unwrap_or(defaults.production_grant_seconds),
+            backup_reference_bytes: self
+                .backup_reference_bytes
+                .unwrap_or(defaults.backup_reference_bytes),
         }
     }
 }

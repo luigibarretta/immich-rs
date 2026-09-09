@@ -87,6 +87,7 @@ pub(super) enum JobKind {
     Scan,
     Plan { server_id: String },
     DryRun { reference: ArtifactRef },
+    Apply { reference: ArtifactRef },
 }
 
 impl JobKind {
@@ -95,6 +96,7 @@ impl JobKind {
             Self::Scan => HistoryKind::FolderScan,
             Self::Plan { .. } => HistoryKind::FolderPlan,
             Self::DryRun { .. } => HistoryKind::FolderDryRun,
+            Self::Apply { .. } => HistoryKind::FolderApply,
         }
     }
 }

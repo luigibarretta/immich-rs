@@ -2,6 +2,7 @@ use askama::Template;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
+use crate::grants::GrantView;
 use crate::jobs::{JobSnapshot, JobStatus};
 use crate::state_store::{DryRunReceipt, StoredHistory};
 use crate::{ServerProfile, SourceProfile};
@@ -151,6 +152,10 @@ struct ReceiptTemplate<'a> {
     credential_generation: u64,
     max_logical_effects: u64,
     completed_unix: i64,
+    csrf_token: &'a str,
+    grant_ready: bool,
+    idempotency_key: String,
+    production: bool,
 }
 
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
@@ -247,7 +252,7 @@ pub fn plan(stored: &crate::state_store::StoredUploadPlan, csrf_token: &str) -> 
     )
 }
 
-pub fn receipt(receipt: &DryRunReceipt) -> Response {
+pub fn receipt(receipt: &DryRunReceipt, csrf_token: &str, grant: Option<&GrantView>) -> Response {
     render(
         StatusCode::OK,
         &ReceiptTemplate {
@@ -260,6 +265,10 @@ pub fn receipt(receipt: &DryRunReceipt) -> Response {
             credential_generation: receipt.binding.credential_generation,
             max_logical_effects: receipt.binding.max_logical_effects,
             completed_unix: receipt.binding.completed_unix,
+            csrf_token,
+            grant_ready: grant.is_some(),
+            idempotency_key: grant.map_or_else(String::new, |value| value.idempotency_key.clone()),
+            production: grant.is_some_and(|value| value.production),
         },
     )
 }

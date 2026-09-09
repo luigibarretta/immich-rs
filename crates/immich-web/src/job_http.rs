@@ -10,6 +10,7 @@ use serde::Deserialize;
 use crate::auth::SessionView;
 use crate::cookies::{SESSION_COOKIE, value as cookie_value};
 use crate::events_http;
+use crate::grants::{GrantAdmission, GrantError, GrantRequest};
 use crate::http::ConsoleState;
 use crate::jobs::AdmissionError;
 use crate::state_store::{ArtifactRef, ReceiptRef};
@@ -19,6 +20,23 @@ use crate::{views, views::JobView};
 #[serde(deny_unknown_fields)]
 struct CsrfForm {
     csrf: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConfirmForm {
+    csrf: String,
+    plan_sha256: String,
+    max_logical_effects: u64,
+    backup_reference: String,
+    acknowledge: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ApplyForm {
+    csrf: String,
+    idempotency_key: String,
 }
 
 pub fn routes() -> Router<ConsoleState> {
@@ -35,6 +53,8 @@ pub fn routes() -> Router<ConsoleState> {
         .route("/plans/{plan_ref}/export", get(export_plan))
         .route("/plans/{plan_ref}/dry-run", post(admit_dry_run))
         .route("/receipts/{receipt_ref}", get(inspect_receipt))
+        .route("/receipts/{receipt_ref}/confirm", post(confirm_apply))
+        .route("/receipts/{receipt_ref}/apply", post(admit_apply))
         .route("/history", get(history))
 }
 
@@ -178,7 +198,7 @@ async fn inspect_receipt(
     Path(receipt_ref): Path<String>,
     headers: HeaderMap,
 ) -> Response {
-    let Some(_session) = authenticated(&state, &headers) else {
+    let Some(session) = authenticated(&state, &headers) else {
         return views::locked(StatusCode::UNAUTHORIZED);
     };
     let Some(reference) = ReceiptRef::parse(&receipt_ref) else {
@@ -196,10 +216,99 @@ async fn inspect_receipt(
             |receipt| {
                 receipt.map_or_else(
                     || views::scan_failed(StatusCode::NOT_FOUND),
-                    |value| views::receipt(&value),
+                    |value| views::receipt(&value, &session.csrf_token, None),
                 )
             },
         )
+}
+
+async fn confirm_apply(
+    State(state): State<ConsoleState>,
+    Path(receipt_ref): Path<String>,
+    headers: HeaderMap,
+    Form(form): Form<ConfirmForm>,
+) -> Response {
+    let Some(cookie_token) = cookie_value(&headers, SESSION_COOKIE) else {
+        return views::locked(StatusCode::UNAUTHORIZED);
+    };
+    let Some(session) = state.auth.authenticate_csrf(&cookie_token, &form.csrf) else {
+        return views::locked(StatusCode::FORBIDDEN);
+    };
+    let Some(reference) = ReceiptRef::parse(&receipt_ref) else {
+        return views::scan_failed(StatusCode::NOT_FOUND);
+    };
+    if form.acknowledge != "apply" || !state_is_current(&state) {
+        return views::scan_failed(StatusCode::FORBIDDEN);
+    }
+    let request = GrantRequest {
+        receipt: reference,
+        plan_sha256: form.plan_sha256,
+        max_logical_effects: form.max_logical_effects,
+        backup_reference: form.backup_reference,
+    };
+    let grant = match state.grants.confirm(session.binding, request) {
+        Ok(value) => value,
+        Err(error) => return grant_error(error),
+    };
+    state
+        .store
+        .history()
+        .dry_run_receipt(reference)
+        .map_or_else(
+            |_| views::scan_failed(StatusCode::SERVICE_UNAVAILABLE),
+            |receipt| {
+                receipt.map_or_else(
+                    || views::scan_failed(StatusCode::NOT_FOUND),
+                    |value| views::receipt(&value, &session.csrf_token, Some(&grant)),
+                )
+            },
+        )
+}
+
+async fn admit_apply(
+    State(state): State<ConsoleState>,
+    Path(receipt_ref): Path<String>,
+    headers: HeaderMap,
+    Form(form): Form<ApplyForm>,
+) -> Response {
+    let Some(cookie_token) = cookie_value(&headers, SESSION_COOKIE) else {
+        return views::locked(StatusCode::UNAUTHORIZED);
+    };
+    let Some(session) = state.auth.authenticate_csrf(&cookie_token, &form.csrf) else {
+        return views::locked(StatusCode::FORBIDDEN);
+    };
+    let Some(reference) = ReceiptRef::parse(&receipt_ref) else {
+        return views::scan_failed(StatusCode::NOT_FOUND);
+    };
+    let admitted = state.grants.admit_with(
+        session.binding,
+        reference,
+        &form.idempotency_key,
+        |capability| state.jobs.admit_apply(capability),
+    );
+    match admitted {
+        Ok(GrantAdmission::Admitted(job_id) | GrantAdmission::Existing(job_id)) => {
+            Redirect::to(&format!("/jobs/{job_id}")).into_response()
+        }
+        Err(error) => grant_error(error),
+    }
+}
+
+fn grant_error(error: GrantError) -> Response {
+    match error {
+        GrantError::Invalid => views::scan_failed(StatusCode::FORBIDDEN),
+        GrantError::Expired => views::scan_failed(StatusCode::GONE),
+        GrantError::Unavailable => views::scan_failed(StatusCode::SERVICE_UNAVAILABLE),
+        GrantError::Admission(AdmissionError::UnknownProfile) => {
+            views::scan_failed(StatusCode::NOT_FOUND)
+        }
+        GrantError::Admission(AdmissionError::Full) => {
+            views::scan_failed(StatusCode::TOO_MANY_REQUESTS)
+        }
+        GrantError::Admission(AdmissionError::Unavailable) => {
+            views::scan_failed(StatusCode::SERVICE_UNAVAILABLE)
+        }
+    }
 }
 
 async fn export_plan(

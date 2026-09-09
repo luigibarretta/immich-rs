@@ -183,7 +183,14 @@ reopens and verifies that artifact entirely offline, rejects source, state,
 server-profile or credential-generation drift, creates no checkpoint, and
 atomically records a versioned receipt with terminal history. Tests remove the
 server credential and stop the disposable server before dry-run while proving
-the request counter does not increase. Apply and media-serving routes remain
+the request counter does not increase. Folder apply requires a second exact
+digest/count confirmation and a short-lived session-bound single-use grant.
+Grant consumption and job admission are atomic and idempotent; executor-owned
+apply performs another offline source/checkpoint verification before creating a
+write-capable client, writes a private plan-bound checkpoint, and requires a
+fresh dry-run receipt and confirmation after cancellation or restart. Replay,
+expiry, logout, drift and bounded before/after-commit fault tests use only a
+synthetic loopback server. Source-import apply and media-serving routes remain
 unsupported. A
 standalone web binary, native artifact and container are not yet supported. The
 CLI remains the canonical complete interface. See the
@@ -521,6 +528,10 @@ Picasa execution and Immich-to-Immich migration are recorded in the
 ## Workspace
 
 - `immich-cli`: explicit plan, dry-run and loopback apply command surface;
+- `immich-application`: thin typed workflow composition shared by both
+  frontends;
+- `immich-web`: authenticated SSR/HTTP, configured profiles, bounded jobs,
+  private history and short-lived grant policy;
 - `immich-core`: source-neutral plans, diagnostics, events and cancellation;
 - `immich-client`: version-aware HTTP boundary with distinct opaque read,
   archive, folder-upload and source-import capabilities;
@@ -529,9 +540,8 @@ Picasa execution and Immich-to-Immich migration are recorded in the
 - `immich-sources`: bounded folder, Google Takeout, Apple Photos and Picasa discovery
   and reconciliation.
 
-ADR-0033 accepts future `immich-application` and `immich-web` crates, but neither
-exists at this revision. Their implementation must preserve the current CLI and
-executor contracts.
+ADR-0033 accepts the implemented `immich-application` and `immich-web` crates.
+The CLI and executor contracts remain authoritative and compatible.
 
 The crate boundaries are dependency rules, not microservices. See
 [ADR-0004](docs/adr/ADR-0004-modular-workspace-architecture.md).

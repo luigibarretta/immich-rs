@@ -97,6 +97,50 @@ acknowledgements intentionally cannot be stored in environment or TOML. Test
 transport changes first against an explicitly disposable Immich; the
 repository integration harnesses create and remove that isolated topology.
 
+## Optional Web Console service
+
+The `web` profile builds a separate `Containerfile.web` image and does not
+change the default CLI service. It contains only `immich-rs-web`, its runtime
+libraries and license notices. It contains no operator configuration, API key,
+OIDC client secret, TLS key, certificate or CA bundle. The default configuration
+bind is `/dev/null` and the repository's example secret directory is explicitly
+empty, so starting the service without operator input fails closed.
+
+The profile publishes only `127.0.0.1:2285` by default. Container networking
+requires the process to listen on `0.0.0.0:2285`, so this deployment uses the
+complete direct-TLS/OIDC LAN policy even though Docker publishes its host port
+only on loopback. Follow the [LAN configuration contract](web-console-lan.md)
+and use container paths in the strict TOML:
+
+- `/sources` for the read-only configured source root;
+- `/run/secrets` for read-only API keys, TLS identity, OIDC secret and CA files;
+- `/state` for the private bounded history, plans and executor checkpoints;
+- `/staging` for bounded executor staging when an import profile needs it.
+
+Prepare the source/config/secret paths with permissions readable by UID 65532,
+then build and start only the optional profile:
+
+```bash
+IMMICH_RS_WEB_CONFIG_PATH=/absolute/path/to/immich-rs-web.toml \
+IMMICH_RS_WEB_SOURCE_PATH=/absolute/path/to/authorized-source \
+IMMICH_RS_WEB_SECRETS_PATH=/absolute/path/to/private-secret-directory \
+  docker compose --profile web build --pull immich-rs-web
+IMMICH_RS_WEB_CONFIG_PATH=/absolute/path/to/immich-rs-web.toml \
+IMMICH_RS_WEB_SOURCE_PATH=/absolute/path/to/authorized-source \
+IMMICH_RS_WEB_SECRETS_PATH=/absolute/path/to/private-secret-directory \
+  docker compose --profile web up immich-rs-web
+docker compose --profile web down --volumes --remove-orphans
+```
+
+The root filesystem is read-only, the process is UID/GID 65532 with all
+capabilities dropped and `no-new-privileges`, and only the named state and
+staging volumes are writable. The source, configuration and secret directory
+are read-only binds. The PID limit, temporary filesystem and shutdown grace
+period are explicit. Set `IMMICH_RS_WEB_IMAGE` to an immutable version or digest
+for a published candidate; `latest` is unsupported. Rootless engines still
+require the operator bind paths and published port to be accessible through
+their user namespace.
+
 ## Verified multiarch OCI archive
 
 Run the separate build only from a clean exact checkout and on a host

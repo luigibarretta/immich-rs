@@ -380,8 +380,8 @@ this is not a non-production shadow, WAN or production claim.
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
 and authenticated loopback folder scan/review library surface are implemented.
-The release and observability slices stay unsupported until their evidence
-gates are green.
+The release-bundle and observability closeout slices stay unsupported until
+their evidence gates are green.
 
 Sequential gates are:
 
@@ -408,7 +408,10 @@ Sequential gates are:
    against a disposable IdP, with EdDSA verification, role/subject policy,
    private-CIDR DNS pinning, secure rotation and fail-closed negative coverage.
    Trusted reverse-proxy termination remains unsupported;
-8. separate five-target native artifact and hardened multiarch OCI service;
+8. **In progress:** the standalone binary, separate digest-pinned OCI build,
+   opt-in loopback-published Compose service and deterministic hardened amd64
+   container test are implemented. Five-target native artifacts and the
+   separate attested multiarch release archive remain pending;
 9. aggregate metrics, recovery/operator documentation, accessibility and
    browser regression closeout.
 

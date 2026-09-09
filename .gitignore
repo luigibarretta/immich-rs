@@ -21,4 +21,6 @@ __pycache__/
 # or credentials. Only the synthetic `.example` files are commit-safe.
 /deploy/immich-rs.env
 /deploy/immich-rs.toml
+/deploy/immich-rs-web.toml
+/deploy/web-secrets/
 /normalized-plan.json

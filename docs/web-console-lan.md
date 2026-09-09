@@ -1,8 +1,9 @@
 # Web Console direct-TLS LAN configuration
 
 The implemented LAN authentication boundary is available through the
-`immich-web` library surface. The separately packaged native binary and OCI
-service remain unavailable until the release slice is complete.
+`immich-rs-web` library and standalone binary. A separate local OCI/Compose
+service is available from an exact checkout; no release image or native Web
+Console archive has been published yet.
 
 LAN mode is mutually exclusive with loopback bootstrap pairing. A non-loopback
 listen address requires all of this operator-owned configuration:
@@ -56,3 +57,15 @@ does not cancel admitted work.
 Tests use a synthetic source, a disposable loopback TLS IdP and generated test
 certificates. Live Authentik, production endpoints, production credentials and
 personal media are excluded.
+
+Start the native binary with an explicit strict configuration selector:
+
+```bash
+IMMICH_RS_WEB_CONFIG=/absolute/path/to/immich-rs-web.toml \
+  immich-rs-web
+```
+
+`--config PATH` has precedence over `IMMICH_RS_WEB_CONFIG`. Any other
+`IMMICH_RS_WEB_*` variable fails closed. Secrets, certificates, source paths,
+state paths and server origins remain inside the operator-owned TOML and are
+never accepted from the browser.

@@ -38,6 +38,50 @@ services:
       - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
     restart: "no"
 
+  immich-rs-web:
+    profiles: ["web"]
+    image: ${IMMICH_RS_WEB_IMAGE:-immich-rs-web:0.0.0}
+    build:
+      context: .
+      dockerfile: Containerfile.web
+      args:
+        VERSION: ${IMMICH_RS_WEB_VERSION:-0.0.0}
+        VCS_REF: ${IMMICH_RS_VCS_REF:-unknown}
+    environment:
+      IMMICH_RS_WEB_CONFIG: /config/immich-rs-web.toml
+    volumes:
+      - type: bind
+        source: ${IMMICH_RS_WEB_CONFIG_PATH:-/dev/null}
+        target: /config/immich-rs-web.toml
+        read_only: true
+      - type: bind
+        source: ${IMMICH_RS_WEB_SOURCE_PATH:-./deploy/example-source}
+        target: /sources
+        read_only: true
+      - type: bind
+        source: ${IMMICH_RS_WEB_SECRETS_PATH:-./deploy/example-web-secrets}
+        target: /run/secrets
+        read_only: true
+      - type: volume
+        source: immich_rs_web_state
+        target: /state
+      - type: volume
+        source: immich_rs_web_staging
+        target: /staging
+    ports:
+      - "127.0.0.1:2285:2285"
+    read_only: true
+    user: "65532:65532"
+    init: true
+    cap_drop: ["ALL"]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    tmpfs:
+      - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
+    stop_grace_period: 15s
+    restart: "no"
+
 configs:
   immich_rs_config:
     file: ${IMMICH_RS_CONFIG_PATH:-./deploy/immich-rs.example.toml}
@@ -45,3 +89,5 @@ configs:
 volumes:
   immich_rs_state:
   immich_rs_output:
+  immich_rs_web_state:
+  immich_rs_web_staging:

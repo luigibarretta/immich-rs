@@ -35,6 +35,8 @@ Semantic Versioning.
 - Real disposable compatibility gates and paired raw benchmarks for Apple
   Photos, Picasa and two-server migration, with ADR-0012-scoped synthetic
   performance claims and no generalized or production claim.
+- Authenticated `immich-rs-web` operator binary with a separate hardened local
+  OCI image and opt-in loopback-published Compose profile.
 
 This is the first signed release candidate. Production migration, destructive
 maintenance and compatibility beyond the documented Immich v3.1.x surfaces

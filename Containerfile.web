@@ -1,0 +1,35 @@
+ARG RUST_IMAGE=docker.io/library/rust:1.88.0-bookworm@sha256:af306cfa71d987911a781c37b59d7d67d934f49684058f96cf72079c3626bfe0
+ARG RUNTIME_IMAGE=gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
+
+FROM ${RUST_IMAGE} AS builder
+ARG TARGETARCH
+WORKDIR /build
+
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+
+RUN --mount=type=cache,id=immich-rs-web-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=immich-rs-web-target-${TARGETARCH},target=/build/target,sharing=locked \
+    cargo build --locked --release -p immich-rs-web --bin immich-rs-web && \
+    install -D -m 0755 target/release/immich-rs-web /out/usr/local/bin/immich-rs-web && \
+    install -d -m 0755 /out/config /out/run/secrets /out/sources /out/workspace && \
+    install -d -m 0700 /out/staging /out/state
+
+FROM ${RUNTIME_IMAGE} AS runtime
+ARG VERSION=0.0.0
+ARG VCS_REF=unknown
+
+LABEL org.opencontainers.image.title="immich-rs-web" \
+      org.opencontainers.image.description="Authenticated immich-rs operator Web Console" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://git.luigibarretta.com/luigibarretta/immich-rs" \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
+
+COPY --from=builder --chown=65532:65532 /out/ /
+COPY --chown=65532:65532 LICENSE NOTICE.md /licenses/immich-rs-web/
+
+USER 65532:65532
+WORKDIR /workspace
+ENTRYPOINT ["/usr/local/bin/immich-rs-web"]
+CMD ["--help"]

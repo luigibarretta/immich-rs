@@ -204,8 +204,10 @@ key rotation, provider outage, fixation, expiry, SSE revocation, Origin/proxy
 denial and private-address CIDR pinning are covered. Direct TLS is supported;
 trusted reverse-proxy termination is not. Media-serving routes remain
 unsupported. See the [LAN configuration contract](docs/web-console-lan.md). A
-standalone web binary, native artifact and container are not yet supported. The
-CLI remains the canonical complete interface. See the
+standalone `immich-rs-web` binary and separate local hardened OCI/Compose
+service are supported from an exact checkout; no Web Console release image or
+native release artifact has been published yet. The CLI remains the canonical
+complete interface. See the [container guide](docs/container.md),
 [threat model](docs/web-console-threat-model.md) and
 [capability/resource matrix](docs/web-console-resources.md).
 

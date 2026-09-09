@@ -118,6 +118,8 @@ jobs:
             -v "$WORKSPACE_VOLUME:$PWD:ro" immich-rs \
             > .artifacts/container/compose.json
           cmp .artifacts/container/first.json .artifacts/container/compose.json
+      - name: Build and run the separate hardened Web Console image twice
+        run: scripts/test-web-container.sh --revision "${{ github.sha }}"
       - name: Remove exact test-only container resources
         if: always()
         run: |

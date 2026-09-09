@@ -2,6 +2,7 @@
 !Cargo.lock
 !Cargo.toml
 !Containerfile
+!Containerfile.web
 !LICENSE
 !NOTICE.md
 !crates/

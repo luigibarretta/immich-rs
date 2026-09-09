@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}History · immich-rs{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="history-title">
+  <p class="eyebrow">Private bounded state</p>
+  <h1 id="history-title">Terminal history</h1>
+  <p>History contains only terminal status and aggregate counters. It contains no job, user, path, URL, filename, metadata, token or credential.</p>
+  {% if rows.is_empty() %}
+  <p>No terminal work has been recorded.</p>
+  {% else %}
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Terminal history table">
+    <table>
+      <thead><tr><th>Unix time</th><th>Workflow</th><th>Status</th><th>Assets</th><th>Sidecars</th><th>Bytes</th><th>Warnings</th><th>Errors</th></tr></thead>
+      <tbody>
+      {% for row in rows %}
+        <tr><td>{{ row.recorded_unix }}</td><td>{{ row.kind }}</td><td>{{ row.status }}</td><td>{{ row.assets }}</td><td>{{ row.sidecars }}</td><td>{{ row.bytes_read }}</td><td>{{ row.warnings }}</td><td>{{ row.errors }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <p><a href="/">Configured sources</a></p>
+</section>
+{% endblock %}

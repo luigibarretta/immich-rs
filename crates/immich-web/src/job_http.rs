@@ -24,6 +24,21 @@ pub fn routes() -> Router<ConsoleState> {
         .route("/jobs/{job_id}", get(job_status))
         .route("/jobs/{job_id}/events", get(events_http::job_events))
         .route("/jobs/{job_id}/cancel", post(cancel_job))
+        .route("/history", get(history))
+}
+
+async fn history(State(state): State<ConsoleState>, headers: HeaderMap) -> Response {
+    let Some(_session) = authenticated(&state, &headers) else {
+        return views::locked(StatusCode::UNAUTHORIZED);
+    };
+    let Ok(records) = state
+        .store
+        .history()
+        .latest(state.config.limits().history_page_rows)
+    else {
+        return views::scan_failed(StatusCode::SERVICE_UNAVAILABLE);
+    };
+    views::history(&records)
 }
 
 async fn admit_folder(

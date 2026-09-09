@@ -4,6 +4,7 @@ use axum::response::{Html, IntoResponse, Response};
 
 use crate::SourceProfile;
 use crate::jobs::{JobSnapshot, JobStatus};
+use crate::state_store::StoredHistory;
 
 #[derive(Template)]
 #[template(path = "pair.html")]
@@ -90,6 +91,23 @@ impl<'a> JobView<'a> {
 #[template(path = "scan_failed.html")]
 struct ScanFailedTemplate;
 
+#[derive(Template)]
+#[template(path = "history.html")]
+struct HistoryTemplate {
+    rows: Vec<HistoryRow>,
+}
+
+struct HistoryRow {
+    recorded_unix: i64,
+    kind: &'static str,
+    status: &'static str,
+    assets: u64,
+    sidecars: u64,
+    bytes_read: u64,
+    warnings: u64,
+    errors: u64,
+}
+
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
     render(status, &PairTemplate { csrf_token, denied })
 }
@@ -134,6 +152,23 @@ fn stage_label(snapshot: &JobSnapshot) -> &'static str {
 
 pub fn scan_failed(status: StatusCode) -> Response {
     render(status, &ScanFailedTemplate)
+}
+
+pub fn history(records: &[StoredHistory]) -> Response {
+    let rows = records
+        .iter()
+        .map(|stored| HistoryRow {
+            recorded_unix: stored.record.recorded_unix,
+            kind: stored.record.kind.label(),
+            status: stored.record.status.label(),
+            assets: stored.record.counters.assets,
+            sidecars: stored.record.counters.sidecars,
+            bytes_read: stored.record.counters.bytes_read,
+            warnings: stored.record.counters.warnings,
+            errors: stored.record.counters.errors,
+        })
+        .collect();
+    render(StatusCode::OK, &HistoryTemplate { rows })
 }
 
 fn render<T: Template>(status: StatusCode, template: &T) -> Response {

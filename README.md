@@ -169,10 +169,14 @@ Operator configuration now also validates private state roots and exact server
 profiles. Disposable profiles require a literal loopback address; remote
 read-only HTTPS profiles require an explicit per-profile IP/CIDR allowlist, and
 every bounded DNS answer must match it before addresses can be pinned without
-weakening TLS hostname verification. Server probe, durable plan, history,
-dry-run, apply and media-serving routes are not yet exposed. A standalone web
-binary, native artifact and container are not yet supported. The CLI remains
-the canonical complete interface. See the
+weakening TLS hostname verification. Terminal scan history is now persisted in
+a distinct bounded `console-history-v1` SQLite store under the private operator
+state profile and exposed only to an
+authenticated session; it contains only workflow/status enums and aggregate
+counters, never job/user identifiers or source data. Server planning, immutable
+plan export, dry-run, apply and media-serving routes are not yet exposed. A
+standalone web binary, native artifact and container are not yet supported. The
+CLI remains the canonical complete interface. See the
 [threat model](docs/web-console-threat-model.md) and
 [capability/resource matrix](docs/web-console-resources.md).
 

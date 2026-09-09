@@ -6,6 +6,7 @@ use immich_rs_application::{
 };
 
 use super::{JobProgress, JobStatus, JobSummary, JobsInner, push_event};
+use crate::state_store::{HistoryKind, SafeCounters, TerminalRecord, TerminalStatus, now_unix};
 
 pub fn run(inner: &Arc<JobsInner>, id: &str) {
     if !begin(inner, id) {
@@ -105,9 +106,25 @@ fn begin(inner: &JobsInner, id: &str) -> bool {
 }
 
 fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
+    let history_ok = history_record(outcome).and_then(|record| {
+        inner
+            .store
+            .history()
+            .record_terminal(&record)
+            .map(|_| ())
+            .map_err(|_| ())
+    });
+    let outcome = if history_ok.is_ok() {
+        outcome
+    } else {
+        WorkerOutcome::Failed
+    };
     let Ok(mut state) = inner.state.lock() else {
         return;
     };
+    if history_ok.is_err() {
+        state.worker_failed = true;
+    }
     state.running = state.running.saturating_sub(1);
     if let Some(job) = state.jobs.get_mut(id) {
         match outcome {
@@ -121,6 +138,31 @@ fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
         push_event(job, inner.limits.sse_replay_events);
     }
     inner.worker_available.notify_all();
+}
+
+fn history_record(outcome: WorkerOutcome) -> Result<TerminalRecord, ()> {
+    let (status, counters) = match outcome {
+        WorkerOutcome::Completed(summary) => (
+            TerminalStatus::Completed,
+            SafeCounters {
+                assets: summary.assets,
+                sidecars: summary.sidecars,
+                bytes_read: summary.bytes_read,
+                warnings: u64::try_from(summary.warnings).map_err(|_| ())?,
+                errors: u64::try_from(summary.errors).map_err(|_| ())?,
+                max_logical_effects: 0,
+            },
+        ),
+        WorkerOutcome::Failed => (TerminalStatus::Failed, SafeCounters::default()),
+        WorkerOutcome::Cancelled => (TerminalStatus::Cancelled, SafeCounters::default()),
+    };
+    Ok(TerminalRecord {
+        recorded_unix: now_unix().map_err(|_| ())?,
+        kind: HistoryKind::FolderScan,
+        status,
+        plan: None,
+        counters,
+    })
 }
 
 struct JobObserver {

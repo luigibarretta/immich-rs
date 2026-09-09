@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::WebConfig;
 use crate::jobs::{AdmissionError, JobManager, JobStatus, SubscribeError, SubscriptionDelivery};
+use crate::state_store::ConsoleStore;
 
 static TEST_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -66,6 +67,13 @@ generation = 1
     fn config(&self) -> Result<WebConfig, Box<dyn std::error::Error>> {
         Ok(WebConfig::load(&self.root.join("web.toml"))?)
     }
+
+    fn manager(&self) -> Result<JobManager, Box<dyn std::error::Error>> {
+        let config = Arc::new(self.config()?);
+        let state_profile = config.history_state()?.resolve()?;
+        let store = Arc::new(ConsoleStore::open(&state_profile, config.limits())?);
+        Ok(JobManager::new(config, store))
+    }
 }
 
 #[cfg(unix)]
@@ -84,7 +92,7 @@ fn make_private_directory(_path: &std::path::Path) -> Result<(), Box<dyn std::er
 async fn subscriptions_bound_owners_replay_and_slow_consumers()
 -> Result<(), Box<dyn std::error::Error>> {
     let workspace = Workspace::new()?;
-    let manager = JobManager::new(Arc::new(workspace.config()?));
+    let manager = workspace.manager()?;
     let owner = [11_u8; 32];
     let other = [12_u8; 32];
     let running = manager
@@ -177,7 +185,7 @@ impl Drop for Workspace {
 #[test]
 fn jobs_are_bounded_owned_and_cancel_idempotently() -> Result<(), Box<dyn std::error::Error>> {
     let workspace = Workspace::new()?;
-    let manager = JobManager::new(Arc::new(workspace.config()?));
+    let manager = workspace.manager()?;
     let owner = [7_u8; 32];
     let other = [8_u8; 32];
 

@@ -25,6 +25,7 @@ use crate::job_http;
 use crate::jobs::JobManager;
 use crate::policy::{RequestPolicy, request_policy};
 use crate::server;
+use crate::state_store::ConsoleStore;
 use crate::{WebConfig, WebConfigError, views};
 
 const STYLESHEET: &str = include_str!("../assets/console.css");
@@ -40,6 +41,7 @@ pub struct ConsoleState {
     pub config: Arc<WebConfig>,
     pub auth: Arc<AuthStore>,
     pub jobs: JobManager,
+    pub store: Arc<ConsoleStore>,
 }
 
 #[derive(Deserialize)]
@@ -59,13 +61,16 @@ impl WebConsole {
     /// Load the private bootstrap secret and initialize restart-ephemeral auth state.
     pub fn from_config(config: WebConfig) -> Result<Self, WebConfigError> {
         let auth = AuthStore::load(config.bootstrap_secret_file(), config.limits())?;
+        let state_profile = config.history_state()?.resolve()?;
+        let store = Arc::new(ConsoleStore::open(&state_profile, config.limits())?);
         let config = Arc::new(config);
-        let jobs = JobManager::new(Arc::clone(&config));
+        let jobs = JobManager::new(Arc::clone(&config), Arc::clone(&store));
         Ok(Self {
             state: ConsoleState {
                 config,
                 auth: Arc::new(auth),
                 jobs,
+                store,
             },
         })
     }

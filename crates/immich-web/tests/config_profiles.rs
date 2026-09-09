@@ -198,6 +198,9 @@ fn config_rejects_unknown_fields_traversal_and_excess_limits()
         "concurrent_jobs = 4\nqueued_jobs = 8\nretained_jobs = 11",
         "sse_subscribers_per_session = 8\nsse_subscribers_per_process = 7",
         "sse_replay_events = 257",
+        "history_page_rows = 20\nhistory_retained_rows = 10",
+        "history_store_bytes = 67108865",
+        "plan_file_bytes = 268435457",
     ] {
         let excessive = configuration(
             &workspace,

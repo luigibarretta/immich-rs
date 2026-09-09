@@ -39,6 +39,16 @@ pub struct WebLimits {
     pub sse_heartbeat_seconds: u64,
     /// Maximum unique addresses accepted from one DNS resolution.
     pub dns_addresses: usize,
+    /// Maximum rows returned on one history page.
+    pub history_page_rows: usize,
+    /// Maximum terminal history rows retained.
+    pub history_retained_rows: usize,
+    /// Maximum age of terminal history and dry-run receipts.
+    pub history_retention_days: u64,
+    /// Maximum combined history database and WAL bytes.
+    pub history_store_bytes: u64,
+    /// Maximum immutable plan artifact bytes.
+    pub plan_file_bytes: u64,
 }
 
 impl Default for WebLimits {
@@ -61,6 +71,11 @@ impl Default for WebLimits {
             sse_replay_events: 128,
             sse_heartbeat_seconds: 15,
             dns_addresses: 4,
+            history_page_rows: 50,
+            history_retained_rows: 5_000,
+            history_retention_days: 30,
+            history_store_bytes: 32 * 1_024 * 1_024,
+            plan_file_bytes: 128 * 1_024 * 1_024,
         }
     }
 }
@@ -87,7 +102,13 @@ impl WebLimits {
             && self.sse_subscribers_per_session <= self.sse_subscribers_per_process
             && (1..=256).contains(&self.sse_replay_events)
             && (1..=30).contains(&self.sse_heartbeat_seconds)
-            && (1..=8).contains(&self.dns_addresses);
+            && (1..=8).contains(&self.dns_addresses)
+            && (1..=100).contains(&self.history_page_rows)
+            && (1..=10_000).contains(&self.history_retained_rows)
+            && self.history_page_rows <= self.history_retained_rows
+            && (1..=90).contains(&self.history_retention_days)
+            && (1_024 * 1_024..=64 * 1_024 * 1_024).contains(&self.history_store_bytes)
+            && (1_024 * 1_024..=256 * 1_024 * 1_024).contains(&self.plan_file_bytes);
         valid
             .then_some(self)
             .ok_or_else(|| WebConfigError::new("web resource limits are invalid"))
@@ -114,6 +135,11 @@ pub struct RawWebLimits {
     sse_replay_events: Option<usize>,
     sse_heartbeat_seconds: Option<u64>,
     dns_addresses: Option<usize>,
+    history_page_rows: Option<usize>,
+    history_retained_rows: Option<usize>,
+    history_retention_days: Option<u64>,
+    history_store_bytes: Option<u64>,
+    plan_file_bytes: Option<u64>,
 }
 
 impl RawWebLimits {
@@ -157,6 +183,17 @@ impl RawWebLimits {
                 .sse_heartbeat_seconds
                 .unwrap_or(defaults.sse_heartbeat_seconds),
             dns_addresses: self.dns_addresses.unwrap_or(defaults.dns_addresses),
+            history_page_rows: self.history_page_rows.unwrap_or(defaults.history_page_rows),
+            history_retained_rows: self
+                .history_retained_rows
+                .unwrap_or(defaults.history_retained_rows),
+            history_retention_days: self
+                .history_retention_days
+                .unwrap_or(defaults.history_retention_days),
+            history_store_bytes: self
+                .history_store_bytes
+                .unwrap_or(defaults.history_store_bytes),
+            plan_file_bytes: self.plan_file_bytes.unwrap_or(defaults.plan_file_bytes),
         }
     }
 }

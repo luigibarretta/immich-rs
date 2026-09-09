@@ -759,6 +759,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "immich-rs-application",
+ "rusqlite",
  "serde",
  "sha2",
  "subtle",

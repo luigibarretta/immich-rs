@@ -10,6 +10,9 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use immich_rs_application::{CancellationToken, ProgressStage};
 use tokio::sync::broadcast;
 
+use crate::state_store::{
+    ConsoleStore, HistoryKind, SafeCounters, TerminalRecord, TerminalStatus, now_unix,
+};
 use crate::{WebConfig, WebLimits};
 
 pub use subscription::{JobSubscription, SubscribeError, SubscriptionDelivery};
@@ -94,6 +97,7 @@ pub struct JobManager {
 
 pub struct JobsInner {
     pub config: Arc<WebConfig>,
+    pub store: Arc<ConsoleStore>,
     pub limits: WebLimits,
     pub state: Mutex<JobsState>,
     pub worker_available: Condvar,
@@ -131,11 +135,12 @@ struct OwnedWorker {
 }
 
 impl JobManager {
-    pub fn new(config: Arc<WebConfig>) -> Self {
+    pub fn new(config: Arc<WebConfig>, store: Arc<ConsoleStore>) -> Self {
         let limits = config.limits();
         Self {
             inner: Arc::new(JobsInner {
                 config,
+                store,
                 limits,
                 state: Mutex::new(JobsState {
                     jobs: BTreeMap::new(),
@@ -238,6 +243,7 @@ impl JobManager {
             .get(id)
             .filter(|job| &job.owner == owner)
             .is_some_and(|job| job.status == JobStatus::Queued);
+        let mut record_cancelled = false;
         {
             let job = state.jobs.get_mut(id).filter(|job| &job.owner == owner)?;
             if !job.status.terminal() && !job.cancellation_requested {
@@ -245,6 +251,7 @@ impl JobManager {
                 job.cancellation.cancel();
                 if was_queued {
                     job.status = JobStatus::Cancelled;
+                    record_cancelled = true;
                 }
                 push_event(job, self.inner.limits.sse_replay_events);
                 self.inner.worker_available.notify_all();
@@ -256,6 +263,11 @@ impl JobManager {
         let job = state.jobs.get(id).filter(|job| &job.owner == owner)?;
         let snapshot = snapshot_job(job);
         drop(state);
+        if record_cancelled && record_cancelled_scan(&self.inner).is_err() {
+            if let Ok(mut state) = self.inner.state.lock() {
+                state.worker_failed = true;
+            }
+        }
         Some(snapshot)
     }
 
@@ -298,6 +310,17 @@ impl JobManager {
             .ok()
             .map(|state| state.handles.len())
     }
+}
+
+fn record_cancelled_scan(inner: &JobsInner) -> Result<(), crate::WebConfigError> {
+    inner.store.history().record_terminal(&TerminalRecord {
+        recorded_unix: now_unix()?,
+        kind: HistoryKind::FolderScan,
+        status: TerminalStatus::Cancelled,
+        plan: None,
+        counters: SafeCounters::default(),
+    })?;
+    Ok(())
 }
 
 pub fn push_event(job: &mut StoredJob, replay_limit: usize) {

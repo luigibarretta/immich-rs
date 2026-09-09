@@ -31,6 +31,16 @@ hostname, and forbids redirects. This deliberately permits explicitly
 configured private LAN/VPN ranges without granting a browser general SSRF
 authority. No server connection is exposed by the current slice.
 
+The implemented `console-history-v1.sqlite3` store is separate from executor
+checkpoints. It uses a transactional strict schema, full-synchronous WAL with a
+bounded page count and post-write truncating checkpoints, age/count eviction,
+private state permissions, startup integrity validation, and fail-closed newer
+schema/corruption/size handling. Only terminal workflow/status enums, aggregate
+counters and future opaque plan references are admitted by its typed write API;
+the authenticated fixed-size history page does not expose internal sequences.
+Dry-run receipt persistence is reserved in schema v1 but is not yet exposed or
+written.
+
 ## Numeric bounds
 
 | Resource | Default | Hard maximum |

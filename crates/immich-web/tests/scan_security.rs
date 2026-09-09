@@ -115,6 +115,38 @@ async fn assert_terminal_events(
     Ok(())
 }
 
+async fn assert_private_history(
+    router: &Router,
+    session: &PairedSession,
+    job_location: &str,
+    workspace: &TestWorkspace,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let locked = send(router, Method::GET, "/history", Some(HOST), None, None, "").await?;
+    assert_eq!(locked.status, StatusCode::UNAUTHORIZED);
+    let history = send(
+        router,
+        Method::GET,
+        "/history",
+        Some(HOST),
+        None,
+        Some(&session.cookie),
+        "",
+    )
+    .await?;
+    assert_eq!(history.status, StatusCode::OK);
+    assert!(history.body.contains("Folder scan"));
+    assert!(history.body.contains("Completed"));
+    assert!(!history.body.contains(job_location));
+    assert!(!history.body.contains("synthetic.jpg"));
+    assert!(!history.body.contains("Camera &"));
+    assert!(
+        !history
+            .body
+            .contains(&workspace.path("").display().to_string())
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn scan_uses_only_authenticated_opaque_profile_and_never_connects()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -197,6 +229,7 @@ async fn scan_uses_only_authenticated_opaque_profile_and_never_connects()
     assert!(!body.contains("synthetic.jpg"));
     assert!(!body.contains(&workspace.path("").display().to_string()));
     assert_terminal_events(&router, &session, &events_url, &workspace).await?;
+    assert_private_history(&router, &session, location, &workspace).await?;
     assert!(!workspace.path("never-read-api-key.secret").exists());
     match listener.accept() {
         Err(error) if error.kind() == ErrorKind::WouldBlock => {}

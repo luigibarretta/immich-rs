@@ -17,6 +17,7 @@ mod limits;
 mod policy;
 mod profiles;
 mod server;
+mod state_store;
 mod views;
 
 pub use config::WebConfig;

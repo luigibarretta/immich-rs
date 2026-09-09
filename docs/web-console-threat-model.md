@@ -37,7 +37,7 @@ headers are untrusted even after authentication.
 | Restart/logout/cancel ambiguity | Unused grants invalidated; admitted run is executor-owned and checkpointed; resume needs new dry-run | Never reconstruct authority |
 | Slow client or SSE disconnect | Bounded replay/subscribers, owned tasks, polling fallback; disconnect does not cancel | Drop subscriber, preserve job |
 | Resource exhaustion | Numerical HTTP/session/job/SSE/history/plan limits and backpressure | Reject admission or stop cleanly |
-| History leakage/corruption | Separate minimal schema, no identifiers/secrets/metadata, private file, transactional migration, bounded WAL | Refuse newer/corrupt/full store |
+| History leakage/corruption | Separate strict minimal schema, enum/counter-only typed writes, no identifiers/secrets/metadata, private file, transactional migration, bounded pages/WAL/retention and authenticated reads | Refuse newer/corrupt/full store and stop further job admission after a terminal-write failure |
 | OIDC mix-up/replay | Code+PKCE, exact issuer/audience/redirect/signature/alg/exp, single-use state/nonce, role/subject mapping | No session issued |
 | JWKS rotation/outage abuse | Bounded fetch/cache/key set; fail closed on unknown/invalid keys | Existing policy expires; login refused |
 | Excess privilege | Authz on every object/stream/export/metrics route; executor remains sole effect owner | Deny without disclosing existence |

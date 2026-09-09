@@ -184,6 +184,28 @@ code {
   color: #9cd4ff;
 }
 
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.65rem;
+  border-bottom: 1px solid #344467;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th {
+  color: #c7d2eb;
+}
+
 @media (max-width: 36rem) {
   .heading-row,
   .source-list li {

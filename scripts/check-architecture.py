@@ -17,7 +17,12 @@ MANIFESTS = {
     "immich-rs-sources": REPOSITORY_ROOT / "crates" / "immich-sources" / "Cargo.toml",
 }
 ALLOWED_INTERNAL = {
-    "immich-rs-application": {"immich-rs-core", "immich-rs-sources"},
+    "immich-rs-application": {
+        "immich-rs-client",
+        "immich-rs-core",
+        "immich-rs-executor",
+        "immich-rs-sources",
+    },
     "immich-rs-cli": {
         "immich-rs-application",
         "immich-rs-client",
@@ -70,9 +75,25 @@ def check() -> list[str]:
             or direct_token in source_frontend
         ):
             failures.append(f"{source_name}: CLI bypasses the application workflow facade")
+    for source_name in (
+        "upload_plan.rs",
+        "takeout_upload_plan.rs",
+        "apple_upload_plan.rs",
+        "picasa_upload_plan.rs",
+    ):
+        upload_frontend = (
+            REPOSITORY_ROOT / "crates" / "immich-cli" / "src" / source_name
+        ).read_text(encoding="utf-8")
+        if any(
+            token in upload_frontend
+            for token in ("immich_rs_client", "immich_rs_executor", "immich_rs_sources")
+        ):
+            failures.append(f"{source_name}: CLI bypasses upload-plan application facade")
     application_source = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (REPOSITORY_ROOT / "crates" / "immich-application" / "src").glob("*.rs")
+        (REPOSITORY_ROOT / "crates" / "immich-application" / "src" / name).read_text(
+            encoding="utf-8"
+        )
+        for name in ("folder.rs", "source_plans.rs", "progress.rs")
     ).casefold()
     forbidden_application_tokens = (
         "immich_rs_client",

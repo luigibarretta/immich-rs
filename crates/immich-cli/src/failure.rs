@@ -1,3 +1,4 @@
+use immich_rs_application::{ApplicationError, ApplicationErrorClass};
 use immich_rs_client::{ClientError, ClientErrorClass};
 use immich_rs_executor::{ExecutorError, ExecutorErrorClass};
 use immich_rs_sources::ScanError;
@@ -86,6 +87,24 @@ impl CliFailure {
             | ExecutorErrorClass::UnsupportedMetadata => SOURCE_EXIT,
             ExecutorErrorClass::Client => NETWORK_EXIT,
             _ => INVARIANT_EXIT,
+        };
+        Self {
+            exit_code,
+            message: error.to_string(),
+        }
+    }
+
+    pub fn from_application(error: &ApplicationError) -> Self {
+        let exit_code = match error.class() {
+            ApplicationErrorClass::Usage => USAGE_EXIT,
+            ApplicationErrorClass::Source => SOURCE_EXIT,
+            ApplicationErrorClass::Authentication => AUTH_EXIT,
+            ApplicationErrorClass::Compatibility => COMPATIBILITY_EXIT,
+            ApplicationErrorClass::Network => NETWORK_EXIT,
+            ApplicationErrorClass::Checkpoint => CHECKPOINT_EXIT,
+            ApplicationErrorClass::Destination => DESTINATION_EXIT,
+            ApplicationErrorClass::Invariant => INVARIANT_EXIT,
+            ApplicationErrorClass::Cancelled => CANCELLED_EXIT,
         };
         Self {
             exit_code,

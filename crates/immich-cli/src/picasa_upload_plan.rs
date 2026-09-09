@@ -1,6 +1,6 @@
-use immich_rs_core::CancellationToken;
-use immich_rs_executor::create_picasa_upload_plan;
-use immich_rs_sources::{NoProgress, scan_picasa_inputs_resolved};
+use immich_rs_application::{
+    ApplicationNoProgress, CancellationToken, SourceUploadPlanRequest, plan_picasa_upload,
+};
 
 use crate::args::UploadPicasaRequest;
 use crate::failure::CliFailure;
@@ -14,23 +14,17 @@ pub async fn run(request: UploadPicasaRequest) -> Result<(), CliFailure> {
         request.production_read,
         request.ca_certificate.as_deref(),
     )?;
-    let negotiated = client
-        .probe(&cancellation)
-        .await
-        .map_err(CliFailure::from_client)?;
-    let resolved = scan_picasa_inputs_resolved(
-        &request.inputs,
-        &request.label,
-        &request.config.source,
+    let plan = plan_picasa_upload(
+        &SourceUploadPlanRequest {
+            inputs: request.inputs,
+            label: request.label,
+            config: request.config,
+        },
+        &client,
         &cancellation,
-        &mut NoProgress,
+        &mut ApplicationNoProgress,
     )
-    .map_err(|error| CliFailure::from_scan(&error))?;
-    let plan = create_picasa_upload_plan(
-        &resolved,
-        negotiated.compatibility().clone(),
-        &request.config,
-    )
-    .map_err(CliFailure::from_executor)?;
+    .await
+    .map_err(|error| CliFailure::from_application(&error))?;
     output::write_json(&plan, "Picasa upload plan")
 }

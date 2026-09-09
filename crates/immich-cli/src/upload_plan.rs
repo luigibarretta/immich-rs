@@ -1,6 +1,7 @@
-use immich_rs_core::CancellationToken;
-use immich_rs_executor::{UploadExecutionConfig, create_upload_plan};
-use immich_rs_sources::{NoProgress, scan_folder_resolved};
+use immich_rs_application::{
+    ApplicationNoProgress, CancellationToken, FolderPlanRequest, FolderUploadPlanRequest,
+    plan_folder_upload,
+};
 
 use crate::args::UploadFolderRequest;
 use crate::failure::CliFailure;
@@ -14,21 +15,19 @@ pub async fn run(request: UploadFolderRequest) -> Result<(), CliFailure> {
         request.production_read,
         request.ca_certificate.as_deref(),
     )?;
-    let negotiated = client
-        .probe(&cancellation)
-        .await
-        .map_err(CliFailure::from_client)?;
-    let resolved = scan_folder_resolved(
-        &request.folder.root,
-        &request.folder.label,
-        &request.folder.config,
+    let plan = plan_folder_upload(
+        &FolderUploadPlanRequest {
+            source: FolderPlanRequest {
+                root: request.folder.root,
+                label: request.folder.label,
+                config: request.folder.config,
+            },
+        },
+        &client,
         &cancellation,
-        &mut NoProgress,
+        &mut ApplicationNoProgress,
     )
-    .map_err(|error| CliFailure::from_scan(&error))?;
-    let mut config = UploadExecutionConfig::default();
-    config.scan = request.folder.config;
-    let plan = create_upload_plan(&resolved, negotiated.compatibility().clone(), &config)
-        .map_err(CliFailure::from_executor)?;
+    .await
+    .map_err(|error| CliFailure::from_application(&error))?;
     output::write_json(&plan, "upload plan")
 }

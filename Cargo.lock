@@ -552,7 +552,9 @@ dependencies = [
 name = "immich-rs-application"
 version = "0.1.0-rc.1"
 dependencies = [
+ "immich-rs-client",
  "immich-rs-core",
+ "immich-rs-executor",
  "immich-rs-sources",
  "serde",
  "serde_json",

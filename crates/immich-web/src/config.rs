@@ -36,6 +36,20 @@ pub struct WebLimits {
     pub session_absolute_seconds: u64,
     /// First-start bootstrap lifetime in seconds.
     pub bootstrap_lifetime_seconds: u64,
+    /// Maximum concurrently running jobs.
+    pub concurrent_jobs: usize,
+    /// Maximum jobs waiting for a worker slot.
+    pub queued_jobs: usize,
+    /// Maximum in-memory job records, including terminal records.
+    pub retained_jobs: usize,
+    /// Maximum SSE subscribers owned by one session.
+    pub sse_subscribers_per_session: usize,
+    /// Maximum SSE subscribers in the process.
+    pub sse_subscribers_per_process: usize,
+    /// Maximum replay events retained by one job.
+    pub sse_replay_events: usize,
+    /// SSE heartbeat interval in seconds.
+    pub sse_heartbeat_seconds: u64,
 }
 
 impl Default for WebLimits {
@@ -50,6 +64,13 @@ impl Default for WebLimits {
             session_idle_seconds: 30 * 60,
             session_absolute_seconds: 8 * 60 * 60,
             bootstrap_lifetime_seconds: 10 * 60,
+            concurrent_jobs: 1,
+            queued_jobs: 4,
+            retained_jobs: 128,
+            sse_subscribers_per_session: 4,
+            sse_subscribers_per_process: 16,
+            sse_replay_events: 128,
+            sse_heartbeat_seconds: 15,
         }
     }
 }
@@ -66,6 +87,16 @@ impl WebLimits {
             && (1..=12 * 60 * 60).contains(&self.session_absolute_seconds)
             && self.session_idle_seconds <= self.session_absolute_seconds
             && (1..=15 * 60).contains(&self.bootstrap_lifetime_seconds);
+        let valid = valid
+            && (1..=4).contains(&self.concurrent_jobs)
+            && (1..=8).contains(&self.queued_jobs)
+            && (1..=256).contains(&self.retained_jobs)
+            && self.retained_jobs >= self.concurrent_jobs.saturating_add(self.queued_jobs)
+            && (1..=8).contains(&self.sse_subscribers_per_session)
+            && (1..=32).contains(&self.sse_subscribers_per_process)
+            && self.sse_subscribers_per_session <= self.sse_subscribers_per_process
+            && (1..=256).contains(&self.sse_replay_events)
+            && (1..=30).contains(&self.sse_heartbeat_seconds);
         valid
             .then_some(self)
             .ok_or_else(|| WebConfigError::new("web resource limits are invalid"))
@@ -274,6 +305,13 @@ struct RawWebLimits {
     session_idle_seconds: Option<u64>,
     session_absolute_seconds: Option<u64>,
     bootstrap_lifetime_seconds: Option<u64>,
+    concurrent_jobs: Option<usize>,
+    queued_jobs: Option<usize>,
+    retained_jobs: Option<usize>,
+    sse_subscribers_per_session: Option<usize>,
+    sse_subscribers_per_process: Option<usize>,
+    sse_replay_events: Option<usize>,
+    sse_heartbeat_seconds: Option<u64>,
 }
 
 impl RawWebLimits {
@@ -303,6 +341,19 @@ impl RawWebLimits {
             bootstrap_lifetime_seconds: self
                 .bootstrap_lifetime_seconds
                 .unwrap_or(defaults.bootstrap_lifetime_seconds),
+            concurrent_jobs: self.concurrent_jobs.unwrap_or(defaults.concurrent_jobs),
+            queued_jobs: self.queued_jobs.unwrap_or(defaults.queued_jobs),
+            retained_jobs: self.retained_jobs.unwrap_or(defaults.retained_jobs),
+            sse_subscribers_per_session: self
+                .sse_subscribers_per_session
+                .unwrap_or(defaults.sse_subscribers_per_session),
+            sse_subscribers_per_process: self
+                .sse_subscribers_per_process
+                .unwrap_or(defaults.sse_subscribers_per_process),
+            sse_replay_events: self.sse_replay_events.unwrap_or(defaults.sse_replay_events),
+            sse_heartbeat_seconds: self
+                .sse_heartbeat_seconds
+                .unwrap_or(defaults.sse_heartbeat_seconds),
         }
     }
 }

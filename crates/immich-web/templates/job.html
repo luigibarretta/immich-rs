@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Scan status · immich-rs{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="job-title" data-events-url="/jobs/{{ id }}/events">
+  <p class="eyebrow">Bounded read-only scan</p>
+  <h1 id="job-title">{{ label }}</h1>
+  <p id="job-status" class="job-status" role="status" aria-live="polite">{{ status }} · {{ stage }}</p>
+  {% if cancellation_requested %}<p>Cooperative cancellation requested.</p>{% endif %}
+  <dl class="summary-grid">
+    <div><dt>Assets observed</dt><dd id="assets-observed">{{ assets_observed }}</dd></div>
+    <div><dt>Bytes streamed</dt><dd id="progress-bytes">{{ progress_bytes }}</dd></div>
+  </dl>
+  {% if has_summary %}
+  <h2>Completed plan summary</h2>
+  <p>This browser summary is informational and cannot authorize a later job.</p>
+  <dl class="summary-grid">
+    <div><dt>Plan schema</dt><dd>{{ schema_version }}</dd></div>
+    <div><dt>Assets</dt><dd>{{ assets }}</dd></div>
+    <div><dt>Sidecars</dt><dd>{{ sidecars }}</dd></div>
+    <div><dt>Bytes read</dt><dd>{{ bytes_read }}</dd></div>
+    <div><dt>Warnings</dt><dd>{{ warnings }}</dd></div>
+    <div><dt>Blocking errors</dt><dd>{{ errors }}</dd></div>
+  </dl>
+  {% endif %}
+  {% if cancellable %}
+  <form method="post" action="/jobs/{{ id }}/cancel">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <button class="secondary" type="submit">Cancel scan</button>
+  </form>
+  {% endif %}
+  <p><a href="/jobs/{{ id }}">Refresh status</a> · <a href="/">Configured sources</a></p>
+</section>
+{% endblock %}

@@ -5,28 +5,28 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use axum::extract::{ConnectInfo, Form, Path, State};
-use axum::http::header::{CONTENT_TYPE, COOKIE, SET_COOKIE};
+use axum::extract::{ConnectInfo, Form, State};
+use axum::http::header::CONTENT_TYPE;
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::middleware;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
-use immich_rs_application::{
-    ApplicationNoProgress, CancellationToken, FolderPlanRequest, plan_folder,
-};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::timeout::TimeoutLayer;
 
 use crate::auth::{AuthStore, PairingFailure, PairingView, SessionView};
+use crate::cookies::{
+    PAIRING_COOKIE, SESSION_COOKIE, append as append_cookie, clear as append_clear_cookie,
+    value as cookie_value,
+};
+use crate::job_http;
+use crate::jobs::JobManager;
 use crate::policy::{RequestPolicy, request_policy};
 use crate::server;
-use crate::views::ScanReview;
 use crate::{WebConfig, WebConfigError, views};
 
-const SESSION_COOKIE: &str = "immich_rs_session";
-const PAIRING_COOKIE: &str = "immich_rs_pairing";
 const STYLESHEET: &str = include_str!("../assets/console.css");
 
 /// Authenticated loopback console assembled from validated operator configuration.
@@ -35,9 +35,10 @@ pub struct WebConsole {
 }
 
 #[derive(Clone)]
-struct ConsoleState {
-    config: Arc<WebConfig>,
-    auth: Arc<AuthStore>,
+pub struct ConsoleState {
+    pub config: Arc<WebConfig>,
+    pub auth: Arc<AuthStore>,
+    pub jobs: JobManager,
 }
 
 #[derive(Deserialize)]
@@ -57,10 +58,13 @@ impl WebConsole {
     /// Load the private bootstrap secret and initialize restart-ephemeral auth state.
     pub fn from_config(config: WebConfig) -> Result<Self, WebConfigError> {
         let auth = AuthStore::load(config.bootstrap_secret_file(), config.limits())?;
+        let config = Arc::new(config);
+        let jobs = JobManager::new(Arc::clone(&config));
         Ok(Self {
             state: ConsoleState {
-                config: Arc::new(config),
+                config,
                 auth: Arc::new(auth),
+                jobs,
             },
         })
     }
@@ -73,8 +77,8 @@ impl WebConsole {
             .route("/", get(index))
             .route("/pair", get(pair_page).post(pair))
             .route("/logout", post(logout))
-            .route("/sources/{source_id}/scan", post(scan_folder))
             .route("/assets/console.css", get(stylesheet))
+            .merge(job_http::routes())
             .fallback(not_found)
             .layer(RequestBodyLimitLayer::new(limits.request_body_bytes))
             .layer(TimeoutLayer::with_status_code(
@@ -111,7 +115,12 @@ impl WebConsole {
         }
         let limits = self.state.config.limits();
         let router = self.router();
-        server::serve(listener, router, limits, shutdown).await
+        let result = server::serve(listener, router, limits, shutdown).await;
+        let jobs_clean = self.state.jobs.shutdown();
+        if !jobs_clean && result.is_ok() {
+            return Err(io::Error::other("web job worker failed"));
+        }
+        result
     }
 }
 
@@ -189,48 +198,6 @@ async fn logout(
     }
 }
 
-async fn scan_folder(
-    State(state): State<ConsoleState>,
-    Path(source_id): Path<String>,
-    headers: HeaderMap,
-    Form(form): Form<CsrfForm>,
-) -> Response {
-    let Some(cookie_token) = cookie_value(&headers, SESSION_COOKIE) else {
-        return views::locked(StatusCode::UNAUTHORIZED);
-    };
-    if state
-        .auth
-        .authenticate_csrf(&cookie_token, &form.csrf)
-        .is_none()
-    {
-        return views::locked(StatusCode::FORBIDDEN);
-    }
-    let Some(profile) = state.config.source(&source_id) else {
-        return views::scan_failed(StatusCode::NOT_FOUND);
-    };
-    let Ok(resolved) = profile.resolve() else {
-        return views::scan_failed(StatusCode::CONFLICT);
-    };
-    let request = FolderPlanRequest {
-        root: resolved.root().to_path_buf(),
-        label: resolved.label().to_owned(),
-        config: resolved.config().clone(),
-    };
-    let cancellation = CancellationToken::default();
-    let Ok(plan) = plan_folder(&request, &cancellation, &mut ApplicationNoProgress) else {
-        return views::scan_failed(StatusCode::UNPROCESSABLE_ENTITY);
-    };
-    views::scan_review(&ScanReview {
-        label: resolved.label(),
-        schema_version: plan.schema_version,
-        assets: plan.summary.assets,
-        sidecars: plan.summary.sidecars,
-        bytes_read: plan.summary.bytes_read,
-        warnings: plan.warnings.len(),
-        errors: plan.errors.len(),
-    })
-}
-
 async fn stylesheet() -> Response {
     ([(CONTENT_TYPE, "text/css; charset=utf-8")], STYLESHEET).into_response()
 }
@@ -268,46 +235,4 @@ fn pairing_response(state: &ConsoleState, denied: bool) -> Response {
     } else {
         views::locked(StatusCode::INTERNAL_SERVER_ERROR)
     }
-}
-
-fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
-    let mut found = None;
-    for header in headers.get_all(COOKIE) {
-        let value = header.to_str().ok()?;
-        for part in value.split(';') {
-            let (cookie_name, cookie_value) = part.trim().split_once('=')?;
-            if cookie_name == name {
-                if found.is_some() || !valid_token(cookie_value) {
-                    return None;
-                }
-                found = Some(cookie_value.to_owned());
-            }
-        }
-    }
-    found
-}
-
-fn valid_token(value: &str) -> bool {
-    value.len() == 43
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
-}
-
-fn append_cookie(response: &mut Response, name: &str, value: &str, max_age: u64) -> bool {
-    let cookie = format!("{name}={value}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}");
-    let Ok(header) = HeaderValue::from_str(&cookie) else {
-        return false;
-    };
-    response.headers_mut().append(SET_COOKIE, header);
-    true
-}
-
-fn append_clear_cookie(response: &mut Response, name: &str) -> bool {
-    let cookie = format!("{name}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
-    let Ok(header) = HeaderValue::from_str(&cookie) else {
-        return false;
-    };
-    response.headers_mut().append(SET_COOKIE, header);
-    true
 }

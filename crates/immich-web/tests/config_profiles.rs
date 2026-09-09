@@ -110,6 +110,13 @@ fn strict_config_resolves_only_opaque_operator_profiles() -> Result<(), Box<dyn 
     assert_eq!(config.limits().accepted_connections, 16);
     assert_eq!(config.limits().header_read_seconds, 5);
     assert_eq!(config.limits().response_seconds, 15);
+    assert_eq!(config.limits().concurrent_jobs, 1);
+    assert_eq!(config.limits().queued_jobs, 4);
+    assert_eq!(config.limits().retained_jobs, 128);
+    assert_eq!(config.limits().sse_subscribers_per_session, 4);
+    assert_eq!(config.limits().sse_subscribers_per_process, 16);
+    assert_eq!(config.limits().sse_replay_events, 128);
+    assert_eq!(config.limits().sse_heartbeat_seconds, 15);
     assert_eq!(config.sources().len(), 1);
     let profile = config
         .source("camera_roll")
@@ -145,14 +152,21 @@ fn config_rejects_unknown_fields_traversal_and_excess_limits()
     let traversal_path = write_config(&workspace, &traversal)?;
     assert!(WebConfig::load(&traversal_path).is_err());
 
-    let excessive = configuration(
-        &workspace,
-        &allowed,
-        "\n[web.limits]\nmax_sessions = 17",
-        ".",
-    );
-    let excessive_path = write_config(&workspace, &excessive)?;
-    assert!(WebConfig::load(&excessive_path).is_err());
+    for limits in [
+        "max_sessions = 17",
+        "concurrent_jobs = 4\nqueued_jobs = 8\nretained_jobs = 11",
+        "sse_subscribers_per_session = 8\nsse_subscribers_per_process = 7",
+        "sse_replay_events = 257",
+    ] {
+        let excessive = configuration(
+            &workspace,
+            &allowed,
+            &format!("\n[web.limits]\n{limits}"),
+            ".",
+        );
+        let excessive_path = write_config(&workspace, &excessive)?;
+        assert!(WebConfig::load(&excessive_path).is_err());
+    }
     Ok(())
 }
 

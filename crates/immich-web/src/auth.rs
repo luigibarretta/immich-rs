@@ -39,6 +39,7 @@ struct Bootstrap {
 }
 
 struct Session {
+    binding: [u8; 32],
     csrf_token: String,
     created_at: Instant,
     last_seen_at: Instant,
@@ -50,6 +51,7 @@ pub struct PairingView {
 }
 
 pub struct SessionView {
+    pub binding: [u8; 32],
     pub csrf_token: String,
 }
 
@@ -146,10 +148,12 @@ impl AuthStore {
         }
         let cookie_token = random_token().map_err(|_| PairingFailure::Unavailable)?;
         let csrf_token = random_token().map_err(|_| PairingFailure::Unavailable)?;
+        let binding = Sha256::digest(cookie_token.as_bytes()).into();
         state.bootstrap = None;
         state.sessions.insert(
             cookie_token.clone(),
             Session {
+                binding,
                 csrf_token,
                 created_at: now,
                 last_seen_at: now,
@@ -167,6 +171,7 @@ impl AuthStore {
             let session = state.sessions.get_mut(cookie_token)?;
             session.last_seen_at = now;
             SessionView {
+                binding: session.binding,
                 csrf_token: session.csrf_token.clone(),
             }
         };

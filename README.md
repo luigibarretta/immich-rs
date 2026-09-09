@@ -159,13 +159,16 @@ revision.
 
 The optional operator Web Console now has a tested loopback library surface for
 one-time bootstrap pairing, restart-ephemeral sessions and source-only folder
-scan/review through opaque operator-configured profiles. It applies exact
-Host/Origin/CSRF policy, contextual SSR escaping, private response headers and
-bounded connections, headers, bodies and deadlines. It exposes no server probe,
-durable plan, history, dry-run, apply or media-serving route. A standalone web
-binary, native artifact and container are not yet supported. The CLI remains
-the canonical complete interface. See the [threat model](docs/web-console-threat-model.md)
-and [capability/resource matrix](docs/web-console-resources.md).
+scan/review through opaque operator-configured profiles. Scans run as bounded,
+owned in-memory jobs with authenticated polling, cooperative cancellation and
+joined shutdown; terminal summaries are published only after a complete plan.
+It applies exact Host/Origin/CSRF policy, contextual SSR escaping, private
+response headers and bounded connections, headers, bodies and deadlines. SSE,
+server probe, durable plan, history, dry-run, apply and media-serving routes are
+not yet exposed. A standalone web binary, native artifact and container are not
+yet supported. The CLI remains the canonical complete interface. See the
+[threat model](docs/web-console-threat-model.md) and
+[capability/resource matrix](docs/web-console-resources.md).
 
 - deterministic recursive folder discovery with bounded entry and path limits;
 - one-file-at-a-time SHA-256 streaming through a configurable bounded buffer;

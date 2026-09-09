@@ -5,6 +5,7 @@ use std::io::ErrorKind;
 use std::net::TcpListener;
 
 use axum::Router;
+use axum::http::header::LOCATION;
 use axum::http::{Method, StatusCode};
 
 mod support;
@@ -48,6 +49,33 @@ async fn pair(router: &Router) -> Result<PairedSession, Box<dyn std::error::Erro
         cookie,
         csrf: csrf(&dashboard.body)?.to_owned(),
     })
+}
+
+async fn wait_for_job(
+    router: &Router,
+    session: &PairedSession,
+    location: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    for _attempt in 0..100 {
+        let response = send(
+            router,
+            Method::GET,
+            location,
+            Some(HOST),
+            None,
+            Some(&session.cookie),
+            "",
+        )
+        .await?;
+        if response.status != StatusCode::OK {
+            return Err("job status request failed".into());
+        }
+        if response.body.contains("Completed ·") || response.body.contains("Failed ·") {
+            return Ok(response.body);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    Err("job did not finish within the bounded wait".into())
 }
 
 #[tokio::test]
@@ -118,15 +146,18 @@ async fn scan_uses_only_authenticated_opaque_profile_and_never_connects()
         &format!("csrf={}", session.csrf),
     )
     .await?;
-    assert_eq!(scanned.status, StatusCode::OK);
-    assert!(scanned.body.contains("Completed read-only scan"));
-    assert!(scanned.body.contains("<dd>1</dd>"));
-    assert!(!scanned.body.contains("synthetic.jpg"));
-    assert!(
-        !scanned
-            .body
-            .contains(&workspace.path("").display().to_string())
-    );
+    assert_eq!(scanned.status, StatusCode::SEE_OTHER);
+    let location = scanned
+        .headers
+        .get(LOCATION)
+        .ok_or("job redirect missing")?
+        .to_str()?;
+    let body = wait_for_job(&router, &session, location).await?;
+    assert!(body.contains("Completed ·"));
+    assert!(body.contains("Completed plan summary"));
+    assert!(body.contains("<dd>1</dd>"));
+    assert!(!body.contains("synthetic.jpg"));
+    assert!(!body.contains(&workspace.path("").display().to_string()));
     assert!(!workspace.path("never-read-api-key.secret").exists());
     match listener.accept() {
         Err(error) if error.kind() == ErrorKind::WouldBlock => {}
@@ -156,8 +187,15 @@ async fn source_identity_swap_fails_before_scan_and_returns_no_path()
         &format!("csrf={}", session.csrf),
     )
     .await?;
-    assert_eq!(response.status, StatusCode::CONFLICT);
-    assert!(response.body.contains("No partial plan was retained"));
-    assert!(!response.body.contains(&source.display().to_string()));
+    assert_eq!(response.status, StatusCode::SEE_OTHER);
+    let location = response
+        .headers
+        .get(LOCATION)
+        .ok_or("job redirect missing")?
+        .to_str()?;
+    let body = wait_for_job(&router, &session, location).await?;
+    assert!(body.contains("Failed ·"));
+    assert!(!body.contains("Completed plan summary"));
+    assert!(!body.contains(&source.display().to_string()));
     Ok(())
 }

@@ -9,6 +9,7 @@ mod import;
 mod import_models;
 mod migration;
 mod models;
+mod network_policy;
 mod production;
 mod read;
 mod response;
@@ -23,6 +24,7 @@ pub use import::{ImmichImportClient, RemoteAlbum};
 pub use migration::{
     MigrationListConfig, RemoteMigrationAsset, RemoteMigrationInventory, RemoteOwnedAlbum,
 };
+pub use network_policy::PinnedEndpointAddresses;
 pub use production::{
     ProductionImmichImportClient, ProductionImmichUploadClient, ProductionImportAuthorization,
     ProductionUploadAuthorization, migration_plan_sha256, upload_plan_sha256,

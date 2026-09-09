@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
+use std::net::IpAddr;
 
 use url::{Host, Url};
 
@@ -101,6 +102,15 @@ impl ImmichEndpoint {
 
     pub(crate) fn canonical_origin(&self) -> &str {
         self.origin.as_str()
+    }
+
+    pub(crate) fn resolution_target(&self) -> Result<(&str, u16, Option<IpAddr>), EndpointError> {
+        let host = self.origin.host_str().ok_or(EndpointError::InvalidOrigin)?;
+        let port = self
+            .origin
+            .port_or_known_default()
+            .ok_or(EndpointError::InvalidOrigin)?;
+        Ok((host, port, host.parse::<IpAddr>().ok()))
     }
 }
 

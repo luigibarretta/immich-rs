@@ -5,16 +5,16 @@ use immich_rs_core::{
     Cancellation, MigrationServer, ProductionWriteConfirmation, ServerCompatibility, ServerVersion,
     UploadPlan,
 };
-use reqwest::header::{ACCEPT, HeaderMap, HeaderValue};
 use sha2::{Digest, Sha256};
 
 use crate::models::{UserResponse, VersionResponse};
+use crate::network_policy::build_http_client;
 use crate::response::{bounded_json, classify_transport};
 use crate::{
     ApiKey, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint, ImmichImportClient,
-    ImmichUploadClient, ProductionImmichImportClient, ProductionImmichUploadClient,
-    ProductionImportAuthorization, ProductionUploadAuthorization, TlsRootCertificates,
-    upload_plan_sha256,
+    ImmichUploadClient, PinnedEndpointAddresses, ProductionImmichImportClient,
+    ProductionImmichUploadClient, ProductionImportAuthorization, ProductionUploadAuthorization,
+    TlsRootCertificates, upload_plan_sha256,
 };
 
 const SUPPORTED_MAJOR: u32 = 3;
@@ -120,7 +120,7 @@ impl ImmichReadClient {
     ) -> Result<Self, ClientError> {
         let access = EndpointAccess::disposable(&endpoint)
             .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
-        Self::new_with_access(endpoint, api_key, config, access, None)
+        Self::new_with_access(endpoint, api_key, config, access, None, None)
     }
 
     /// Construct an explicitly acknowledged read-only production client.
@@ -132,7 +132,7 @@ impl ImmichReadClient {
     ) -> Result<Self, ClientError> {
         let access = EndpointAccess::production_read(&endpoint, acknowledged)
             .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
-        Self::new_with_access(endpoint, api_key, config, access, None)
+        Self::new_with_access(endpoint, api_key, config, access, None, None)
     }
 
     /// Construct a production read client that trusts an additional bounded CA bundle.
@@ -145,7 +145,34 @@ impl ImmichReadClient {
     ) -> Result<Self, ClientError> {
         let access = EndpointAccess::production_read(&endpoint, acknowledged)
             .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
-        Self::new_with_access(endpoint, api_key, config, access, Some(roots))
+        Self::new_with_access(endpoint, api_key, config, access, Some(roots), None)
+    }
+
+    /// Construct a read client pinned to prevalidated endpoint addresses.
+    pub fn new_pinned(
+        endpoint: ImmichEndpoint,
+        api_key: ApiKey,
+        config: ClientConfig,
+        roots: Option<TlsRootCertificates>,
+        addresses: PinnedEndpointAddresses,
+    ) -> Result<Self, ClientError> {
+        let access = EndpointAccess::disposable(&endpoint)
+            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
+        Self::new_with_access(endpoint, api_key, config, access, roots, Some(addresses))
+    }
+
+    /// Construct an acknowledged production read client pinned to validated addresses.
+    pub fn new_production_read_pinned(
+        endpoint: ImmichEndpoint,
+        api_key: ApiKey,
+        config: ClientConfig,
+        acknowledged: bool,
+        roots: Option<TlsRootCertificates>,
+        addresses: PinnedEndpointAddresses,
+    ) -> Result<Self, ClientError> {
+        let access = EndpointAccess::production_read(&endpoint, acknowledged)
+            .map_err(|_| ClientError::new(ClientErrorClass::Compatibility))?;
+        Self::new_with_access(endpoint, api_key, config, access, roots, Some(addresses))
     }
 
     fn new_with_access(
@@ -154,22 +181,10 @@ impl ImmichReadClient {
         config: ClientConfig,
         access: EndpointAccess,
         roots: Option<TlsRootCertificates>,
+        addresses: Option<PinnedEndpointAddresses>,
     ) -> Result<Self, ClientError> {
         let config = config.validate()?;
-        let mut headers = HeaderMap::new();
-        headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
-        let mut builder = reqwest::Client::builder()
-            .default_headers(headers)
-            .timeout(config.request_timeout)
-            .redirect(reqwest::redirect::Policy::none());
-        if let Some(roots) = roots {
-            for certificate in roots.certificates {
-                builder = builder.add_root_certificate(certificate);
-            }
-        }
-        let http = builder
-            .build()
-            .map_err(|_| ClientError::new(ClientErrorClass::Protocol))?;
+        let http = build_http_client(&endpoint, config, roots, addresses)?;
         Ok(Self {
             http,
             endpoint,

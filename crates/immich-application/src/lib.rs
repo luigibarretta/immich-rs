@@ -23,7 +23,7 @@ pub use error::{ApplicationError, ApplicationErrorClass};
 pub use folder::{FolderPlanRequest, plan_folder};
 pub use immich_rs_client::{
     ApiKey, ClientConfig, ClientError, ClientErrorClass, EndpointAccess, ImmichEndpoint,
-    ImmichReadClient, TlsRootCertificates, upload_plan_sha256,
+    ImmichReadClient, PinnedEndpointAddresses, TlsRootCertificates, upload_plan_sha256,
 };
 pub use immich_rs_core::{
     ArchiveManifest, Cancellation, CancellationToken, MigrationPlan, NormalizedPlan, ProgressStage,

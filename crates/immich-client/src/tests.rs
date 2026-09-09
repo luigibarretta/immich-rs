@@ -1,4 +1,5 @@
 use std::time::Duration;
+use std::{net::SocketAddr, str::FromStr};
 
 use immich_rs_core::{
     CancellationToken, ProductionWriteConfirmation, ServerCompatibility, ServerVersion, UploadPlan,
@@ -7,8 +8,40 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     ApiKey, ClientConfig, ClientError, ClientErrorClass, EndpointAccess, EndpointError,
-    ImmichEndpoint, ImmichReadClient, TlsRootCertificates,
+    ImmichEndpoint, ImmichReadClient, PinnedEndpointAddresses, TlsRootCertificates,
 };
+
+#[test]
+fn pinned_addresses_are_exact_bounded_and_endpoint_bound() -> Result<(), Box<dyn std::error::Error>>
+{
+    let endpoint = ImmichEndpoint::parse("http://127.0.0.1:31337")?;
+    let address = SocketAddr::from_str("127.0.0.1:31337")?;
+    assert!(PinnedEndpointAddresses::new(&endpoint, Vec::new()).is_err());
+    assert!(PinnedEndpointAddresses::new(&endpoint, vec![address, address]).is_err());
+    assert!(
+        PinnedEndpointAddresses::new(&endpoint, vec![SocketAddr::from_str("127.0.0.1:31338")?])
+            .is_err()
+    );
+    assert!(
+        PinnedEndpointAddresses::new(&endpoint, vec![SocketAddr::from_str("127.0.0.2:31337")?])
+            .is_err()
+    );
+    let pinned = PinnedEndpointAddresses::new(&endpoint, vec![address])?;
+    assert!(!format!("{pinned:?}").contains("31337"));
+
+    let different = ImmichEndpoint::parse("http://127.0.0.1:31338")?;
+    let error = ImmichReadClient::new_pinned(
+        different,
+        ApiKey::new("synthetic-test-key")?,
+        ClientConfig::default(),
+        None,
+        pinned,
+    )
+    .err()
+    .ok_or("endpoint accepted another origin's pinned addresses")?;
+    assert_eq!(error.class(), ClientErrorClass::Protocol);
+    Ok(())
+}
 
 #[test]
 fn secrets_and_origins_are_redacted() -> Result<(), Box<dyn std::error::Error>> {

@@ -21,6 +21,8 @@ impl Workspace {
         ));
         let source = root.join("source");
         fs::create_dir_all(&source)?;
+        fs::create_dir(root.join("state"))?;
+        make_private_directory(&root.join("state"))?;
         File::create(source.join("bounded.jpg"))?.set_len(512 * 1_024 * 1_024)?;
         let config = format!(
             r#"schema_version = 1
@@ -29,6 +31,7 @@ impl Workspace {
 listen_address = "127.0.0.1:2285"
 public_origin = "http://127.0.0.1:2285"
 bootstrap_secret_file = "{}"
+history_state_id = "console"
 
 [web.limits]
 concurrent_jobs = 1
@@ -44,9 +47,17 @@ label = "Bounded synthetic source"
 allowed_root = "{}"
 relative_root = "."
 generation = 1
+
+[[states]]
+id = "console"
+label = "Synthetic console state"
+allowed_root = "{}"
+relative_root = "state"
+generation = 1
 "#,
             root.join("unused.secret").display(),
             source.display(),
+            root.display(),
         );
         fs::write(root.join("web.toml"), config)?;
         Ok(Self { root })
@@ -55,6 +66,18 @@ generation = 1
     fn config(&self) -> Result<WebConfig, Box<dyn std::error::Error>> {
         Ok(WebConfig::load(&self.root.join("web.toml"))?)
     }
+}
+
+#[cfg(unix)]
+fn make_private_directory(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn make_private_directory(_path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
 }
 
 #[tokio::test]

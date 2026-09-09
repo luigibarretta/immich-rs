@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use immich_rs_web::WebConfig;
+use immich_rs_web::{ServerMode, WebConfig};
 
 static WORKSPACE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -20,6 +20,8 @@ impl TestWorkspace {
             std::process::id()
         ));
         fs::create_dir(&root)?;
+        fs::create_dir(root.join("state"))?;
+        make_private_directory(&root.join("state"))?;
         Ok(Self { root })
     }
 
@@ -49,6 +51,7 @@ fn configuration(
 listen_address = "127.0.0.1:2285"
 public_origin = "http://127.0.0.1:2285"
 bootstrap_secret_file = "{}"
+history_state_id = "console"
 {}
 
 [[sources]]
@@ -69,6 +72,15 @@ case_sensitive = true
 id = "disposable"
 origin = "http://127.0.0.1:9387"
 api_key_file = "{}"
+mode = "disposable"
+generation = 1
+credential_generation = 1
+
+[[states]]
+id = "console"
+label = "Synthetic console state"
+allowed_root = "{}"
+relative_root = "state"
 generation = 1
 "#,
         bootstrap.display(),
@@ -76,6 +88,7 @@ generation = 1
         source_root.display(),
         relative_root,
         api_key.display(),
+        workspace.path("").display(),
     )
 }
 
@@ -105,6 +118,12 @@ fn strict_config_resolves_only_opaque_operator_profiles() -> Result<(), Box<dyn 
     assert_eq!(config.listen_address().to_string(), "127.0.0.1:2285");
     assert_eq!(config.public_origin(), "http://127.0.0.1:2285");
     assert_eq!(config.allowed_host(), "127.0.0.1:2285");
+    assert_default_limits(&config);
+    assert_profiles(&config, &source)?;
+    Ok(())
+}
+
+fn assert_default_limits(config: &WebConfig) {
     assert_eq!(config.limits().request_header_bytes, 16 * 1024);
     assert_eq!(config.limits().request_body_bytes, 16 * 1024);
     assert_eq!(config.limits().accepted_connections, 16);
@@ -117,12 +136,16 @@ fn strict_config_resolves_only_opaque_operator_profiles() -> Result<(), Box<dyn 
     assert_eq!(config.limits().sse_subscribers_per_process, 16);
     assert_eq!(config.limits().sse_replay_events, 128);
     assert_eq!(config.limits().sse_heartbeat_seconds, 15);
+    assert_eq!(config.limits().dns_addresses, 4);
+}
+
+fn assert_profiles(config: &WebConfig, source: &Path) -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(config.sources().len(), 1);
     let profile = config
         .source("camera_roll")
         .ok_or("source profile missing")?;
     let resolved = profile.resolve()?;
-    assert_eq!(resolved.root(), fs::canonicalize(&source)?);
+    assert_eq!(resolved.root(), fs::canonicalize(source)?);
     assert_eq!(resolved.label(), "Synthetic camera roll");
     assert_eq!(resolved.generation_sha256().len(), 64);
     assert_eq!(resolved.config().buffer_bytes, 4096);
@@ -134,6 +157,24 @@ fn strict_config_resolves_only_opaque_operator_profiles() -> Result<(), Box<dyn 
     assert_eq!(server.origin(), "http://127.0.0.1:9387");
     assert!(!server.api_key_file().exists());
     assert_eq!(server.generation(), 1);
+    assert_eq!(server.generation_sha256().len(), 64);
+    assert_eq!(server.credential_generation(), 1);
+    let state = config.state("console").ok_or("state profile missing")?;
+    assert_eq!(state.label(), "Synthetic console state");
+    assert_eq!(config.history_state()?.id(), "console");
+    assert!(state.resolve()?.generation_sha256().len() == 64);
+    Ok(())
+}
+
+#[cfg(unix)]
+fn make_private_directory(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn make_private_directory(_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
@@ -189,6 +230,78 @@ fn source_identity_swap_is_rejected_before_scanning() -> Result<(), Box<dyn std:
     fs::rename(&source, &parked)?;
     fs::create_dir(&source)?;
     assert!(profile.resolve().is_err());
+    Ok(())
+}
+
+#[test]
+fn state_identity_swap_is_rejected_before_use() -> Result<(), Box<dyn std::error::Error>> {
+    let workspace = TestWorkspace::new()?;
+    let allowed = workspace.path("allowed");
+    fs::create_dir(&allowed)?;
+    let path = write_config(&workspace, &configuration(&workspace, &allowed, "", "."))?;
+    let config = WebConfig::load(&path)?;
+    let profile = config.state("console").ok_or("state profile missing")?;
+
+    fs::rename(workspace.path("state"), workspace.path("parked-state"))?;
+    fs::create_dir(workspace.path("state"))?;
+    make_private_directory(&workspace.path("state"))?;
+    assert!(profile.resolve().is_err());
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn state_profile_rejects_group_or_other_access() -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let workspace = TestWorkspace::new()?;
+    let allowed = workspace.path("allowed");
+    fs::create_dir(&allowed)?;
+    fs::set_permissions(workspace.path("state"), fs::Permissions::from_mode(0o750))?;
+    let path = write_config(&workspace, &configuration(&workspace, &allowed, "", "."))?;
+    assert!(WebConfig::load(&path).is_err());
+    Ok(())
+}
+
+#[test]
+fn production_read_profile_accepts_private_cidr_policy_without_browser_url()
+-> Result<(), Box<dyn std::error::Error>> {
+    let workspace = TestWorkspace::new()?;
+    let allowed = workspace.path("allowed");
+    fs::create_dir(&allowed)?;
+    let contents = configuration(&workspace, &allowed, "", ".")
+        .replace("http://127.0.0.1:9387", "https://immich.internal.example")
+        .replace(
+            "mode = \"disposable\"",
+            "mode = \"production_read\"\nallowed_cidrs = [\"fd42::/64\"]",
+        );
+    let path = write_config(&workspace, &contents)?;
+    let config = WebConfig::load(&path)?;
+    let server = config
+        .server("disposable")
+        .ok_or("server profile missing")?;
+    assert_eq!(server.mode(), ServerMode::ProductionRead);
+    assert_eq!(server.origin(), "https://immich.internal.example");
+    Ok(())
+}
+
+#[test]
+fn server_profiles_reject_hostname_disposable_and_unbounded_remote()
+-> Result<(), Box<dyn std::error::Error>> {
+    let workspace = TestWorkspace::new()?;
+    let allowed = workspace.path("allowed");
+    fs::create_dir(&allowed)?;
+    let base = configuration(&workspace, &allowed, "", ".");
+
+    let hostname_disposable = base.replace("127.0.0.1:9387", "localhost:9387");
+    let path = write_config(&workspace, &hostname_disposable)?;
+    assert!(WebConfig::load(&path).is_err());
+
+    let unbounded_remote = base
+        .replace("http://127.0.0.1:9387", "https://immich.internal.example")
+        .replace("mode = \"disposable\"", "mode = \"production_read\"");
+    let path = write_config(&workspace, &unbounded_remote)?;
+    assert!(WebConfig::load(&path).is_err());
     Ok(())
 }
 

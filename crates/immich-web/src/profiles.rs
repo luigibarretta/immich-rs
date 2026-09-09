@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-use immich_rs_application::{FolderScanConfig, ImmichEndpoint};
+use immich_rs_application::FolderScanConfig;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
@@ -9,6 +9,12 @@ use crate::error::WebConfigError;
 
 const MAX_ID_BYTES: usize = 64;
 const MAX_LABEL_BYTES: usize = 128;
+
+mod server;
+mod state;
+
+pub use server::{RawServerProfile, ServerMode, ServerProfile};
+pub use state::{RawStateProfile, ResolvedStateProfile, StateProfile};
 
 /// Operator-configured folder profile addressed by an opaque browser ID.
 pub struct SourceProfile {
@@ -126,69 +132,6 @@ impl ResolvedSourceProfile {
     }
 }
 
-/// Validated server profile whose secret paths remain server-side.
-pub struct ServerProfile {
-    id: String,
-    origin: String,
-    api_key_file: PathBuf,
-    ca_certificate_file: Option<PathBuf>,
-    generation: u64,
-}
-
-impl ServerProfile {
-    pub(crate) fn from_raw(raw: RawServerProfile) -> Result<Self, WebConfigError> {
-        validate_id(&raw.id)?;
-        ImmichEndpoint::parse(&raw.origin)
-            .map_err(|_| WebConfigError::new("server profile origin is invalid"))?;
-        if !raw.api_key_file.is_absolute()
-            || raw
-                .ca_certificate_file
-                .as_ref()
-                .is_some_and(|path| !path.is_absolute())
-            || raw.generation == 0
-        {
-            return Err(WebConfigError::new("server profile is invalid"));
-        }
-        Ok(Self {
-            id: raw.id,
-            origin: raw.origin,
-            api_key_file: raw.api_key_file,
-            ca_certificate_file: raw.ca_certificate_file,
-            generation: raw.generation,
-        })
-    }
-
-    /// Opaque browser-safe identifier.
-    #[must_use]
-    pub fn id(&self) -> &str {
-        &self.id
-    }
-
-    /// Operator-configured origin, never accepted from a browser request.
-    #[must_use]
-    pub fn origin(&self) -> &str {
-        &self.origin
-    }
-
-    /// Operator-configured secret file for a bounded server-side loader.
-    #[must_use]
-    pub fn api_key_file(&self) -> &Path {
-        &self.api_key_file
-    }
-
-    /// Optional operator-configured CA bundle file.
-    #[must_use]
-    pub fn ca_certificate_file(&self) -> Option<&Path> {
-        self.ca_certificate_file.as_deref()
-    }
-
-    /// Explicit operator generation used in later receipt and grant bindings.
-    #[must_use]
-    pub const fn generation(&self) -> u64 {
-        self.generation
-    }
-}
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RawSourceProfile {
@@ -199,16 +142,6 @@ pub struct RawSourceProfile {
     generation: u64,
     #[serde(default)]
     scan: RawFolderScanConfig,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RawServerProfile {
-    pub id: String,
-    origin: String,
-    api_key_file: PathBuf,
-    ca_certificate_file: Option<PathBuf>,
-    generation: u64,
 }
 
 #[derive(Default, Deserialize)]
@@ -243,18 +176,18 @@ impl RawFolderScanConfig {
     }
 }
 
-fn canonical_directory(path: &Path) -> Result<PathBuf, WebConfigError> {
+pub fn canonical_directory(path: &Path) -> Result<PathBuf, WebConfigError> {
     let metadata = fs::symlink_metadata(path)
-        .map_err(|_| WebConfigError::new("cannot inspect source profile"))?;
+        .map_err(|_| WebConfigError::new("cannot inspect configured directory"))?;
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Err(WebConfigError::new(
-            "source profile must be a non-symlink directory",
+            "configured directory must not be a symlink",
         ));
     }
-    fs::canonicalize(path).map_err(|_| WebConfigError::new("cannot resolve source profile"))
+    fs::canonicalize(path).map_err(|_| WebConfigError::new("cannot resolve configured directory"))
 }
 
-fn valid_relative_root(path: &Path) -> bool {
+pub fn valid_relative_root(path: &Path) -> bool {
     !path.as_os_str().is_empty()
         && !path.is_absolute()
         && path
@@ -262,7 +195,7 @@ fn valid_relative_root(path: &Path) -> bool {
             .all(|component| matches!(component, Component::Normal(_) | Component::CurDir))
 }
 
-fn validate_id(value: &str) -> Result<(), WebConfigError> {
+pub fn validate_id(value: &str) -> Result<(), WebConfigError> {
     let mut bytes = value.bytes();
     let first = bytes.next();
     let valid = (1..=MAX_ID_BYTES).contains(&value.len())
@@ -275,7 +208,7 @@ fn validate_id(value: &str) -> Result<(), WebConfigError> {
         .ok_or_else(|| WebConfigError::new("profile identifier is invalid"))
 }
 
-fn validate_label(value: &str) -> Result<(), WebConfigError> {
+pub fn validate_label(value: &str) -> Result<(), WebConfigError> {
     let valid = !value.is_empty()
         && value.len() <= MAX_LABEL_BYTES
         && value.trim() == value
@@ -308,13 +241,13 @@ fn source_generation(
 }
 
 #[cfg(unix)]
-fn update_path_digest(digest: &mut Sha256, path: &Path) {
+pub fn update_path_digest(digest: &mut Sha256, path: &Path) {
     use std::os::unix::ffi::OsStrExt;
     digest.update(path.as_os_str().as_bytes());
 }
 
 #[cfg(windows)]
-fn update_path_digest(digest: &mut Sha256, path: &Path) {
+pub fn update_path_digest(digest: &mut Sha256, path: &Path) {
     use std::os::windows::ffi::OsStrExt;
     for unit in path.as_os_str().encode_wide() {
         digest.update(unit.to_le_bytes());
@@ -322,14 +255,14 @@ fn update_path_digest(digest: &mut Sha256, path: &Path) {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-struct ResourceIdentity {
+pub struct ResourceIdentity {
     first: u64,
     second: u64,
 }
 
 impl ResourceIdentity {
     #[cfg(unix)]
-    fn from_metadata(metadata: &fs::Metadata) -> Result<Self, WebConfigError> {
+    pub fn from_metadata(metadata: &fs::Metadata) -> Result<Self, WebConfigError> {
         use std::os::unix::fs::MetadataExt;
         let identity = Self {
             first: metadata.dev(),
@@ -341,7 +274,7 @@ impl ResourceIdentity {
     }
 
     #[cfg(windows)]
-    fn from_metadata(metadata: &fs::Metadata) -> Result<Self, WebConfigError> {
+    pub fn from_metadata(metadata: &fs::Metadata) -> Result<Self, WebConfigError> {
         use std::os::windows::fs::MetadataExt;
         let first = metadata
             .volume_serial_number()
@@ -353,7 +286,7 @@ impl ResourceIdentity {
         Ok(Self { first, second })
     }
 
-    fn update_digest(self, digest: &mut Sha256) {
+    pub fn update_digest(self, digest: &mut Sha256) {
         digest.update(self.first.to_le_bytes());
         digest.update(self.second.to_le_bytes());
     }

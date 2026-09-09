@@ -36,6 +36,8 @@ impl TestWorkspace {
             std::process::id()
         ));
         fs::create_dir(&root)?;
+        fs::create_dir(root.join("state"))?;
+        make_private_directory(&root.join("state"))?;
         Ok(Self { root })
     }
 
@@ -102,6 +104,7 @@ fn configuration(
 listen_address = "127.0.0.1:{}"
 public_origin = "http://127.0.0.1:{}"
 bootstrap_secret_file = "{}"
+history_state_id = "console"
 
 [web.limits]
 request_header_bytes = 1024
@@ -119,6 +122,15 @@ generation = 1
 id = "disposable"
 origin = "{}"
 api_key_file = "{}"
+mode = "disposable"
+generation = 1
+credential_generation = 1
+
+[[states]]
+id = "console"
+label = "Synthetic console state"
+allowed_root = "{}"
+relative_root = "state"
 generation = 1
 "#,
         port,
@@ -128,6 +140,7 @@ generation = 1
         source.display(),
         server_origin,
         workspace.path("never-read-api-key.secret").display(),
+        workspace.path("").display(),
     )
 }
 
@@ -138,8 +151,20 @@ fn make_private(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(unix)]
+fn make_private_directory(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    Ok(())
+}
+
 #[cfg(windows)]
 fn make_private(_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
+#[cfg(windows)]
+fn make_private_directory(_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 

@@ -20,6 +20,17 @@ The first executable slice is authenticated loopback folder scan/review. Later
 rows cannot be described as supported until their implementation and evidence
 gate is green.
 
+Configured state roots are required now and must resolve to private directories;
+their canonical identity is revalidated at each use. A disposable server profile
+uses only a literal loopback IP and has no address allowlist. A remote read
+profile uses one exact HTTPS hostname and 1–32 operator-configured IPv4/IPv6 CIDR
+ranges. Resolution is repeated immediately before use, accepts at most the
+configured DNS-address limit, requires every answer to match the profile policy,
+deduplicates and pins the complete set, preserves TLS verification of the exact
+hostname, and forbids redirects. This deliberately permits explicitly
+configured private LAN/VPN ranges without granting a browser general SSRF
+authority. No server connection is exposed by the current slice.
+
 ## Numeric bounds
 
 | Resource | Default | Hard maximum |
@@ -53,6 +64,7 @@ gate is green.
 | Configured source profiles | 32 | 64 |
 | Configured state/destination profiles | 16 | 32 |
 | Configured server profiles | 16 | 32 |
+| Address CIDR ranges per server profile | 32 | 32 |
 | DNS addresses accepted per host lookup | 4 | 8 |
 | OIDC discovery document | 64 KiB | 128 KiB |
 | OIDC JWKS document | 256 KiB | 512 KiB |

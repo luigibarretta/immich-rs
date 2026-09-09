@@ -165,9 +165,14 @@ joined shutdown; bounded authenticated SSE provides isolated replay with a
 polling fallback, and terminal summaries are published only after a complete
 plan. It applies exact Host/Origin/CSRF policy, contextual SSR escaping, private
 response headers and bounded connections, headers, bodies and deadlines.
-Server probe, durable plan, history, dry-run, apply and media-serving routes are
-not yet exposed. A standalone web binary, native artifact and container are not
-yet supported. The CLI remains the canonical complete interface. See the
+Operator configuration now also validates private state roots and exact server
+profiles. Disposable profiles require a literal loopback address; remote
+read-only HTTPS profiles require an explicit per-profile IP/CIDR allowlist, and
+every bounded DNS answer must match it before addresses can be pinned without
+weakening TLS hostname verification. Server probe, durable plan, history,
+dry-run, apply and media-serving routes are not yet exposed. A standalone web
+binary, native artifact and container are not yet supported. The CLI remains
+the canonical complete interface. See the
 [threat model](docs/web-console-threat-model.md) and
 [capability/resource matrix](docs/web-console-resources.md).
 

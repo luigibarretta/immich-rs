@@ -13,12 +13,17 @@ mod job_http;
 mod jobs;
 #[cfg(test)]
 mod jobs_tests;
+mod limits;
 mod policy;
 mod profiles;
 mod server;
 mod views;
 
-pub use config::{WebConfig, WebLimits};
+pub use config::WebConfig;
 pub use error::WebConfigError;
 pub use http::WebConsole;
-pub use profiles::{ResolvedSourceProfile, ServerProfile, SourceProfile};
+pub use limits::WebLimits;
+pub use profiles::{
+    ResolvedSourceProfile, ResolvedStateProfile, ServerMode, ServerProfile, SourceProfile,
+    StateProfile,
+};

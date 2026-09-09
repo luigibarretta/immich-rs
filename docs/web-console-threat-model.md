@@ -29,7 +29,7 @@ headers are untrusted even after authentication.
 | Session theft/fixation | HttpOnly protected cookie, rotation on login/pairing, idle/absolute expiry, restart logout | Revoke session and its unused grants |
 | Stored/reflected XSS | Contextual SSR escaping, no raw HTML/`innerHTML`/inline handlers/external assets, restrictive CSP | Render escaped text or reject oversized input |
 | Path traversal or symlink/reparse swap | Opaque configured profiles, canonical containment, reopen/revalidate identity at use | Fail before source/state access |
-| SSRF, redirects or DNS rebinding | Profile-only URLs, HTTPS except disposable loopback, no redirects/embedded credentials, bounded DNS and address policy | No outbound connection |
+| SSRF, redirects or DNS rebinding | Profile-only exact hostnames, literal-loopback disposable targets, HTTPS for remote reads, redirects forbidden, bounded DNS with every answer inside an explicit per-profile CIDR policy, pinned connections with TLS hostname verification | No outbound connection |
 | Proxy spoofing | Reject forwarded headers unless peer is explicitly trusted; exact reconstructed origin | Reject request/startup |
 | Credential disclosure | Secret files only, redacting types, no browser storage/history/logs, private state permissions | Fail closed and emit safe diagnostic |
 | Plan/count/identity substitution | Canonical server-side digest, source/config/server/user/profile/credential/count binding | Grant creation/admission refused |

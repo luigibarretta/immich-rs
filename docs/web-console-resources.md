@@ -7,7 +7,7 @@ allowed; exceeding a hard maximum is a startup or request error.
 
 | Surface | Read/plan | Dry-run | Apply | Current status at ADR acceptance |
 |---|---:|---:|---:|---|
-| Folder source | Implemented | Planned | Planned with exact grant | Authenticated scan and server-bound immutable plan |
+| Folder source | Implemented | Implemented | Planned with exact grant | Authenticated immutable plan and offline receipt |
 | Google Takeout | Planned | Planned | Planned with exact grant | Not implemented |
 | Apple Photos | Planned | Planned | Planned with exact grant | Not implemented |
 | Picasa | Planned | Planned | Planned with exact grant | Not implemented |
@@ -30,17 +30,22 @@ deduplicates and pins the complete set, preserves TLS verification of the exact
 hostname, and forbids redirects. This deliberately permits explicitly
 configured private LAN/VPN ranges without granting a browser general SSRF
 authority. Only an authenticated folder planning job can construct this read
-capability; source-only scan and later offline dry-run paths cannot construct it.
+capability; source-only scan and offline dry-run paths cannot construct it.
 
 The implemented `console-history-v1.sqlite3` store is separate from executor
 checkpoints. It uses a transactional strict schema, full-synchronous WAL with a
 bounded page count and post-write truncating checkpoints, age/count eviction,
 private state permissions, startup integrity validation, and fail-closed newer
 schema/corruption/size handling. Only terminal workflow/status enums, aggregate
-counters and opaque plan references are admitted by its typed write API;
-the authenticated fixed-size history page does not expose internal sequences.
-Dry-run receipt persistence is reserved in schema v1 but is not yet exposed or
-written.
+counters and opaque plan references are admitted by its typed write API; the
+authenticated fixed-size history page does not expose internal sequences. Its
+transactional schema v2 migration expands the workflow enum without renaming
+the distinct `console-history-v1.sqlite3` format family. A completed folder
+dry-run atomically writes its terminal row and a random opaque receipt binding
+the canonical plan, combined source-profile/configuration identity,
+authenticated server identity, server profile and credential generation, exact
+logical-effect maximum and completion time. Receipt inspection is authenticated
+and informational; a receipt is neither a checkpoint nor a grant.
 
 Completed folder upload plans are pretty-JSON application artifacts stored in
 private create-new files under random 128-bit opaque references. A separate
@@ -51,6 +56,15 @@ serialization, synchronized files and atomic same-directory renames. Every
 inspection and streaming export revalidates the state-root identity, file type,
 permissions, size, identity, plan schema and all binding digests. It exposes no
 server origin or source path in the HTML summary.
+
+Dry-run reopens that private artifact, revalidates source/state/server bindings
+before and after executor-owned offline verification, and uses a fresh absent
+checkpoint pathname. Any unexpected checkpoint is removed and fails the job.
+The capability canary test stops the disposable server and removes its key file
+after the two planning probes; dry-run still completes with the request counter
+unchanged, proving neither the secret loader nor client construction path was
+reached. Source-content drift and server-profile binding drift fail without a
+network request or receipt.
 
 ## Numeric bounds
 

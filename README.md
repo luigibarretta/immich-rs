@@ -178,8 +178,13 @@ references and aggregate counters, never job/user identifiers or source data.
 Server-bound planning uses a strictly bounded private secret loader and the
 address-pinned read client. Completed plans are published atomically under
 opaque references in private state, revalidated on every authenticated
-inspection, and exported with bounded streaming. Dry-run, apply and
-media-serving routes are not yet exposed. A
+inspection, and exported with bounded streaming. Authenticated folder dry-run
+reopens and verifies that artifact entirely offline, rejects source, state,
+server-profile or credential-generation drift, creates no checkpoint, and
+atomically records a versioned receipt with terminal history. Tests remove the
+server credential and stop the disposable server before dry-run while proving
+the request counter does not increase. Apply and media-serving routes remain
+unsupported. A
 standalone web binary, native artifact and container are not yet supported. The
 CLI remains the canonical complete interface. See the
 [threat model](docs/web-console-threat-model.md) and

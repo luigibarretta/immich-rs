@@ -12,7 +12,7 @@ use crate::cookies::{SESSION_COOKIE, value as cookie_value};
 use crate::events_http;
 use crate::http::ConsoleState;
 use crate::jobs::AdmissionError;
-use crate::state_store::ArtifactRef;
+use crate::state_store::{ArtifactRef, ReceiptRef};
 use crate::{views, views::JobView};
 
 #[derive(Deserialize)]
@@ -33,6 +33,8 @@ pub fn routes() -> Router<ConsoleState> {
         .route("/jobs/{job_id}/cancel", post(cancel_job))
         .route("/plans/{plan_ref}", get(inspect_plan))
         .route("/plans/{plan_ref}/export", get(export_plan))
+        .route("/plans/{plan_ref}/dry-run", post(admit_dry_run))
+        .route("/receipts/{receipt_ref}", get(inspect_receipt))
         .route("/history", get(history))
 }
 
@@ -130,7 +132,7 @@ async fn inspect_plan(
     Path(plan_ref): Path<String>,
     headers: HeaderMap,
 ) -> Response {
-    let Some(_session) = authenticated(&state, &headers) else {
+    let Some(session) = authenticated(&state, &headers) else {
         return views::locked(StatusCode::UNAUTHORIZED);
     };
     let Some(reference) = ArtifactRef::parse(&plan_ref) else {
@@ -141,8 +143,63 @@ async fn inspect_plan(
     }
     state.store.plans().load(reference).map_or_else(
         |_| views::scan_failed(StatusCode::NOT_FOUND),
-        |stored| views::plan(&stored),
+        |stored| views::plan(&stored, &session.csrf_token),
     )
+}
+
+async fn admit_dry_run(
+    State(state): State<ConsoleState>,
+    Path(plan_ref): Path<String>,
+    headers: HeaderMap,
+    Form(form): Form<CsrfForm>,
+) -> Response {
+    let Some(cookie_token) = cookie_value(&headers, SESSION_COOKIE) else {
+        return views::locked(StatusCode::UNAUTHORIZED);
+    };
+    let Some(session) = state.auth.authenticate_csrf(&cookie_token, &form.csrf) else {
+        return views::locked(StatusCode::FORBIDDEN);
+    };
+    let Some(reference) = ArtifactRef::parse(&plan_ref) else {
+        return views::scan_failed(StatusCode::NOT_FOUND);
+    };
+    if !state_is_current(&state) {
+        return views::scan_failed(StatusCode::SERVICE_UNAVAILABLE);
+    }
+    match state.jobs.admit_dry_run(session.binding, reference) {
+        Ok(job_id) => Redirect::to(&format!("/jobs/{job_id}")).into_response(),
+        Err(AdmissionError::UnknownProfile) => views::scan_failed(StatusCode::NOT_FOUND),
+        Err(AdmissionError::Full) => views::scan_failed(StatusCode::TOO_MANY_REQUESTS),
+        Err(AdmissionError::Unavailable) => views::scan_failed(StatusCode::SERVICE_UNAVAILABLE),
+    }
+}
+
+async fn inspect_receipt(
+    State(state): State<ConsoleState>,
+    Path(receipt_ref): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Some(_session) = authenticated(&state, &headers) else {
+        return views::locked(StatusCode::UNAUTHORIZED);
+    };
+    let Some(reference) = ReceiptRef::parse(&receipt_ref) else {
+        return views::scan_failed(StatusCode::NOT_FOUND);
+    };
+    if !state_is_current(&state) {
+        return views::scan_failed(StatusCode::SERVICE_UNAVAILABLE);
+    }
+    state
+        .store
+        .history()
+        .dry_run_receipt(reference)
+        .map_or_else(
+            |_| views::scan_failed(StatusCode::SERVICE_UNAVAILABLE),
+            |receipt| {
+                receipt.map_or_else(
+                    || views::scan_failed(StatusCode::NOT_FOUND),
+                    |value| views::receipt(&value),
+                )
+            },
+        )
 }
 
 async fn export_plan(

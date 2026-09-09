@@ -6,7 +6,9 @@ use rusqlite::Connection;
 
 use super::history::HistoryStore;
 use super::plan_store::PlanStore;
-use super::{HistoryKind, SafeCounters, TerminalRecord, TerminalStatus};
+use super::{
+    ArtifactRef, DryRunBinding, HistoryKind, SafeCounters, TerminalRecord, TerminalStatus,
+};
 use immich_rs_application::UploadPlan;
 
 static SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -67,7 +69,7 @@ fn terminal_history_is_bounded_and_persists_across_restart()
 fn newer_corrupt_and_over_bound_databases_fail_closed() -> Result<(), Box<dyn std::error::Error>> {
     let newer = Workspace::new()?;
     let connection = Connection::open(newer.database())?;
-    connection.pragma_update(None, "user_version", 2_i64)?;
+    connection.pragma_update(None, "user_version", 3_i64)?;
     drop(connection);
     assert!(HistoryStore::open(&newer.database(), 1024 * 1024, 10, 30, 1).is_err());
 
@@ -77,6 +79,81 @@ fn newer_corrupt_and_over_bound_databases_fail_closed() -> Result<(), Box<dyn st
 
     let bounded = Workspace::new()?;
     assert!(HistoryStore::open(&bounded.database(), 4 * 4096, 10, 30, 1).is_err());
+    Ok(())
+}
+
+#[test]
+fn version_one_history_migrates_and_dry_run_receipts_expire()
+-> Result<(), Box<dyn std::error::Error>> {
+    let workspace = Workspace::new()?;
+    let connection = Connection::open(workspace.database())?;
+    connection.execute_batch(include_str!("history-v1.sql"))?;
+    connection.pragma_update(None, "user_version", 1_i64)?;
+    drop(connection);
+
+    let store = HistoryStore::open(&workspace.database(), 1024 * 1024, 10, 1, 100)?;
+    let plan_reference = ArtifactRef::random()?;
+    let binding = DryRunBinding {
+        plan_reference,
+        plan_sha256: "1".repeat(64),
+        source_configuration_sha256: "2".repeat(64),
+        server_identity_sha256: "3".repeat(64),
+        server_profile_sha256: "4".repeat(64),
+        credential_generation: 5,
+        max_logical_effects: 6,
+        completed_unix: 100,
+    };
+    let terminal = TerminalRecord {
+        recorded_unix: 100,
+        kind: HistoryKind::FolderDryRun,
+        status: TerminalStatus::Completed,
+        plan: Some((plan_reference, 1)),
+        counters: SafeCounters {
+            max_logical_effects: 6,
+            ..SafeCounters::default()
+        },
+    };
+    let receipt = store.record_dry_run(binding.clone(), &terminal)?;
+    drop(store);
+    let store = HistoryStore::open(&workspace.database(), 1024 * 1024, 10, 1, 100)?;
+    assert_eq!(
+        store
+            .dry_run_receipt(receipt.reference)?
+            .map(|value| value.binding),
+        Some(binding)
+    );
+    assert_eq!(store.latest(10)?[0].record.kind, HistoryKind::FolderDryRun);
+    store.maintain(86_501)?;
+    assert!(store.dry_run_receipt(receipt.reference)?.is_none());
+    Ok(())
+}
+
+#[test]
+fn history_disk_capacity_fails_closed_without_corruption() -> Result<(), Box<dyn std::error::Error>>
+{
+    let workspace = Workspace::new()?;
+    let store = HistoryStore::open(&workspace.database(), 64 * 1024, 10_000, 30, 100)?;
+    let mut capacity_reached = false;
+    for sequence in 0..2_000_u64 {
+        let result = store.record_terminal(&TerminalRecord {
+            recorded_unix: 100,
+            kind: HistoryKind::FolderScan,
+            status: TerminalStatus::Completed,
+            plan: None,
+            counters: SafeCounters {
+                assets: sequence,
+                ..SafeCounters::default()
+            },
+        });
+        if result.is_err() {
+            capacity_reached = true;
+            break;
+        }
+    }
+    assert!(capacity_reached);
+    drop(store);
+    let reopened = HistoryStore::open(&workspace.database(), 64 * 1024, 10_000, 30, 100)?;
+    assert!(!reopened.latest(100)?.is_empty());
     Ok(())
 }
 

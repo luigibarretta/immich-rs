@@ -12,8 +12,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use history::HistoryStore;
 use plan_store::PlanStore;
 pub use types::{
-    ArtifactRef, HistoryKind, PlanArtifact, PlanBinding, SafeCounters, StoredHistory,
-    StoredUploadPlan, TerminalRecord, TerminalStatus,
+    ArtifactRef, DryRunBinding, DryRunReceipt, HistoryKind, PlanArtifact, PlanBinding, ReceiptRef,
+    SafeCounters, StoredHistory, StoredUploadPlan, TerminalRecord, TerminalStatus,
 };
 
 use crate::{ResolvedStateProfile, WebConfigError, WebLimits};
@@ -26,7 +26,7 @@ const CHECKPOINTS_DIRECTORY: &str = "checkpoints";
 pub struct ConsoleStore {
     history: HistoryStore,
     plans: PlanStore,
-    _checkpoints: PathBuf,
+    checkpoints: PathBuf,
     state_generation_sha256: String,
 }
 
@@ -55,7 +55,7 @@ impl ConsoleStore {
         Ok(Self {
             history,
             plans,
-            _checkpoints: checkpoints,
+            checkpoints,
             state_generation_sha256: state.generation_sha256().to_owned(),
         })
     }
@@ -71,6 +71,36 @@ impl ConsoleStore {
     pub fn matches_state(&self, state: &ResolvedStateProfile) -> bool {
         state.generation_sha256() == self.state_generation_sha256
             && self.plans.is_below(state.root())
+    }
+
+    pub fn unused_checkpoint(&self) -> Result<PathBuf, WebConfigError> {
+        let path = self.checkpoints.join(format!(
+            "dry-run-{}.sqlite3",
+            ArtifactRef::random()?.encode()
+        ));
+        match fs::symlink_metadata(&path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(path),
+            _ => Err(WebConfigError::new(
+                "dry-run checkpoint path is unavailable",
+            )),
+        }
+    }
+
+    pub fn verify_checkpoint_unused(&self, path: &Path) -> Result<(), WebConfigError> {
+        if path.parent() != Some(self.checkpoints.as_path()) {
+            return Err(WebConfigError::new("dry-run checkpoint path is invalid"));
+        }
+        match fs::symlink_metadata(path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Ok(metadata) if metadata.is_file() && !metadata.file_type().is_symlink() => {
+                fs::remove_file(path)
+                    .map_err(|_| WebConfigError::new("cannot remove dry-run checkpoint"))?;
+                Err(WebConfigError::new(
+                    "dry-run created an unexpected checkpoint",
+                ))
+            }
+            _ => Err(WebConfigError::new("dry-run checkpoint path is invalid")),
+        }
     }
 }
 

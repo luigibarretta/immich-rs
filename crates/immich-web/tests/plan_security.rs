@@ -8,15 +8,18 @@ use std::time::Duration;
 use axum::Router;
 use axum::body::Body;
 use axum::extract::State;
-use axum::http::header::{CONTENT_DISPOSITION, CONTENT_TYPE, HeaderMap, LOCATION};
+use axum::http::header::{CONTENT_TYPE, HeaderMap, LOCATION};
 use axum::http::{Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use serde_json::json;
 use tokio::sync::oneshot;
 
+#[path = "plan_security/inspection.rs"]
+mod inspection;
 mod support;
 
+use inspection::inspect_and_export;
 use support::{HOST, ORIGIN, SECRET, TestWorkspace, csrf, response_cookie, send};
 
 const SYNTHETIC_KEY: &str = "synthetic-api-key";
@@ -154,14 +157,90 @@ async fn wait_for_plan(
 }
 
 fn extract_plan_ref(body: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let marker = "href=\"/plans/";
-    let start = body.find(marker).ok_or("plan reference missing")? + marker.len();
-    let remaining = body.get(start..).ok_or("plan reference start missing")?;
-    let end = remaining.find('"').ok_or("plan reference end missing")?;
+    link_reference(body, "href=\"/plans/").ok_or_else(|| "plan reference missing".into())
+}
+
+async fn wait_for_receipt(
+    router: &Router,
+    session: &PairedSession,
+    location: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    for _attempt in 0..200 {
+        let response = send(
+            router,
+            Method::GET,
+            location,
+            Some(HOST),
+            None,
+            Some(&session.cookie),
+            "",
+        )
+        .await?;
+        if let Some(reference) = link_reference(&response.body, "href=\"/receipts/") {
+            return Ok(reference);
+        }
+        if response.body.contains("Failed ·") {
+            return Err("offline dry-run failed".into());
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    Err("offline dry-run did not finish".into())
+}
+
+fn link_reference(body: &str, marker: &str) -> Option<String> {
+    let remaining = body.get(body.find(marker)?.saturating_add(marker.len())..)?;
     remaining
-        .get(..end)
+        .find('"')
+        .and_then(|end| remaining.get(..end))
         .map(str::to_owned)
-        .ok_or_else(|| "plan reference missing".into())
+}
+
+async fn wait_for_failure(
+    router: &Router,
+    session: &PairedSession,
+    location: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for _attempt in 0..200 {
+        let response = send(
+            router,
+            Method::GET,
+            location,
+            Some(HOST),
+            None,
+            Some(&session.cookie),
+            "",
+        )
+        .await?;
+        if response.body.contains("Failed ·") {
+            return Ok(());
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    Err("drifted dry-run did not fail".into())
+}
+
+async fn admit_dry_run(
+    router: &Router,
+    session: &PairedSession,
+    plan_ref: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let response = send(
+        router,
+        Method::POST,
+        &format!("/plans/{plan_ref}/dry-run"),
+        Some(HOST),
+        Some(ORIGIN),
+        Some(&session.cookie),
+        &format!("csrf={}", session.csrf),
+    )
+    .await?;
+    assert_eq!(response.status, StatusCode::SEE_OTHER);
+    response
+        .headers
+        .get(LOCATION)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned)
+        .ok_or_else(|| "dry-run job location missing".into())
 }
 
 #[cfg(unix)]
@@ -177,7 +256,7 @@ fn make_private(_path: &std::path::Path) -> Result<(), Box<dyn std::error::Error
 }
 
 #[tokio::test]
-async fn authenticated_probe_publishes_private_inspectable_streamed_plan()
+async fn authenticated_plan_and_offline_dry_run_are_capability_isolated()
 -> Result<(), Box<dyn std::error::Error>> {
     let mock_state = Arc::new(MockState {
         authenticated_reads: AtomicUsize::new(0),
@@ -226,58 +305,50 @@ async fn authenticated_probe_publishes_private_inspectable_streamed_plan()
         .ok_or("job location missing")?;
     let plan_ref = wait_for_plan(&router, &session, job).await?;
     assert_eq!(mock_state.authenticated_reads.load(Ordering::Relaxed), 2);
+    server.stop().await?;
 
-    let locked = send(
+    inspect_and_export(&router, &session, &plan_ref, &workspace, &origin).await?;
+
+    fs::remove_file(&key_path)?;
+    let dry_run_job = admit_dry_run(&router, &session, &plan_ref).await?;
+    let receipt_ref = wait_for_receipt(&router, &session, &dry_run_job).await?;
+    assert_eq!(mock_state.authenticated_reads.load(Ordering::Relaxed), 2);
+    assert_eq!(
+        fs::read_dir(workspace.path("state/checkpoints"))?.count(),
+        0
+    );
+    let receipt = send(
         &router,
         Method::GET,
-        &format!("/plans/{plan_ref}"),
-        Some(HOST),
-        None,
-        None,
-        "",
-    )
-    .await?;
-    assert_eq!(locked.status, StatusCode::UNAUTHORIZED);
-    let inspection = send(
-        &router,
-        Method::GET,
-        &format!("/plans/{plan_ref}"),
+        &format!("/receipts/{receipt_ref}"),
         Some(HOST),
         None,
         Some(&session.cookie),
         "",
     )
     .await?;
-    assert_eq!(inspection.status, StatusCode::OK);
-    assert!(inspection.body.contains("Canonical plan digest"));
-    assert!(!inspection.body.contains(&origin));
+    assert_eq!(receipt.status, StatusCode::OK);
+    assert!(receipt.body.contains("neither an executor checkpoint"));
+    assert!(receipt.body.contains("Source/configuration digest"));
+    assert!(!receipt.body.contains(&origin));
     assert!(
-        !inspection
+        !receipt
             .body
             .contains(&workspace.path("").display().to_string())
     );
 
-    let export = send(
-        &router,
-        Method::GET,
-        &format!("/plans/{plan_ref}/export"),
-        Some(HOST),
-        None,
-        Some(&session.cookie),
-        "",
-    )
-    .await?;
-    assert_eq!(export.status, StatusCode::OK);
-    assert_eq!(
-        export
-            .headers
-            .get(CONTENT_DISPOSITION)
-            .and_then(|value| value.to_str().ok()),
-        Some("attachment; filename=immich-rs-plan.json")
-    );
-    let exported: immich_rs_application::UploadPlan = serde_json::from_str(&export.body)?;
-    exported.validate()?;
+    fs::write(workspace.path("source/synthetic.jpg"), b"changed\n")?;
+    let drifted_source = admit_dry_run(&router, &session, &plan_ref).await?;
+    wait_for_failure(&router, &session, &drifted_source).await?;
+    assert_eq!(mock_state.authenticated_reads.load(Ordering::Relaxed), 2);
 
-    server.stop().await?;
+    let binding_path = workspace.path(&format!("state/plans/{plan_ref}.binding.json"));
+    let mut binding: serde_json::Value = serde_json::from_slice(&fs::read(&binding_path)?)?;
+    binding["server_profile_sha256"] = json!("f".repeat(64));
+    fs::write(&binding_path, serde_json::to_vec_pretty(&binding)?)?;
+    make_private(&binding_path)?;
+    let drifted_profile = admit_dry_run(&router, &session, &plan_ref).await?;
+    wait_for_failure(&router, &session, &drifted_profile).await?;
+    assert_eq!(mock_state.authenticated_reads.load(Ordering::Relaxed), 2);
     Ok(())
 }

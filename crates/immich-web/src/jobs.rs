@@ -1,3 +1,4 @@
+mod dry_run;
 mod subscription;
 mod types;
 mod worker;
@@ -9,7 +10,7 @@ use std::thread::JoinHandle;
 use tokio::sync::broadcast;
 
 use crate::state_store::{
-    ConsoleStore, HistoryKind, SafeCounters, TerminalRecord, TerminalStatus, now_unix,
+    ArtifactRef, ConsoleStore, HistoryKind, SafeCounters, TerminalRecord, TerminalStatus, now_unix,
 };
 use crate::{WebConfig, WebLimits};
 
@@ -71,7 +72,7 @@ impl JobManager {
     }
 
     pub fn admit(&self, owner: [u8; 32], source_id: &str) -> Result<String, AdmissionError> {
-        self.admit_kind(owner, source_id, JobKind::FolderScan)
+        self.admit_kind(owner, source_id, JobKind::Scan)
     }
 
     pub fn admit_plan(
@@ -86,9 +87,35 @@ impl JobManager {
         self.admit_kind(
             owner,
             source_id,
-            JobKind::FolderPlan {
+            JobKind::Plan {
                 server_id: server_id.to_owned(),
             },
+        )
+    }
+
+    pub fn admit_dry_run(
+        &self,
+        owner: [u8; 32],
+        reference: ArtifactRef,
+    ) -> Result<String, AdmissionError> {
+        let stored = self
+            .inner
+            .store
+            .plans()
+            .load(reference)
+            .map_err(|_| AdmissionError::UnknownProfile)?;
+        if self
+            .inner
+            .config
+            .server(&stored.binding.server_profile_id)
+            .is_none()
+        {
+            return Err(AdmissionError::UnknownProfile);
+        }
+        self.admit_kind(
+            owner,
+            &stored.binding.source_profile_id,
+            JobKind::DryRun { reference },
         )
     }
 
@@ -281,6 +308,7 @@ fn snapshot_job(job: &StoredJob) -> JobSnapshot {
         progress: job.progress,
         summary: job.summary,
         artifact: job.artifact.clone(),
+        receipt: job.receipt,
     }
 }
 

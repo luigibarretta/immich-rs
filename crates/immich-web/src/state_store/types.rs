@@ -33,6 +33,47 @@ impl ArtifactRef {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ReceiptRef(pub(super) [u8; 16]);
+
+impl ReceiptRef {
+    pub(super) fn random() -> Result<Self, crate::WebConfigError> {
+        let mut bytes = [0_u8; 16];
+        getrandom::fill(&mut bytes)
+            .map_err(|_| crate::WebConfigError::new("receipt reference generation failed"))?;
+        Ok(Self(bytes))
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        let bytes = URL_SAFE_NO_PAD.decode(value).ok()?;
+        let reference = bytes.try_into().ok().map(Self)?;
+        (reference.encode() == value).then_some(reference)
+    }
+
+    #[must_use]
+    pub fn encode(self) -> String {
+        URL_SAFE_NO_PAD.encode(self.0)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DryRunBinding {
+    pub plan_reference: ArtifactRef,
+    pub plan_sha256: String,
+    pub source_configuration_sha256: String,
+    pub server_identity_sha256: String,
+    pub server_profile_sha256: String,
+    pub credential_generation: u64,
+    pub max_logical_effects: u64,
+    pub completed_unix: i64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DryRunReceipt {
+    pub reference: ReceiptRef,
+    pub binding: DryRunBinding,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlanBinding {
@@ -69,6 +110,14 @@ pub enum HistoryKind {
     GoogleTakeoutPlan = 3,
     ApplePhotosPlan = 4,
     PicasaPlan = 5,
+    FolderDryRun = 6,
+    GoogleTakeoutDryRun = 7,
+    ApplePhotosDryRun = 8,
+    PicasaDryRun = 9,
+    FolderApply = 10,
+    GoogleTakeoutApply = 11,
+    ApplePhotosApply = 12,
+    PicasaApply = 13,
 }
 
 impl HistoryKind {
@@ -80,6 +129,14 @@ impl HistoryKind {
             Self::GoogleTakeoutPlan => "Google Takeout plan",
             Self::ApplePhotosPlan => "Apple Photos plan",
             Self::PicasaPlan => "Picasa plan",
+            Self::FolderDryRun => "Folder dry-run",
+            Self::GoogleTakeoutDryRun => "Google Takeout dry-run",
+            Self::ApplePhotosDryRun => "Apple Photos dry-run",
+            Self::PicasaDryRun => "Picasa dry-run",
+            Self::FolderApply => "Folder apply",
+            Self::GoogleTakeoutApply => "Google Takeout apply",
+            Self::ApplePhotosApply => "Apple Photos apply",
+            Self::PicasaApply => "Picasa apply",
         }
     }
 }
@@ -170,6 +227,14 @@ impl TryFrom<i64> for HistoryKind {
             3 => Ok(Self::GoogleTakeoutPlan),
             4 => Ok(Self::ApplePhotosPlan),
             5 => Ok(Self::PicasaPlan),
+            6 => Ok(Self::FolderDryRun),
+            7 => Ok(Self::GoogleTakeoutDryRun),
+            8 => Ok(Self::ApplePhotosDryRun),
+            9 => Ok(Self::PicasaDryRun),
+            10 => Ok(Self::FolderApply),
+            11 => Ok(Self::GoogleTakeoutApply),
+            12 => Ok(Self::ApplePhotosApply),
+            13 => Ok(Self::PicasaApply),
             _ => Err(rusqlite::Error::InvalidQuery),
         }
     }

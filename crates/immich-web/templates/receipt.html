@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Dry-run receipt · immich-rs{% endblock %}
+{% block content %}
+<section class="panel" aria-labelledby="receipt-title">
+  <p class="eyebrow">Authenticated offline evidence</p>
+  <h1 id="receipt-title">Dry-run receipt</h1>
+  <p>This server-side receipt records a completed offline validation. It is neither an executor checkpoint nor an authorization grant.</p>
+  <dl class="summary-grid">
+    <div><dt>Completed Unix time</dt><dd>{{ completed_unix }}</dd></div>
+    <div><dt>Credential generation</dt><dd>{{ credential_generation }}</dd></div>
+    <div><dt>Maximum logical effects</dt><dd>{{ max_logical_effects }}</dd></div>
+  </dl>
+  <h2>Bound identities</h2>
+  <dl>
+    <div><dt>Plan digest</dt><dd><code>{{ plan_sha256 }}</code></dd></div>
+    <div><dt>Source/configuration digest</dt><dd><code>{{ source_configuration_sha256 }}</code></dd></div>
+    <div><dt>Server identity digest</dt><dd><code>{{ server_identity_sha256 }}</code></dd></div>
+    <div><dt>Server profile digest</dt><dd><code>{{ server_profile_sha256 }}</code></dd></div>
+  </dl>
+  <p><a href="/plans/{{ plan_reference }}">Inspect immutable plan</a> · <a href="/history">History</a></p>
+  <p class="eyebrow">Opaque receipt {{ reference }}</p>
+</section>
+{% endblock %}

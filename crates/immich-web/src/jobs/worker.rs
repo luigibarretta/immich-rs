@@ -7,9 +7,10 @@ use immich_rs_application::{
 };
 
 use super::types::JobKind;
-use super::{JobProgress, JobStatus, JobSummary, JobsInner, push_event};
+use super::{JobProgress, JobStatus, JobSummary, JobsInner, dry_run, push_event};
 use crate::state_store::{
-    HistoryKind, PlanArtifact, SafeCounters, TerminalRecord, TerminalStatus, now_unix,
+    DryRunBinding, HistoryKind, PlanArtifact, SafeCounters, TerminalRecord, TerminalStatus,
+    now_unix,
 };
 
 pub fn run(inner: &Arc<JobsInner>, id: &str) {
@@ -68,16 +69,17 @@ fn execute(
         id: id.to_owned(),
     };
     match kind {
-        JobKind::FolderScan => match plan_folder(&request, cancellation, &mut observer) {
+        JobKind::Scan => match plan_folder(&request, cancellation, &mut observer) {
             Ok(plan) => WorkerOutcome::Completed {
                 kind: HistoryKind::FolderScan,
                 summary: normalized_summary(&plan),
                 artifact: None,
+                dry_run: None,
             },
             Err(ScanError::Cancelled) => WorkerOutcome::Cancelled(HistoryKind::FolderScan),
             Err(_) => WorkerOutcome::Failed(HistoryKind::FolderScan),
         },
-        JobKind::FolderPlan { server_id } => plan_upload(
+        JobKind::Plan { server_id } => plan_upload(
             inner,
             source_id,
             &server_id,
@@ -85,6 +87,9 @@ fn execute(
             cancellation,
             &mut observer,
         ),
+        JobKind::DryRun { reference } => {
+            dry_run::execute(inner, source_id, reference, &request, cancellation)
+        }
     }
 }
 
@@ -131,6 +136,7 @@ fn plan_upload(
             kind,
             summary: upload_summary(&plan),
             artifact: Some(artifact),
+            dry_run: None,
         },
         Err(()) => WorkerOutcome::Failed(kind),
     }
@@ -227,20 +233,27 @@ fn begin(inner: &JobsInner, id: &str) -> bool {
 }
 
 fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
-    let history_ok = history_record(&outcome).and_then(|record| {
-        inner
-            .store
-            .history()
-            .record_terminal(&record)
-            .map(|_| ())
+    let history_result = history_record(&outcome).and_then(|record| {
+        outcome
+            .dry_run_binding()
+            .map_or_else(
+                || inner.store.history().record_terminal(&record).map(|_| None),
+                |binding| {
+                    inner
+                        .store
+                        .history()
+                        .record_dry_run(binding.clone(), &record)
+                        .map(|receipt| Some(receipt.reference))
+                },
+            )
             .map_err(|_| ())
     });
-    if history_ok.is_err()
-        && let Some(artifact) = outcome.artifact()
-    {
+    let history_ok = history_result.is_ok();
+    if !history_ok && let Some(artifact) = outcome.published_artifact() {
         let _cleanup = inner.store.plans().remove(artifact.reference);
     }
-    let outcome = if history_ok.is_ok() {
+    let receipt = history_result.ok().flatten();
+    let outcome = if history_ok {
         outcome
     } else {
         WorkerOutcome::Failed(outcome.kind())
@@ -248,7 +261,7 @@ fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
     let Ok(mut state) = inner.state.lock() else {
         return;
     };
-    if history_ok.is_err() {
+    if !history_ok {
         state.worker_failed = true;
     }
     state.running = state.running.saturating_sub(1);
@@ -260,6 +273,7 @@ fn finish(inner: &JobsInner, id: &str, outcome: WorkerOutcome) {
                 job.status = JobStatus::Completed;
                 job.summary = Some(summary);
                 job.artifact = artifact;
+                job.receipt = receipt;
             }
             WorkerOutcome::Failed(_) => job.status = JobStatus::Failed,
             WorkerOutcome::Cancelled(_) => job.status = JobStatus::Cancelled,
@@ -293,7 +307,10 @@ fn history_record(outcome: &WorkerOutcome) -> Result<TerminalRecord, ()> {
         WorkerOutcome::Cancelled(_) => (TerminalStatus::Cancelled, SafeCounters::default(), None),
     };
     Ok(TerminalRecord {
-        recorded_unix: now_unix().map_err(|_| ())?,
+        recorded_unix: outcome.dry_run_binding().map_or_else(
+            || now_unix().map_err(|_| ()),
+            |binding| Ok(binding.completed_unix),
+        )?,
         kind: outcome.kind(),
         status,
         plan,
@@ -326,11 +343,12 @@ impl ApplicationProgressObserver for JobObserver {
     }
 }
 
-enum WorkerOutcome {
+pub(super) enum WorkerOutcome {
     Completed {
         kind: HistoryKind,
         summary: JobSummary,
         artifact: Option<PlanArtifact>,
+        dry_run: Option<Box<DryRunBinding>>,
     },
     Failed(HistoryKind),
     Cancelled(HistoryKind),
@@ -343,9 +361,20 @@ impl WorkerOutcome {
         }
     }
 
-    const fn artifact(&self) -> Option<&PlanArtifact> {
+    const fn published_artifact(&self) -> Option<&PlanArtifact> {
         match self {
-            Self::Completed { artifact, .. } => artifact.as_ref(),
+            Self::Completed {
+                kind: HistoryKind::FolderPlan,
+                artifact,
+                ..
+            } => artifact.as_ref(),
+            Self::Failed(_) | Self::Cancelled(_) | Self::Completed { .. } => None,
+        }
+    }
+
+    fn dry_run_binding(&self) -> Option<&DryRunBinding> {
+        match self {
+            Self::Completed { dry_run, .. } => dry_run.as_deref(),
             Self::Failed(_) | Self::Cancelled(_) => None,
         }
     }

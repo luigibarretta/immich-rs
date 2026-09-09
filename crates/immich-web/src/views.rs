@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 
 use crate::jobs::{JobSnapshot, JobStatus};
-use crate::state_store::StoredHistory;
+use crate::state_store::{DryRunReceipt, StoredHistory};
 use crate::{ServerProfile, SourceProfile};
 
 #[derive(Template)]
@@ -55,6 +55,7 @@ pub struct JobView<'a> {
     pub warnings: usize,
     pub errors: usize,
     pub plan_ref: String,
+    pub receipt_ref: String,
 }
 
 impl<'a> JobView<'a> {
@@ -93,6 +94,9 @@ impl<'a> JobView<'a> {
                 .artifact
                 .as_ref()
                 .map_or_else(String::new, |artifact| artifact.reference.encode()),
+            receipt_ref: snapshot
+                .receipt
+                .map_or_else(String::new, crate::state_store::ReceiptRef::encode),
         }
     }
 }
@@ -132,6 +136,21 @@ struct PlanTemplate<'a> {
     media_bytes: u64,
     sidecars: u64,
     max_logical_effects: u64,
+    csrf_token: &'a str,
+}
+
+#[derive(Template)]
+#[template(path = "receipt.html")]
+struct ReceiptTemplate<'a> {
+    reference: String,
+    plan_reference: String,
+    plan_sha256: &'a str,
+    source_configuration_sha256: &'a str,
+    server_identity_sha256: &'a str,
+    server_profile_sha256: &'a str,
+    credential_generation: u64,
+    max_logical_effects: u64,
+    completed_unix: i64,
 }
 
 pub fn pair(status: StatusCode, csrf_token: &str, denied: bool) -> Response {
@@ -210,7 +229,7 @@ pub fn history(records: &[StoredHistory]) -> Response {
     render(StatusCode::OK, &HistoryTemplate { rows })
 }
 
-pub fn plan(stored: &crate::state_store::StoredUploadPlan) -> Response {
+pub fn plan(stored: &crate::state_store::StoredUploadPlan, csrf_token: &str) -> Response {
     render(
         StatusCode::OK,
         &PlanTemplate {
@@ -223,6 +242,24 @@ pub fn plan(stored: &crate::state_store::StoredUploadPlan) -> Response {
             media_bytes: stored.plan.summary.media_bytes,
             sidecars: stored.plan.summary.xmp_sidecars,
             max_logical_effects: stored.binding.max_logical_effects,
+            csrf_token,
+        },
+    )
+}
+
+pub fn receipt(receipt: &DryRunReceipt) -> Response {
+    render(
+        StatusCode::OK,
+        &ReceiptTemplate {
+            reference: receipt.reference.encode(),
+            plan_reference: receipt.binding.plan_reference.encode(),
+            plan_sha256: &receipt.binding.plan_sha256,
+            source_configuration_sha256: &receipt.binding.source_configuration_sha256,
+            server_identity_sha256: &receipt.binding.server_identity_sha256,
+            server_profile_sha256: &receipt.binding.server_profile_sha256,
+            credential_generation: receipt.binding.credential_generation,
+            max_logical_effects: receipt.binding.max_logical_effects,
+            completed_unix: receipt.binding.completed_unix,
         },
     )
 }

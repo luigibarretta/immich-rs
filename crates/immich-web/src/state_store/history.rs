@@ -5,11 +5,13 @@ use std::time::Duration;
 
 use rusqlite::{Connection, OpenFlags, TransactionBehavior, params};
 
+mod receipts;
+
 use super::TerminalRecord;
 use super::types::StoredHistory;
 use crate::WebConfigError;
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 const SQLITE_PAGE_BYTES: u64 = 4_096;
 
 pub struct HistoryStore {
@@ -137,6 +139,14 @@ impl HistoryStore {
                 [cutoff],
             )
             .map_err(db_error)?;
+        transaction
+            .execute(
+                "DELETE FROM dry_run_receipts WHERE rowid NOT IN \
+                 (SELECT rowid FROM dry_run_receipts \
+                  ORDER BY completed_unix DESC, rowid DESC LIMIT ?1)",
+                [to_i64(self.retained_rows)?],
+            )
+            .map_err(db_error)?;
         transaction.commit().map_err(db_error)?;
         checkpoint(&connection)?;
         drop(connection);
@@ -179,6 +189,12 @@ fn configure(connection: &mut Connection, maximum_bytes: u64) -> Result<(), WebC
     if version == 0 {
         migrate_v1(connection)?;
     }
+    let version: i64 = connection
+        .pragma_query_value(None, "user_version", |row| row.get(0))
+        .map_err(db_error)?;
+    if version == 1 {
+        migrate_v2(connection)?;
+    }
     validate_schema(connection)?;
     let result: String = connection
         .pragma_update_and_check(None, "journal_mode", "WAL", |row| row.get(0))
@@ -220,6 +236,19 @@ fn migrate_v1(connection: &mut Connection) -> Result<(), WebConfigError> {
         .map_err(db_error)?;
     transaction
         .execute_batch(include_str!("history-v1.sql"))
+        .map_err(db_error)?;
+    transaction
+        .pragma_update(None, "user_version", 1_i64)
+        .map_err(db_error)?;
+    transaction.commit().map_err(db_error)
+}
+
+fn migrate_v2(connection: &mut Connection) -> Result<(), WebConfigError> {
+    let transaction = connection
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .map_err(db_error)?;
+    transaction
+        .execute_batch(include_str!("history-v2.sql"))
         .map_err(db_error)?;
     transaction
         .pragma_update(None, "user_version", SCHEMA_VERSION)

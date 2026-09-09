@@ -5,7 +5,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use immich_rs_application::{CancellationToken, ProgressStage};
 use tokio::sync::broadcast;
 
-use crate::state_store::{HistoryKind, PlanArtifact};
+use crate::state_store::{ArtifactRef, HistoryKind, PlanArtifact, ReceiptRef};
 
 const JOB_ID_BYTES: usize = 16;
 
@@ -63,6 +63,7 @@ pub struct JobSnapshot {
     pub progress: JobProgress,
     pub summary: Option<JobSummary>,
     pub artifact: Option<PlanArtifact>,
+    pub receipt: Option<ReceiptRef>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -83,15 +84,17 @@ pub enum AdmissionError {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum JobKind {
-    FolderScan,
-    FolderPlan { server_id: String },
+    Scan,
+    Plan { server_id: String },
+    DryRun { reference: ArtifactRef },
 }
 
 impl JobKind {
     pub(super) const fn history_kind(&self) -> HistoryKind {
         match self {
-            Self::FolderScan => HistoryKind::FolderScan,
-            Self::FolderPlan { .. } => HistoryKind::FolderPlan,
+            Self::Scan => HistoryKind::FolderScan,
+            Self::Plan { .. } => HistoryKind::FolderPlan,
+            Self::DryRun { .. } => HistoryKind::FolderDryRun,
         }
     }
 }
@@ -108,6 +111,7 @@ pub(super) struct StoredJob {
     pub progress: JobProgress,
     pub summary: Option<JobSummary>,
     pub artifact: Option<PlanArtifact>,
+    pub receipt: Option<ReceiptRef>,
     pub events: VecDeque<JobEvent>,
     pub event_sender: broadcast::Sender<JobEvent>,
     pub next_event_sequence: u64,
@@ -135,6 +139,7 @@ impl StoredJob {
             progress: JobProgress::default(),
             summary: None,
             artifact: None,
+            receipt: None,
             events: VecDeque::with_capacity(replay_events),
             event_sender,
             next_event_sequence: 0,

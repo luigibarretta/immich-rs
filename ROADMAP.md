@@ -200,15 +200,18 @@ Rust tests passed, Clippy denied warnings, the release build succeeded and the
 binary was verified as Mach-O ARM64. The non-root host runner was stopped after
 the run and is intentionally offline when not in use.
 
-The Phase 6 release-candidate gate is **passed** for version `0.1.0-rc.1`.
-GitHub native-matrix run 33849192526 built and tested Linux x86-64/ARM64,
-macOS x86-64/ARM64 and Windows x86-64 on exact revision
-`f69a4c09bdeb09fbdae6d61260b0f8a20e2b6c3c`; Gitea run 6155 passed on that same
-revision. The committed OpenPGP public key matches the independently encrypted
-Vault identity, and the protected GitHub release environment contains only the
-private key, fingerprint and passphrase required by ADR-0025. The signed tag
-still remains fail-closed until the exact version commit also passes both main
-pipelines.
+The Phase 6 release-candidate gate is **passed** for version `0.1.0-rc.3` on
+exact revision `92874b8c4f418dffb0faa77fb129a16168e38d3e`. Gitea run 6602 and
+GitHub native-matrix run 34521237753 passed that revision before the annotated
+OpenPGP-signed tag was created. Signed release run 34522102971 then passed all
+eight jobs and published 36 immutable assets: ten native archives, ten
+CycloneDX 1.5 SBOMs, ten provenance records, two attested amd64/arm64 OCI
+archives and reports, `SHA256SUMS` with 34 entries and its detached signature.
+An independent public redownload verified the signature, every checksum,
+archive layout, provenance revision, OCI platform and both Linux x86-64
+product versions. The committed OpenPGP public key matches the independently
+encrypted Vault identity, and the protected GitHub release environment
+contains only the three secrets required by ADR-0025.
 
 No replacement of immich-go is considered before Phase 6 evidence.
 
@@ -379,9 +382,9 @@ this is not a non-production shadow, WAN or production claim.
 
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
-and all nine sequential implementation gates below are complete. The
-`0.1.0-rc.3` signed pipeline includes separate Web Console native and OCI
-artifacts; publication remains fail-closed until its exact tag workflow passes.
+and all nine sequential implementation gates below are complete. The signed
+`0.1.0-rc.3` prerelease publishes separate Web Console native and OCI artifacts
+after its exact tag workflow passed all eight jobs.
 
 Sequential gates are:
 

@@ -108,15 +108,29 @@ is green and published both reports. Evidence enforcement commit
 
 ## Release status
 
-`0.1.0-rc.3` is the current release candidate. It includes the proven read-only
-archive and immutable folder uploader against remote Immich v3.1.x HTTPS
-endpoints, plus plan-bound Google Takeout, Apple Photos and Picasa uploads with
-normalized metadata and albums. It adds the optional authenticated Web Console
-as a separate native and multiarch OCI product. The source-import synthetic
-gates are complete; their explicitly authorized private-export shadows remain
-pending release evidence. Disposable Immich-to-Immich migration is implemented,
-while production migration is not authorized. Delete, replace, trash and
-independent maintenance remain unavailable. The
+[`0.1.0-rc.3`](https://github.com/luigibarretta/immich-rs/releases/tag/v0.1.0-rc.3)
+is the current signed prerelease. It was built from exact revision
+`92874b8c4f418dffb0faa77fb129a16168e38d3e` after Gitea
+[run 6602](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6602)
+and the five-target GitHub native
+[run 34521237753](https://github.com/luigibarretta/immich-rs/actions/runs/34521237753)
+passed. The signed release
+[run 34522102971](https://github.com/luigibarretta/immich-rs/actions/runs/34522102971)
+published 36 assets: ten native archives, ten CycloneDX 1.5 SBOMs, ten
+provenance records, two attested amd64/arm64 OCI archives and reports, plus a
+34-entry SHA-256 manifest and its detached OpenPGP signature. An independent
+redownload verified every checksum, provenance identity, OCI platform and both
+Linux x86-64 product versions.
+
+The candidate includes the proven read-only archive and immutable folder
+uploader against remote Immich v3.1.x HTTPS endpoints, plus plan-bound Google
+Takeout, Apple Photos and Picasa uploads with normalized metadata and albums.
+It adds the optional authenticated Web Console as a separate native and
+multiarch OCI product. The source-import synthetic gates are complete; their
+explicitly authorized private-export shadows remain pending release evidence.
+Disposable Immich-to-Immich migration is implemented, while production
+migration is not authorized. Delete, replace, trash and independent
+maintenance remain unavailable. The
 Phase 7 synthetic gate is green in
 Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
 on implementation SHA `db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`;
@@ -194,9 +208,9 @@ denial and private-address CIDR pinning are covered. Direct TLS is supported;
 trusted reverse-proxy termination is not. Media-serving routes remain
 unsupported. See the [LAN configuration contract](docs/web-console-lan.md). A
 standalone `immich-rs-web` binary and separate local hardened OCI/Compose
-service are packaged by the `0.1.0-rc.3` signed release pipeline for every
-supported native target and both Linux architectures. The CLI remains the
-canonical complete interface. See the [container guide](docs/container.md),
+service are published in the `0.1.0-rc.3` signed prerelease for every supported
+native target and both Linux architectures. The CLI remains the canonical
+complete interface. See the [container guide](docs/container.md),
 [threat model](docs/web-console-threat-model.md) and
 [capability/resource matrix](docs/web-console-resources.md).
 

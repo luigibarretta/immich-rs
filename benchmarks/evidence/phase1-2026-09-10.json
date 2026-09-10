@@ -1,0 +1,609 @@
+{
+  "aggregate": {
+    "immich_go": {
+      "characters_read": {
+        "max": 67165332,
+        "median": 67165137.0,
+        "min": 67164576,
+        "p95": 67165332
+      },
+      "characters_written": {
+        "max": 10546,
+        "median": 9128.5,
+        "min": 8162,
+        "p95": 10546
+      },
+      "logical_media_bytes_read": {
+        "max": 67108864,
+        "median": 67108864.0,
+        "min": 67108864,
+        "p95": 67108864
+      },
+      "logical_media_bytes_written": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "peak_open_file_descriptors": {
+        "max": 16,
+        "median": 15.0,
+        "min": 15,
+        "p95": 16
+      },
+      "peak_rss_bytes": {
+        "max": 18796544,
+        "median": 16130048.0,
+        "min": 14921728,
+        "p95": 18796544
+      },
+      "storage_bytes_read": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "storage_bytes_written": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "system_cpu_seconds": {
+        "max": 0.03143599999999999,
+        "median": 0.021063499999999985,
+        "min": 0.012871999999999995,
+        "p95": 0.03143599999999999
+      },
+      "user_cpu_seconds": {
+        "max": 0.07632900000000009,
+        "median": 0.049786499999999984,
+        "min": 0.029398999999999953,
+        "p95": 0.07632900000000009
+      },
+      "wall_time_seconds": {
+        "max": 0.085231823,
+        "median": 0.0687686255,
+        "min": 0.054660112,
+        "p95": 0.085231823
+      }
+    },
+    "immich_rs": {
+      "characters_read": {
+        "max": 67118220,
+        "median": 66856076.0,
+        "min": 66069644,
+        "p95": 67118220
+      },
+      "characters_written": {
+        "max": 4235,
+        "median": 0.0,
+        "min": 0,
+        "p95": 4235
+      },
+      "logical_media_bytes_read": {
+        "max": 67108864,
+        "median": 67108864.0,
+        "min": 67108864,
+        "p95": 67108864
+      },
+      "logical_media_bytes_written": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "peak_open_file_descriptors": {
+        "max": 10,
+        "median": 10.0,
+        "min": 10,
+        "p95": 10
+      },
+      "peak_rss_bytes": {
+        "max": 5701632,
+        "median": 5220352.0,
+        "min": 5001216,
+        "p95": 5701632
+      },
+      "storage_bytes_read": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "storage_bytes_written": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "system_cpu_seconds": {
+        "max": 0.020869000000000026,
+        "median": 0.01520450000000001,
+        "min": 0.007515999999999967,
+        "p95": 0.020869000000000026
+      },
+      "user_cpu_seconds": {
+        "max": 0.08355400000000002,
+        "median": 0.07497749999999997,
+        "min": 0.06250100000000003,
+        "p95": 0.08355400000000002
+      },
+      "wall_time_seconds": {
+        "max": 0.097891254,
+        "median": 0.087375856,
+        "min": 0.082610597,
+        "p95": 0.097891254
+      }
+    }
+  },
+  "claims": [
+    "Raw measurements only; no performance improvement is claimed."
+  ],
+  "manifest": {
+    "environment": {
+      "architecture": "x86_64",
+      "hostname": "<REDACTED_HOST>",
+      "kernel": "6.12.107+deb13-cloud-amd64",
+      "locale": "C.UTF-8",
+      "logical_cpus": 10,
+      "system": "Linux",
+      "timezone": "UTC"
+    },
+    "fixture": {
+      "assets": 8,
+      "expected_plan_sha256": "96a753fe2677785bce5a23a7de370b82ff2f2c280ac956801de7b4ca0e2830bd",
+      "id": "synthetic-benchmark",
+      "manifest_sha256": "9a23974ca266c344c322ff559fd3de3c29c18a21c499c65f9448b122b78634e4",
+      "media_bytes": 67108864
+    },
+    "methodology": {
+      "concurrency": 1,
+      "immich_rs_buffer_bytes": 65536,
+      "order": "alternating to bound page-cache ordering bias",
+      "pairing": "same materialized corpus and environment within each sample",
+      "percentiles": "nearest-rank p95 over the raw samples",
+      "samples": 10,
+      "scope": "child process only; fixture generation and mock startup excluded",
+      "warmups": 2
+    },
+    "source_revision": "03e6e13855ad4b401143653c30fa352fc8761546",
+    "tools": {
+      "immich_go": {
+        "binary_sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "name": "immich-go",
+        "sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "upstream_commit": "f7d19fce34acd4884ea2c02fc3025706a060afdf",
+        "version": "0.32.0"
+      },
+      "immich_rs": {
+        "sha256": "a855d767bcb9f9d27b4eccae8bc623a61557aaa3f8e6a0adfbd2a4f593f51be6",
+        "version": "immich-rs 0.1.0-rc.1"
+      },
+      "rustc": "rustc 1.88.0 (6b00bc388 2025-06-23)"
+    }
+  },
+  "raw_samples": [
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67164799,
+        "characters_written": 8537,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 16175104,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.02629899999999999,
+        "user_cpu_seconds": 0.056994000000000045,
+        "wall_time_seconds": 0.082842452
+      },
+      "immich_rs": {
+        "characters_read": 67118216,
+        "characters_written": 4235,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5574656,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.019992999999999997,
+        "user_cpu_seconds": 0.07199399999999997,
+        "wall_time_seconds": 0.09281039
+      },
+      "sample": 0
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67165141,
+        "characters_written": 9098,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 18796544,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.023104000000000013,
+        "user_cpu_seconds": 0.047330999999999956,
+        "wall_time_seconds": 0.067592363
+      },
+      "immich_rs": {
+        "characters_read": 66725000,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5222400,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.016792999999999975,
+        "user_cpu_seconds": 0.06717500000000004,
+        "wall_time_seconds": 0.083984088
+      },
+      "sample": 1
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67165141,
+        "characters_written": 9167,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 15372288,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.03143599999999999,
+        "user_cpu_seconds": 0.03532299999999999,
+        "wall_time_seconds": 0.067960599
+      },
+      "immich_rs": {
+        "characters_read": 66725004,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5234688,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.011940000000000006,
+        "user_cpu_seconds": 0.08355400000000002,
+        "wall_time_seconds": 0.097891254
+      },
+      "sample": 2
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67165133,
+        "characters_written": 9159,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 18141184,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.019256999999999996,
+        "user_cpu_seconds": 0.05760900000000002,
+        "wall_time_seconds": 0.074837478
+      },
+      "immich_rs": {
+        "characters_read": 67118216,
+        "characters_written": 4235,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5623808,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.014324999999999977,
+        "user_cpu_seconds": 0.07480399999999998,
+        "wall_time_seconds": 0.090061956
+      },
+      "sample": 3
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67164910,
+        "characters_written": 8723,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 16084992,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.012871999999999995,
+        "user_cpu_seconds": 0.04284100000000002,
+        "wall_time_seconds": 0.054660112
+      },
+      "immich_rs": {
+        "characters_read": 67118220,
+        "characters_written": 4235,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5701632,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.016378999999999977,
+        "user_cpu_seconds": 0.069326,
+        "wall_time_seconds": 0.085986185
+      },
+      "sample": 4
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67165255,
+        "characters_written": 9381,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 17539072,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.02020299999999997,
+        "user_cpu_seconds": 0.05224200000000001,
+        "wall_time_seconds": 0.069576652
+      },
+      "immich_rs": {
+        "characters_read": 66331788,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5001216,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.012170000000000014,
+        "user_cpu_seconds": 0.07691399999999993,
+        "wall_time_seconds": 0.088765527
+      },
+      "sample": 5
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67164759,
+        "characters_written": 8497,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 16076800,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.02941699999999997,
+        "user_cpu_seconds": 0.029398999999999953,
+        "wall_time_seconds": 0.058975913
+      },
+      "immich_rs": {
+        "characters_read": 66987148,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5218304,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.020869000000000026,
+        "user_cpu_seconds": 0.06250100000000003,
+        "wall_time_seconds": 0.083432378
+      },
+      "sample": 6
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67164576,
+        "characters_written": 8162,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 15740928,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.021924,
+        "user_cpu_seconds": 0.05950299999999986,
+        "wall_time_seconds": 0.075590208
+      },
+      "immich_rs": {
+        "characters_read": 66725000,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5099520,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.007711000000000023,
+        "user_cpu_seconds": 0.07594800000000013,
+        "wall_time_seconds": 0.082610597
+      },
+      "sample": 7
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 67165332,
+        "characters_written": 9429,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 15,
+        "peak_rss_bytes": 16453632,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.01952400000000004,
+        "user_cpu_seconds": 0.03903700000000021,
+        "wall_time_seconds": 0.05970227
+      },
+      "immich_rs": {
+        "characters_read": 67118220,
+        "characters_written": 191,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5132288,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.007515999999999967,
+        "user_cpu_seconds": 0.07515099999999997,
+        "wall_time_seconds": 0.08313338
+      },
+      "sample": 8
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 67165308,
+        "characters_written": 10546,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 5,
+          "http_requests": 17,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 14921728,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.013427999999999995,
+        "user_cpu_seconds": 0.07632900000000009,
+        "wall_time_seconds": 0.085231823
+      },
+      "immich_rs": {
+        "characters_read": 66069644,
+        "characters_written": 0,
+        "logical_media_bytes_read": 67108864,
+        "logical_media_bytes_written": 0,
+        "operations": {
+          "contained_oracle_mutations": 0,
+          "http_requests": 0,
+          "http_retries_observed": 0,
+          "source_assets_planned": 8
+        },
+        "peak_open_file_descriptors": 10,
+        "peak_rss_bytes": 5165056,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.016084000000000043,
+        "user_cpu_seconds": 0.07718800000000003,
+        "wall_time_seconds": 0.091635653
+      },
+      "sample": 9
+    }
+  ],
+  "schema": "phase1-benchmark-report-v1"
+}

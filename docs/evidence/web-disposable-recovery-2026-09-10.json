@@ -1,0 +1,38 @@
+{
+  "authentication": {
+    "bearer_route_scoped": true,
+    "browser_pairing": true,
+    "machine_metrics": true,
+    "query_token_rejected": true
+  },
+  "binary_sha256": "9bbff5ed5d33b88f61a8a7d7c18af84f4388eebd460a853016581f872f967b88",
+  "cleanup": {
+    "processes_remaining": 0,
+    "workspace_removed": true
+  },
+  "commit_sha": "b8e03f876580cc6c35eb433f74ca3eb69cd364ff",
+  "environment": {
+    "architecture": "x86_64",
+    "os": "Linux"
+  },
+  "fixture": {
+    "assets": 1,
+    "kind": "synthetic",
+    "license": "CC0-1.0"
+  },
+  "isolation": {
+    "loopback_only": true,
+    "production_access": false
+  },
+  "recovery": {
+    "copied_while_stopped": true,
+    "history_after_restart": 1,
+    "sessions_after_restart": 0,
+    "state_tree_sha256": "2864be5735e7838352386586d6e510dcba1fae70c894927a8cc5a286fde93b15"
+  },
+  "schema": "web-disposable-recovery-v1",
+  "workflow": {
+    "folder_scan_completed": true,
+    "history_rows": 1
+  }
+}

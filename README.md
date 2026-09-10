@@ -600,6 +600,7 @@ python3 scripts/check-source-import-evidence.py
 python3 scripts/check-source-import-benchmark.py
 python3 scripts/check-migration-evidence.py
 python3 scripts/check-real-migration-benchmark.py
+python3 scripts/check-web-evidence.py
 python3 scripts/check-release.py
 python3 scripts/check-container.py
 python3 scripts/check-fixtures.py

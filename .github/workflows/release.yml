@@ -45,6 +45,7 @@ jobs:
           python scripts/check-source-import-benchmark.py
           python scripts/check-migration-evidence.py
           python scripts/check-real-migration-benchmark.py
+          python scripts/check-web-evidence.py
           python scripts/check-release.py
           python scripts/check-container.py
           python scripts/check-fixtures.py

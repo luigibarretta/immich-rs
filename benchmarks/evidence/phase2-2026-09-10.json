@@ -1,0 +1,435 @@
+{
+  "aggregate": {
+    "immich_go": {
+      "characters_read": {
+        "max": 1307022,
+        "median": 1306718.0,
+        "min": 1306700,
+        "p95": 1307022
+      },
+      "characters_written": {
+        "max": 603992,
+        "median": 603944.0,
+        "min": 603922,
+        "p95": 603992
+      },
+      "peak_open_file_descriptors": {
+        "max": 16,
+        "median": 16.0,
+        "min": 16,
+        "p95": 16
+      },
+      "peak_rss_bytes": {
+        "max": 15036416,
+        "median": 13891584.0,
+        "min": 13848576,
+        "p95": 15036416
+      },
+      "storage_bytes_read": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "storage_bytes_written": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "system_cpu_seconds": {
+        "max": 0.015333,
+        "median": 0.011219499999999993,
+        "min": 0.005756000000000004,
+        "p95": 0.015333
+      },
+      "user_cpu_seconds": {
+        "max": 0.011742999999999996,
+        "median": 0.011208999999999997,
+        "min": 0.008718000000000004,
+        "p95": 0.011742999999999996
+      },
+      "wall_time_seconds": {
+        "max": 0.256081122,
+        "median": 0.153730222,
+        "min": 0.132794804,
+        "p95": 0.256081122
+      }
+    },
+    "immich_rs": {
+      "characters_read": {
+        "max": 2374829,
+        "median": 2374825.0,
+        "min": 1787525,
+        "p95": 2374829
+      },
+      "characters_written": {
+        "max": 723220,
+        "median": 688957.0,
+        "min": 686196,
+        "p95": 723220
+      },
+      "peak_open_file_descriptors": {
+        "max": 14,
+        "median": 13.0,
+        "min": 13,
+        "p95": 14
+      },
+      "peak_rss_bytes": {
+        "max": 10383360,
+        "median": 10295296.0,
+        "min": 9908224,
+        "p95": 10383360
+      },
+      "storage_bytes_read": {
+        "max": 73728,
+        "median": 0.0,
+        "min": 0,
+        "p95": 73728
+      },
+      "storage_bytes_written": {
+        "max": 0,
+        "median": 0.0,
+        "min": 0,
+        "p95": 0
+      },
+      "system_cpu_seconds": {
+        "max": 0.029378,
+        "median": 0.011965999999999997,
+        "min": 0.0,
+        "p95": 0.029378
+      },
+      "user_cpu_seconds": {
+        "max": 0.02333700000000001,
+        "median": 0.008911000000000002,
+        "min": 0.0,
+        "p95": 0.02333700000000001
+      },
+      "wall_time_seconds": {
+        "max": 0.165093234,
+        "median": 0.1506881445,
+        "min": 0.119934394,
+        "p95": 0.165093234
+      }
+    }
+  },
+  "claims": [
+    "Raw measurements only; no performance improvement is claimed."
+  ],
+  "manifest": {
+    "environment": {
+      "architecture": "x86_64",
+      "hostname": "<REDACTED_HOST>",
+      "kernel": "6.12.107+deb13-cloud-amd64",
+      "locale": "C.UTF-8",
+      "logical_cpus": 10,
+      "system": "Linux",
+      "timezone": "UTC"
+    },
+    "fixture": {
+      "derived_from": {
+        "manifest_sha256": "5288a0548d947d22e2e693ef958db00215a562ffa3172a26861d569ae5927a61",
+        "mapping": "live media renamed and assigned distinct fixed-size synthetic identifiers",
+        "schema": "phase2-corpus-v1"
+      },
+      "expected": {
+        "live_photo_links": 0,
+        "live_photo_pairs": 0,
+        "upload_operations": 4,
+        "visible_assets": 4,
+        "xmp_sidecars": 1
+      },
+      "files": [
+        {
+          "bytes": 294437,
+          "path": "clip.mp4",
+          "role": "standalone-video",
+          "sha256": "0a8fecdcd3acc4d48f86556019a116e949e8b54259bf37b368e957fa11863092"
+        },
+        {
+          "bytes": 229,
+          "path": "image.jpg",
+          "role": "standalone-image",
+          "sha256": "1ddf2520656768129b504be9d3c54b8b722a7b5e03bbd68dbd1c8006fe27969b"
+        },
+        {
+          "bytes": 289,
+          "path": "image.xmp",
+          "role": "xmp-sidecar",
+          "sha256": "f8dc98bef622f83d65bd58cdc957d1bdf349ccfd8fe87391a474c3bf558e92fa"
+        },
+        {
+          "bytes": 291962,
+          "path": "motion.mov",
+          "role": "standalone-video",
+          "sha256": "d0c1752c8234bdc5381d641dfc7bd9c364e561db193e0f80eef60c6585b9ae34"
+        },
+        {
+          "bytes": 387,
+          "path": "still.jpg",
+          "role": "standalone-image",
+          "sha256": "5848cb1b560f914347478da69f98fabb37e2e61fdcc47a630093a27332475e3e"
+        }
+      ],
+      "manifest_sha256": "9efa46724d28a59e245b316ccacb3c11d452510e3c2c61e7ae7664ac98ee8dbf"
+    },
+    "methodology": {
+      "concurrency": "immich-rs default 1; immich-go concurrent-tasks 1",
+      "immich_rs_workflow": "plan upload folder plus apply upload",
+      "order": "alternating within pairs",
+      "pairing": "fresh isolated owner per tool on one disposable server and one corpus",
+      "percentiles": "nearest-rank p95 over the raw samples",
+      "samples": 6,
+      "scope": "client processes only; account setup, server startup and postcondition probes excluded",
+      "warmups": 2
+    },
+    "source_revision": "03e6e13855ad4b401143653c30fa352fc8761546",
+    "tools": {
+      "immich_go": {
+        "archive": "immich-go_Linux_x86_64.tar.gz",
+        "archive_sha256": "6e2ad86bafdadb9466d6515de7cb882726c0aea1a21d51164dff361d7d480a97",
+        "binary_sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "license": "AGPL-3.0",
+        "name": "immich-go",
+        "sha256": "eb46733ccf8ff78fb7207b9601695ff5730927cc712f08c6a93e315c845d5475",
+        "upstream_commit": "f7d19fce34acd4884ea2c02fc3025706a060afdf",
+        "version": "0.32.0"
+      },
+      "immich_rs": {
+        "sha256": "a855d767bcb9f9d27b4eccae8bc623a61557aaa3f8e6a0adfbd2a4f593f51be6",
+        "version": "immich-rs 0.1.0-rc.1"
+      }
+    }
+  },
+  "raw_samples": [
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 1306700,
+        "characters_written": 603932,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 14008320,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.008771999999999995,
+        "user_cpu_seconds": 0.011742999999999996,
+        "wall_time_seconds": 0.256081122
+      },
+      "immich_rs": {
+        "characters_read": 1787525,
+        "characters_written": 686212,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 13,
+        "peak_rss_bytes": 10305536,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.016882,
+        "user_cpu_seconds": 0.0021860000000000004,
+        "wall_time_seconds": 0.119934394
+      },
+      "sample": 0
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 1306725,
+        "characters_written": 603992,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 13856768,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.005756000000000004,
+        "user_cpu_seconds": 0.011513000000000002,
+        "wall_time_seconds": 0.132794804
+      },
+      "immich_rs": {
+        "characters_read": 2374826,
+        "characters_written": 686196,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 13,
+        "peak_rss_bytes": 10321920,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.009057999999999997,
+        "user_cpu_seconds": 0.015852999999999992,
+        "wall_time_seconds": 0.15807205500000002
+      },
+      "sample": 1
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 1306711,
+        "characters_written": 603922,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 13848576,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.013076000000000004,
+        "user_cpu_seconds": 0.008718000000000004,
+        "wall_time_seconds": 0.146354248
+      },
+      "immich_rs": {
+        "characters_read": 2374825,
+        "characters_written": 688953,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 13,
+        "peak_rss_bytes": 10285056,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.014873999999999998,
+        "user_cpu_seconds": 0.006610000000000005,
+        "wall_time_seconds": 0.160879993
+      },
+      "sample": 2
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 1307022,
+        "characters_written": 603922,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 13901824,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.015333,
+        "user_cpu_seconds": 0.00917699999999999,
+        "wall_time_seconds": 0.182486586
+      },
+      "immich_rs": {
+        "characters_read": 1943556,
+        "characters_written": 723220,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 13,
+        "peak_rss_bytes": 10166272,
+        "storage_bytes_read": 73728,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.029378,
+        "user_cpu_seconds": 0.0,
+        "wall_time_seconds": 0.165093234
+      },
+      "sample": 3
+    },
+    {
+      "execution_order": "immich-rs-first",
+      "immich_go": {
+        "characters_read": 1306707,
+        "characters_written": 603976,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 13881344,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.011496000000000006,
+        "user_cpu_seconds": 0.011473999999999984,
+        "wall_time_seconds": 0.161106196
+      },
+      "immich_rs": {
+        "characters_read": 2374825,
+        "characters_written": 688965,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 14,
+        "peak_rss_bytes": 9908224,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.0,
+        "user_cpu_seconds": 0.02333700000000001,
+        "wall_time_seconds": 0.135107625
+      },
+      "sample": 4
+    },
+    {
+      "execution_order": "immich-go-first",
+      "immich_go": {
+        "characters_read": 1306726,
+        "characters_written": 603956,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 16,
+        "peak_rss_bytes": 15036416,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.01094299999999998,
+        "user_cpu_seconds": 0.01094400000000001,
+        "wall_time_seconds": 0.13773535
+      },
+      "immich_rs": {
+        "characters_read": 2374829,
+        "characters_written": 688961,
+        "operations": {
+          "live_photo_links": 0,
+          "retries": 0,
+          "source_operations": 4,
+          "visible_assets": 4
+        },
+        "peak_open_file_descriptors": 14,
+        "peak_rss_bytes": 10383360,
+        "storage_bytes_read": 0,
+        "storage_bytes_written": 0,
+        "system_cpu_seconds": 0.008367000000000013,
+        "user_cpu_seconds": 0.011212,
+        "wall_time_seconds": 0.143304234
+      },
+      "sample": 5
+    }
+  ],
+  "schema": "phase2-benchmark-report-v1"
+}

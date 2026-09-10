@@ -64,6 +64,7 @@ def validate() -> None:
         "check-phase8-benchmark.py",
         "check-source-import-evidence.py",
         "check-migration-evidence.py",
+        "check-web-evidence.py",
     )
     if any(value not in workflow for value in required):
         raise ReleaseCheckError("release identity, SBOM or signing gate drifted")

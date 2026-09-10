@@ -38,6 +38,7 @@ jobs:
           python3 scripts/check-production-evidence.py
           python3 scripts/check-phase8-evidence.py
           python3 scripts/check-phase8-benchmark.py
+          python3 scripts/check-web-evidence.py
           python3 scripts/check-release.py
           python3 scripts/check-container.py
           python3 scripts/check-fixtures.py

@@ -14,7 +14,7 @@ import tomllib
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = ROOT / "benchmarks/evidence/phase8-2026-08-24.json"
+DEFAULT_INPUT = ROOT / "benchmarks/evidence/phase8-2026-09-10.json"
 FIXTURE = ROOT / "benchmarks/fixtures/phase8-takeout-64m.json"
 BASELINE = ROOT / "tests/oracle/baseline.toml"
 SHA256 = re.compile(r"^[0-9a-f]{64}$")

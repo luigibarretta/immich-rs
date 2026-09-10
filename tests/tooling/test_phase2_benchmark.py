@@ -58,6 +58,27 @@ class Phase2BenchmarkTests(unittest.TestCase):
         self.assertNotIn("IMMICH_RS_BENCHMARK_ADMIN_TOKEN", environment)
         self.assertEqual(set(environment), {"HOME", "LANG", "LC_ALL", "PATH", "TZ", "IMMICH_RS_API_KEY"})
 
+    def test_tool_inspection_does_not_inherit_benchmark_credentials(self) -> None:
+        module = load_module()
+        previous = os.environ.get("IMMICH_RS_BENCHMARK_ADMIN_TOKEN")
+        os.environ["IMMICH_RS_BENCHMARK_ADMIN_TOKEN"] = "synthetic-admin-token"
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                output = module.command_output(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import os; print('IMMICH_RS_BENCHMARK_ADMIN_TOKEN' in os.environ)",
+                    ],
+                    Path(temporary),
+                )
+        finally:
+            if previous is None:
+                os.environ.pop("IMMICH_RS_BENCHMARK_ADMIN_TOKEN", None)
+            else:
+                os.environ["IMMICH_RS_BENCHMARK_ADMIN_TOKEN"] = previous
+        self.assertEqual(output, "False")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -61,9 +61,16 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def command_output(command: list[str]) -> str:
+def command_output(command: list[str], workspace: Path) -> str:
     try:
-        completed = subprocess.run(command, check=True, capture_output=True, text=True, timeout=15)
+        completed = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env=safe_environment(workspace),
+        )
     except (OSError, subprocess.SubprocessError) as failure:
         raise Phase2BenchmarkError("cannot inspect a benchmark tool") from failure
     return (completed.stdout or completed.stderr).strip()
@@ -329,7 +336,7 @@ def run(arguments: argparse.Namespace) -> dict[str, Any]:
             "source_revision": arguments.source_revision,
             "fixture": {"manifest_sha256": sha256(arguments.fixture_manifest), "derived_from": fixture["derived_from"], "files": fixture["files"], "expected": expected},
             "tools": {
-                "immich_rs": {"version": command_output([str(arguments.immich_rs), "--version"]), "sha256": sha256(arguments.immich_rs)},
+                "immich_rs": {"version": command_output([str(arguments.immich_rs), "--version"], arguments.workspace), "sha256": sha256(arguments.immich_rs)},
                 "immich_go": {**baseline["oracle"], **baseline["artifacts"]["linux_x86_64"], "sha256": sha256(arguments.oracle)},
             },
             "environment": {"system": platform.system(), "kernel": platform.release(), "architecture": platform.machine(), "logical_cpus": os.cpu_count(), "locale": "C.UTF-8", "timezone": "UTC", "hostname": "<REDACTED_HOST>"},

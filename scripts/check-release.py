@@ -48,6 +48,8 @@ def validate() -> None:
         "merge-multiple: true",
         "needs: [native, container]",
         "build-multiarch-container.sh",
+        "container_dist=$(mktemp -d)",
+        'mv "$container_dist"/* dist/',
         "linux-multiarch.oci.tar",
         "immich-rs-web-${version}-linux-multiarch.oci.tar",
         "cancel-in-progress: false",
@@ -122,6 +124,14 @@ def validate() -> None:
         raise ReleaseCheckError("release checksum or provenance finalizer drifted")
     legacy_release = read(".gitea/workflows/release.yml")
     manual_container = read(".gitea/workflows/container.yml")
+    for source, label in ((workflow, "GitHub release"), (legacy_release, "legacy release")):
+        if (
+            "container_dist=$(mktemp -d)" not in source
+            or 'mv "$container_dist"/* dist/' not in source
+            or '--output "dist/' in source
+            or '--report "dist/' in source
+        ):
+            raise ReleaseCheckError(f"{label} writes OCI outputs into its checkout")
     for source, label in (
         (legacy_release, "legacy release"),
         (manual_container, "manual container"),

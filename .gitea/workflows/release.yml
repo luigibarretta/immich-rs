@@ -137,19 +137,22 @@ jobs:
       - name: Build the attested multiarch OCI candidate
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          container_dist=$(mktemp -d)
+          trap 'find "$container_dist" -type f -delete; rmdir "$container_dist"' EXIT
           mkdir -p dist
           scripts/build-multiarch-container.sh \
             --product immich-rs \
-            --output "dist/immich-rs-${VERSION}-linux-multiarch.oci.tar" \
-            --report "dist/immich-rs-${VERSION}-linux-multiarch.container.json" \
+            --output "$container_dist/immich-rs-${VERSION}-linux-multiarch.oci.tar" \
+            --report "$container_dist/immich-rs-${VERSION}-linux-multiarch.container.json" \
             --revision "${{ github.sha }}" \
             --version "$VERSION"
           scripts/build-multiarch-container.sh \
             --product immich-rs-web \
-            --output "dist/immich-rs-web-${VERSION}-linux-multiarch.oci.tar" \
-            --report "dist/immich-rs-web-${VERSION}-linux-multiarch.container.json" \
+            --output "$container_dist/immich-rs-web-${VERSION}-linux-multiarch.oci.tar" \
+            --report "$container_dist/immich-rs-web-${VERSION}-linux-multiarch.container.json" \
             --revision "${{ github.sha }}" \
             --version "$VERSION"
+          mv "$container_dist"/* dist/
       - name: Preserve the multiarch candidate
         uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3
         with:

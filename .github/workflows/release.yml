@@ -150,17 +150,20 @@ jobs:
         shell: bash
         run: |
           version="${GITHUB_REF_NAME#v}"
+          container_dist=$(mktemp -d)
+          trap 'find "$container_dist" -type f -delete; rmdir "$container_dist"' EXIT
           mkdir -p dist
           scripts/build-multiarch-container.sh \
             --product immich-rs \
-            --output "dist/immich-rs-${version}-linux-multiarch.oci.tar" \
-            --report "dist/immich-rs-${version}-linux-multiarch.container.json" \
+            --output "$container_dist/immich-rs-${version}-linux-multiarch.oci.tar" \
+            --report "$container_dist/immich-rs-${version}-linux-multiarch.container.json" \
             --revision "${GITHUB_SHA}" --version "$version"
           scripts/build-multiarch-container.sh \
             --product immich-rs-web \
-            --output "dist/immich-rs-web-${version}-linux-multiarch.oci.tar" \
-            --report "dist/immich-rs-web-${version}-linux-multiarch.container.json" \
+            --output "$container_dist/immich-rs-web-${version}-linux-multiarch.oci.tar" \
+            --report "$container_dist/immich-rs-web-${version}-linux-multiarch.container.json" \
             --revision "${GITHUB_SHA}" --version "$version"
+          mv "$container_dist"/* dist/
       - name: Preserve the multiarch candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

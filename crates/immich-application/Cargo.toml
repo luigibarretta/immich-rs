@@ -10,10 +10,10 @@ repository.workspace = true
 publish = false
 
 [dependencies]
-immich-rs-client = { path = "../immich-client", version = "=0.1.0-rc.1" }
-immich-rs-core = { path = "../immich-core", version = "=0.1.0-rc.1" }
-immich-rs-executor = { path = "../immich-executor", version = "=0.1.0-rc.1" }
-immich-rs-sources = { path = "../immich-sources", version = "=0.1.0-rc.1" }
+immich-rs-client = { path = "../immich-client", version = "=0.1.0-rc.2" }
+immich-rs-core = { path = "../immich-core", version = "=0.1.0-rc.2" }
+immich-rs-executor = { path = "../immich-executor", version = "=0.1.0-rc.2" }
+immich-rs-sources = { path = "../immich-sources", version = "=0.1.0-rc.2" }
 serde.workspace = true
 
 [dev-dependencies]

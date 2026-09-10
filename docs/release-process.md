@@ -4,7 +4,7 @@ This procedure is active for signed release candidates. A candidate is
 published only after the exact `main` revision is green on Gitea and on the
 five-target GitHub native matrix.
 
-The current candidate version is `0.1.0-rc.1`. Its signed tag must resolve to
+The current candidate version is `0.1.0-rc.2`. Its signed tag must resolve to
 the exact version commit after both main pipelines pass on that commit.
 
 ## One-time prerequisites
@@ -39,7 +39,7 @@ is replaced under an existing tag.
    Phase 8 Takeout evidence validators pass.
 3. Set the Cargo workspace version to the candidate version and update
    `CHANGELOG.md`, compatibility matrices and this guide with verified facts.
-4. Create an annotated signed tag such as `v0.1.0-rc.1`; verify it locally with
+4. Create the annotated signed tag `v0.1.0-rc.2`; verify it locally with
    `git verify-tag` against the committed public key.
 5. Push only the signed tag. The release workflow must build/test all five
    native targets for both products, generate separate CycloneDX SBOMs, build

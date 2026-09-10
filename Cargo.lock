@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-application"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "immich-rs-client",
  "immich-rs-core",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-cli"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "ctrlc",
  "immich-rs-application",
@@ -689,7 +689,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-client"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "base64",
  "immich-rs-core",
@@ -705,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-core"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -714,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-executor"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "base64",
  "futures-util",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-sources"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "base64",
  "immich-rs-core",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "immich-rs-web"
-version = "0.1.0-rc.1"
+version = "0.1.0-rc.2"
 dependencies = [
  "askama",
  "axum",

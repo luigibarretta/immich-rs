@@ -4,6 +4,34 @@ All notable changes will be documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 Semantic Versioning.
 
+## [0.1.0-rc.2] - 2026-09-10
+
+### Added
+
+- Optional authenticated `immich-rs-web` operator console with bounded jobs,
+  immutable plan review, offline dry-run and exact single-use apply grants.
+- Direct TLS 1.3 and OIDC authorization-code plus PKCE LAN mode with private
+  address pinning, restart-ephemeral sessions and fail-closed key rotation.
+- Separate downloadable Web Console binaries for all five native targets and
+  a separate attested amd64/arm64 OCI archive in the signed release bundle.
+- Label-free aggregate metrics with browser authentication or an optional
+  file-backed machine bearer constrained by immediate-peer CIDRs.
+- CI-enforced disposable Web Console authentication, shutdown, cold backup,
+  restore and restart evidence using only a synthetic loopback source.
+
+### Changed
+
+- Published a fresh comparable benchmark set for folder planning, folder
+  upload and complete Google Takeout import; only the exact Takeout result
+  supports a current speed claim.
+- Made Python tooling, fixtures and native tests portable across Linux, macOS
+  ARM64 and Windows x86-64 host runners.
+
+### Fixed
+
+- Sanitized benchmark child environments so release credentials cannot alter
+  tool identity inspection.
+
 ## [0.1.0-rc.1] - 2026-09-04
 
 ### Added
@@ -35,15 +63,6 @@ Semantic Versioning.
 - Real disposable compatibility gates and paired raw benchmarks for Apple
   Photos, Picasa and two-server migration, with ADR-0012-scoped synthetic
   performance claims and no generalized or production claim.
-- Authenticated `immich-rs-web` operator binary with a separate hardened local
-  OCI image, opt-in loopback-published Compose profile, five-target native
-  artifacts and an attested multiarch image in the signed release bundle.
-- Label-free authenticated aggregate Web Console metrics, bounded terminal
-  history, immutable private plans and fail-closed recovery guidance.
-- Keyboard-accessible server-rendered console navigation, semantic history and
-  live-status markup, reduced-motion CSS and a synthetic loopback headless
-  browser regression gate.
-
 This is the first signed release candidate. Production migration, destructive
 maintenance and compatibility beyond the documented Immich v3.1.x surfaces
 remain out of scope.

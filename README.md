@@ -108,14 +108,15 @@ is green and published both reports. Evidence enforcement commit
 
 ## Release status
 
-`0.1.0-rc.1` is the first supported release candidate. It includes the proven
-read-only archive and immutable folder uploader against remote Immich v3.1.x
-HTTPS endpoints, plus plan-bound Google Takeout, Apple Photos and Picasa
-uploads with normalized metadata and albums. The source-import synthetic gates
-are complete; their explicitly authorized private-export shadows remain
-release evidence. Disposable Immich-to-Immich migration is implemented, while
-production migration is not authorized. Delete, replace, trash and independent
-maintenance remain unavailable. The
+`0.1.0-rc.2` is the current release candidate. It includes the proven read-only
+archive and immutable folder uploader against remote Immich v3.1.x HTTPS
+endpoints, plus plan-bound Google Takeout, Apple Photos and Picasa uploads with
+normalized metadata and albums. It adds the optional authenticated Web Console
+as a separate native and multiarch OCI product. The source-import synthetic
+gates are complete; their explicitly authorized private-export shadows remain
+pending release evidence. Disposable Immich-to-Immich migration is implemented,
+while production migration is not authorized. Delete, replace, trash and
+independent maintenance remain unavailable. The
 Phase 7 synthetic gate is green in
 Gitea [run 5544](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5544)
 on implementation SHA `db6ec2185b0e2bff8be8cb017f0fe8fafba95eb8`;
@@ -193,9 +194,9 @@ denial and private-address CIDR pinning are covered. Direct TLS is supported;
 trusted reverse-proxy termination is not. Media-serving routes remain
 unsupported. See the [LAN configuration contract](docs/web-console-lan.md). A
 standalone `immich-rs-web` binary and separate local hardened OCI/Compose
-service are supported from an exact checkout; no Web Console release image or
-native release artifact has been published yet. The CLI remains the canonical
-complete interface. See the [container guide](docs/container.md),
+service are packaged by the `0.1.0-rc.2` signed release pipeline for every
+supported native target and both Linux architectures. The CLI remains the
+canonical complete interface. See the [container guide](docs/container.md),
 [threat model](docs/web-console-threat-model.md) and
 [capability/resource matrix](docs/web-console-resources.md).
 

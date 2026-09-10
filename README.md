@@ -5,57 +5,45 @@ archive and migration client for [Immich](https://immich.app/).
 
 ## Performance at a glance
 
-Six reproducible comparisons currently satisfy ADR-0012's threshold for a
-scoped performance statement against the pinned immich-go v0.32.0 oracle:
+The latest complete release rehearsal used binaries from exact implementation
+SHA `03e6e13855ad4b401143653c30fa352fc8761546`, the pinned immich-go v0.32.0
+binary and one Linux x86-64 host. Lower is better:
 
-| Lower is better | immich-rs | immich-go | Difference |
-|---|---:|---:|---:|
-| Folder scan/plan median | 49.371 ms | 57.624 ms | immich-rs 14.3% lower |
-| Folder scan/plan p95 | 51.393 ms | 58.321 ms | immich-rs 11.9% lower |
-| Read-only archive median | 40.964 ms | 93.808 ms | immich-rs 56.3% lower |
-| Read-only archive p95 | 55.234 ms | 101.784 ms | immich-rs 45.7% lower |
-| Archive median peak RSS | 6.47 MiB | 14.92 MiB | immich-rs 56.6% lower |
-| Takeout plan + import median | 1.162 s | 39.048 s | immich-rs 97.0% lower |
-| Takeout plan + import p95 | 1.671 s | 39.162 s | immich-rs 95.7% lower |
-| Takeout import median peak RSS | 10.55 MiB | 16.45 MiB | immich-rs 35.9% lower |
-| Apple plan + import median | 0.729 s | 33.788 s | immich-rs 97.8% lower |
-| Apple plan + import p95 | 0.770 s | 93.021 s | immich-rs 99.2% lower |
-| Apple import median peak RSS | 10.58 MiB | 15.77 MiB | immich-rs 32.9% lower |
-| Picasa plan + import median | 0.725 s | 87.064 s | immich-rs 99.2% lower |
-| Picasa plan + import p95 | 0.783 s | 99.286 s | immich-rs 99.2% lower |
-| Picasa import median peak RSS | 10.43 MiB | 15.11 MiB | immich-rs 31.0% lower |
-| Immich migration median | 1.395 s | 124.048 s | immich-rs 98.9% lower |
-| Immich migration p95 | 1.641 s | 128.529 s | immich-rs 98.7% lower |
-| Migration median peak RSS | 12.66 MiB | 16.30 MiB | immich-rs 22.4% lower |
+| Comparable workflow | Metric | immich-rs | immich-go | Supported interpretation |
+|---|---|---:|---:|---|
+| Folder scan/plan, 64 MiB | median wall time | 87.376 ms | 68.769 ms | raw only; immich-go was faster |
+| Folder scan/plan, 64 MiB | median peak RSS | 4.98 MiB | 15.38 MiB | raw only |
+| Folder plan + upload, 4 assets | median wall time | 150.688 ms | 153.730 ms | raw only; ranges overlap |
+| Folder plan + upload, 4 assets | median peak RSS | 9.82 MiB | 13.25 MiB | raw only |
+| Takeout plan + import, 64 MiB | median wall time | 1.046 s | 38.799 s | immich-rs 97.3% lower |
+| Takeout plan + import, 64 MiB | p95 wall time | 1.413 s | 39.092 s | raw corroborating value |
+| Takeout plan + import, 64 MiB | median peak RSS | 11.28 MiB | 16.70 MiB | raw only |
 
-The folder comparison uses the same page-cached deterministic 64 MiB,
-eight-asset synthetic corpus. The archive comparison uses the same owner and
-four standalone originals totalling 587,015 bytes on one disposable Immich
-v3.1.0 server with a warm cache. The Takeout comparison measures complete
-planning and import of the same eight conventional-sidecar assets totalling
-64 MiB into a fresh isolated owner per tool on one disposable HTTPS server.
-All use concurrency one, alternating order, two warmups and six retained
-pairs. Every retained immich-rs wall-time sample is below every corresponding
-immich-go sample.
+The scan/plan run retained ten alternating pairs after two warmups. The folder
+upload and Takeout runs each retained six alternating pairs after two warmups,
+used concurrency one and gave every run a fresh isolated owner on the same
+disposable Immich v3.1.0 server. Setup, fixture generation and postcondition
+probes were outside the timed interval.
 
-The Apple Photos and Picasa comparisons measure complete immutable planning
-plus apply into a fresh owner per tool on one server. The Immich migration
-comparison measures complete inventory, planning and migration between fresh
-owners on the same two servers. All three use the same 64 MiB/eight-asset
-synthetic compatibility intersection, concurrency one, alternating order, two
-warmups and six retained pairs. Setup, seeding and postcondition probes are
-outside the measured interval.
+Only the latest Takeout wall-time result supports a speed claim under
+ADR-0012: its slowest immich-rs sample was 1.413 s and its fastest immich-go
+sample was 38.618 s. That is a claim about this exact synthetic eight-asset,
+67,108,864-byte, warm-cache, loopback import—not a large-library, cold-storage,
+WAN or production claim. The latest scan and folder-upload reports deliberately
+make no performance claim. Earlier exact-SHA reports remain available for the
+read-only archive, Apple Photos, Picasa and two-server migration workloads;
+they are historical scoped evidence, not a promise about other libraries or
+environments.
 
-These are small synthetic CPU/network-loopback results. They do not measure a
-large library, cold storage, WAN or production latency. See the
-[Phase 1 raw report](benchmarks/evidence/phase1-2026-08-21.json),
-[Phase 5 raw report](benchmarks/evidence/phase5-2026-08-22.json),
-[Phase 8 raw report](benchmarks/evidence/phase8-2026-08-24.json),
+Review the current [scan](benchmarks/evidence/phase1-2026-09-10.json),
+[folder upload](benchmarks/evidence/phase2-2026-09-10.json) and
+[Takeout](benchmarks/evidence/phase8-2026-09-10.json) raw reports, the historical
+[archive](benchmarks/evidence/phase5-2026-08-22.json),
 [Apple](benchmarks/evidence/phase9-source-import-benchmark-2026-08-24.json),
-[Picasa](benchmarks/evidence/phase10-source-import-benchmark-2026-08-24.json),
-[migration](benchmarks/evidence/phase11-real-2026-08-24.json) and the full
-[benchmark methodology](benchmarks/README.md). No broader speed claim is
-supported by these measurements.
+[Picasa](benchmarks/evidence/phase10-source-import-benchmark-2026-08-24.json) and
+[migration](benchmarks/evidence/phase11-real-2026-08-24.json) reports, and the
+full [benchmark methodology](benchmarks/README.md). Push CI recomputes every
+aggregate and rejects unsupported claim text.
 
 Phase 0 and Phase 1 are complete for implementation SHA
 `36d0f7f55308e1b578474ae0bec9346e27ea0365`: push CI

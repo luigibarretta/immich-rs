@@ -31,23 +31,23 @@ constitute a performance claim. ADR-0012 budgets apply before any improvement
 is advertised.
 
 Current verification record: the release binary for implementation SHA
-`61383378f1db0999d463fe4180c156668ea0e2b6` completed six paired samples
+`03e6e13855ad4b401143653c30fa352fc8761546` completed ten paired samples
 after two warmups. The committed
-[raw report](evidence/phase1-2026-08-21.json) records the 64 MiB, eight-asset
-fixture, both binary digests and the pinned immich-go v0.32.0 identity. Push CI
-run 5356 validated that report and the full repository on evidence commit
-`8471ee49c4204bb5e2749f42381ef7f0fecc0448`.
+[raw report](evidence/phase1-2026-09-10.json) records the 64 MiB, eight-asset
+fixture, both binary digests and the pinned immich-go v0.32.0 identity. Gitea
+[run 6578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6578)
+validated the report on evidence SHA
+`60a860995584334ecaa38d281b48499b6caaddc4`.
 
 | Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
 |---|---:|---:|---:|---:|
-| Wall time (s) | 0.049371 | 0.051393 | 0.057624 | 0.058321 |
-| Peak RSS (bytes) | 4,642,816 | 4,964,352 | 16,072,704 | 18,317,312 |
+| Wall time (s) | 0.087376 | 0.097891 | 0.068769 | 0.085232 |
+| Peak RSS (bytes) | 5,220,352 | 5,701,632 | 16,130,048 | 18,796,544 |
 
-The median wall-time reduction is 14.3%, the p95 reduction is 11.9% and the
-measured median RSS reduction is 71.1%. The wall-time ranges do not overlap.
-These results satisfy the ADR-0012 threshold for a scoped folder scan/plan
-claim. They do not support an upload, Takeout, cold-storage or generalized
-end-to-end speed claim.
+The latest wall-time result favors immich-go, while the raw immich-rs RSS
+measurements are lower. This report makes no performance-improvement claim.
+The faster immich-rs result in the earlier 2026-08-21 report remains historical
+evidence and is not presented as the current release-rehearsal result.
 
 ## Phase 2 folder upload
 
@@ -65,27 +65,28 @@ from the same bytes and replaces the two fixed-size synthetic Apple identifiers
 in a bounded stream. This keeps observable server outcomes equal without
 claiming live-photo semantic parity for immich-go.
 
-Gitea run 5234 completed six recorded pairs after two warmups on implementation
-SHA `3ed13d3293baf197fa5a21e624a828c201d7b763`. Every tool/sample produced four
-visible assets, zero live-photo links and zero retries. These are the committed
-raw aggregates:
+The release rehearsal completed six recorded pairs after two warmups on
+implementation SHA `03e6e13855ad4b401143653c30fa352fc8761546`.
+Every tool/sample produced four visible assets, zero live-photo links and zero
+retries. These are the committed raw aggregates:
 
 | Metric | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
 |---|---:|---:|---:|---:|
-| Wall time (s) | 0.310600 | 0.379116 | 61.367864 | 89.838749 |
-| User CPU (s) | 0.010874 | 0.014248 | 0.025481 | 0.055146 |
-| System CPU (s) | 0.011954 | 0.022542 | 0.032072 | 0.066544 |
-| Peak RSS (bytes) | 8,214,528 | 8,429,568 | 15,915,008 | 17,928,192 |
-| Peak file descriptors | 11 | 12 | 17.5 | 18 |
-| Characters read | 2,399,588 | 2,399,595 | 1,252,687 | 1,253,337 |
-| Characters written | 726,183 | 726,217 | 612,998.5 | 617,074 |
-| Storage bytes read | 4,096 | 1,232,896 | 0 | 114,688 |
-| Storage bytes written | 221,184 | 221,184 | 71,680 | 98,304 |
+| Wall time (s) | 0.150688 | 0.165093 | 0.153730 | 0.256081 |
+| User CPU (s) | 0.008911 | 0.023337 | 0.011209 | 0.011743 |
+| System CPU (s) | 0.011966 | 0.029378 | 0.011219 | 0.015333 |
+| Peak RSS (bytes) | 10,295,296 | 10,383,360 | 13,891,584 | 15,036,416 |
+| Peak file descriptors | 13 | 14 | 16 | 16 |
+| Characters read | 2,374,825 | 2,374,829 | 1,306,718 | 1,307,022 |
+| Characters written | 688,957 | 723,220 | 603,944 | 603,992 |
+| Storage bytes read | 0 | 73,728 | 0 | 0 |
+| Storage bytes written | 0 | 0 | 0 | 0 |
 
-The wall-time distribution is especially wide for immich-go on this tiny
-corpus. The report therefore makes no performance-improvement claim. Review
-the [raw evidence](evidence/phase2-2026-08-15.json) and ADR-0012 before drawing
-or publishing any comparison.
+The wall-time ranges overlap, so the report makes no performance-improvement
+claim. Review the [raw evidence](evidence/phase2-2026-09-10.json) and ADR-0012
+before drawing or publishing any comparison. Gitea
+[run 6578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6578)
+recomputed it on evidence SHA `60a860995584334ecaa38d281b48499b6caaddc4`.
 
 ## Phase 3 Google Takeout plan
 
@@ -195,26 +196,26 @@ are recorded separately.
 
 | Lower is better | immich-rs median | immich-rs p95 | immich-go median | immich-go p95 |
 |---|---:|---:|---:|---:|
-| Wall time (s) | 1.162272 | 1.670906 | 39.048090 | 39.161931 |
-| User CPU (s) | 0.262252 | 0.291426 | 0.153114 | 0.194424 |
-| System CPU (s) | 0.116975 | 0.161927 | 0.115556 | 0.227583 |
-| Peak RSS (bytes) | 11,063,296 | 11,362,304 | 17,252,352 | 17,416,192 |
-| Peak file descriptors | 11 | 11 | 17 | 17 |
+| Wall time (s) | 1.046122 | 1.412632 | 38.798523 | 39.092057 |
+| User CPU (s) | 0.229150 | 0.304348 | 0.130493 | 0.233309 |
+| System CPU (s) | 0.073241 | 0.232233 | 0.116262 | 0.123635 |
+| Peak RSS (bytes) | 11,831,296 | 12,124,160 | 17,508,352 | 17,997,824 |
+| Peak file descriptors | 14 | 14 | 17 | 17 |
 
-Median wall time is 97.0% lower for immich-rs, and its slowest retained sample
-(1.671 s) is below the oracle's fastest (31.838 s). This statement applies
+Median wall time is 97.3% lower for immich-rs, and its slowest retained sample
+(1.413 s) is below the oracle's fastest (38.618 s). This statement applies
 only to this exact small synthetic, warm-cache, loopback import. It is not a
 large-library, cold-storage, WAN or production claim. The
-[raw evidence](evidence/phase8-2026-08-24.json) binds both binary digests,
+[raw evidence](evidence/phase8-2026-09-10.json) binds both binary digests,
 fixture and corpus identities, source revision, environment, raw samples and
 the exact permitted claim text.
 
-Gitea [run 5578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/5578)
-reproduced the comparison on SHA
-`4edae0365ac5137a2ee99d216755d8e3693cf9c8` and also proved zero disposable
-containers, volumes, networks and staging residue. Push CI recomputes every
-aggregate and rejects a changed fixture, oracle digest, operation count or
-unsupported performance claim.
+The comparison ran on SHA `03e6e13855ad4b401143653c30fa352fc8761546`
+and proved zero disposable containers, volumes, networks and staging residue.
+Gitea [run 6578](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6578)
+validated the evidence at `60a860995584334ecaa38d281b48499b6caaddc4`.
+Push CI recomputes every aggregate and rejects a changed fixture, oracle digest,
+operation count or unsupported performance claim.
 
 ## Phase 9 Apple Photos import
 

@@ -4,6 +4,20 @@ All notable changes will be documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 Semantic Versioning.
 
+## [0.1.0-rc.3] - 2026-09-10
+
+### Changed
+
+- Superseded the signed but unpublished `0.1.0-rc.2` candidate after its
+  fail-closed release workflow rejected incomplete OCI output.
+
+### Fixed
+
+- Made filesystem identity and TOML test fixtures portable across native
+  Windows volumes and paths.
+- Isolated each multiarch OCI build outside the source checkout so both CLI
+  and Web Console release products can be staged without dirty-tree failures.
+
 ## [0.1.0-rc.2] - 2026-09-10
 
 ### Added

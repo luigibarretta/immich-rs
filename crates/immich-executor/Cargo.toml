@@ -12,9 +12,9 @@ publish = false
 [dependencies]
 base64.workspace = true
 futures-util.workspace = true
-immich-rs-client = { path = "../immich-client", version = "=0.1.0-rc.2" }
-immich-rs-core = { path = "../immich-core", version = "=0.1.0-rc.2" }
-immich-rs-sources = { path = "../immich-sources", version = "=0.1.0-rc.2" }
+immich-rs-client = { path = "../immich-client", version = "=0.1.0-rc.3" }
+immich-rs-core = { path = "../immich-core", version = "=0.1.0-rc.3" }
+immich-rs-sources = { path = "../immich-sources", version = "=0.1.0-rc.3" }
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

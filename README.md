@@ -108,7 +108,7 @@ is green and published both reports. Evidence enforcement commit
 
 ## Release status
 
-`0.1.0-rc.2` is the current release candidate. It includes the proven read-only
+`0.1.0-rc.3` is the current release candidate. It includes the proven read-only
 archive and immutable folder uploader against remote Immich v3.1.x HTTPS
 endpoints, plus plan-bound Google Takeout, Apple Photos and Picasa uploads with
 normalized metadata and albums. It adds the optional authenticated Web Console
@@ -194,7 +194,7 @@ denial and private-address CIDR pinning are covered. Direct TLS is supported;
 trusted reverse-proxy termination is not. Media-serving routes remain
 unsupported. See the [LAN configuration contract](docs/web-console-lan.md). A
 standalone `immich-rs-web` binary and separate local hardened OCI/Compose
-service are packaged by the `0.1.0-rc.2` signed release pipeline for every
+service are packaged by the `0.1.0-rc.3` signed release pipeline for every
 supported native target and both Linux architectures. The CLI remains the
 canonical complete interface. See the [container guide](docs/container.md),
 [threat model](docs/web-console-threat-model.md) and

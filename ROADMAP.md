@@ -380,7 +380,7 @@ this is not a non-production shadow, WAN or production claim.
 ADR-0033 accepts a separate authenticated operator console without changing
 the supported CLI or authorizing production migration. The application facade
 and all nine sequential implementation gates below are complete. The
-`0.1.0-rc.2` signed pipeline includes separate Web Console native and OCI
+`0.1.0-rc.3` signed pipeline includes separate Web Console native and OCI
 artifacts; publication remains fail-closed until its exact tag workflow passes.
 
 Sequential gates are:

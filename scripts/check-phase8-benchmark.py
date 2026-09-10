@@ -19,6 +19,9 @@ FIXTURE = ROOT / "benchmarks/fixtures/phase8-takeout-64m.json"
 BASELINE = ROOT / "tests/oracle/baseline.toml"
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 COMMIT = re.compile(r"^[0-9a-f]{40}$")
+RUST_VERSION = re.compile(
+    r"^immich-rs (?:0\.0\.0|[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[1-9][0-9]*)?)$"
+)
 METRICS = {
     "wall_time_seconds", "user_cpu_seconds", "system_cpu_seconds", "peak_rss_bytes",
     "peak_open_file_descriptors", "characters_read", "characters_written",
@@ -96,7 +99,8 @@ def validate_tools(manifest: dict[str, Any]) -> None:
     oracle = tools.get("immich_go") if isinstance(tools, dict) else None
     baseline = tomllib.loads(BASELINE.read_text(encoding="utf-8"))
     expected = baseline["artifacts"]["linux_x86_64"]["binary_sha256"]
-    if not isinstance(rust, dict) or rust.get("version") != "immich-rs 0.0.0":
+    version = rust.get("version") if isinstance(rust, dict) else None
+    if not isinstance(version, str) or RUST_VERSION.fullmatch(version) is None:
         raise EvidenceError("immich-rs identity drifted")
     if not isinstance(rust.get("sha256"), str) or SHA256.fullmatch(rust["sha256"]) is None:
         raise EvidenceError("immich-rs digest is invalid")

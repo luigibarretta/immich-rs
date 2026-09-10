@@ -50,6 +50,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0031](ADR-0031-picasa-import.md) | Picasa import | Accepted |
 | [0032](ADR-0032-immich-migration.md) | Immich-to-Immich migration | Accepted |
 | [0033](ADR-0033-optional-operator-web-console.md) | Optional authenticated operator Web Console | Accepted |
+| [0034](ADR-0034-machine-authenticated-metrics.md) | Machine-authenticated Web Console metrics | Accepted |
 
 ## Template
 

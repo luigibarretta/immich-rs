@@ -71,7 +71,9 @@ state paths and server origins remain inside the operator-owned TOML and are
 never accepted from the browser.
 
 `GET /metrics` remains on this same direct-TLS listener and requires the same
-valid opaque session cookie and exact Host policy. There is no trusted-proxy,
-separate-listener or bearer-token exception. See the
+exact Host policy. It accepts either a valid opaque browser session or the
+optional `[web.metrics]` file-backed bearer plus immediate-peer CIDR policy.
+That bearer is restricted to metrics and does not weaken TLS/OIDC or authorize
+another route. There is no trusted-proxy or separate-listener exception. See the
 [operator guide](web-console-operations.md) for the fixed metric set, rotation
 and recovery procedure.

@@ -212,9 +212,12 @@ complete interface. See the [container guide](docs/container.md),
 [capability/resource matrix](docs/web-console-resources.md).
 
 The console exposes nine fixed, label-free aggregate gauges at authenticated
-`GET /metrics` on the same listener. It has no separate bearer credential or
-network exception: exact Host, session, direct-TLS and OIDC policy continue to
-apply. Keyboard skip navigation, landmarks, scoped history headings, live job
+`GET /metrics` on the same listener. A browser session remains valid; optional
+machine scraping additionally requires an exact 256-bit file-backed bearer and
+an immediate-peer CIDR match. Query-string credentials, environment-provided
+tokens, forwarded addresses and access to any other route are rejected. Exact
+Host, direct-TLS and OIDC policy continue to apply. Keyboard skip navigation,
+landmarks, scoped history headings, live job
 status, polling fallback, reduced-motion CSS and safe DOM updates are covered
 by SSR assertions and a synthetic loopback headless-browser gate. Metrics SHA
 `f079f16433e75f7417b4988e964575c08b41cb33` is green in Gitea
@@ -222,6 +225,9 @@ by SSR assertions and a synthetic loopback headless-browser gate. Metrics SHA
 and browser/accessibility SHA
 `42c8a98c0a6907c16e4204a309e38397a83a7f23` is green in
 [run 6463](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6463).
+Machine-authenticated metrics are green at SHA
+`da86bf41923ad855d7611680a93f8ecbce47925f` in Gitea
+[run 6571](https://git.luigibarretta.com/luigibarretta/immich-rs/actions/runs/6571).
 See the [operator and recovery guide](docs/web-console-operations.md) before
 retaining or restoring console state.
 

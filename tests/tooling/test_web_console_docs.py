@@ -31,7 +31,7 @@ class WebConsoleDocumentationTests(unittest.TestCase):
             "fresh offline",
             "no in-console garbage",
             "Never combine artifacts",
-            "unattended scraping is not supported",
+            "unattended scraping is supported",
             "127.0.0.1",
         ):
             self.assertIn(required, operations)
@@ -53,6 +53,8 @@ class WebConsoleDocumentationTests(unittest.TestCase):
         self.assertIn("no labels", resources)
         normalized_resources = " ".join(resources.lower().split())
         self.assertIn("no separate metrics listener", normalized_resources)
+        self.assertIn("immediate tcp peer cidr", normalized_resources)
+        self.assertIn("query-string credential", normalized_resources)
         self.assertIn("IMMICH_RS_WEB_CONFIG", configuration)
         self.assertIn("production_read", configuration)
         web_section = configuration.split("## Web Console configuration namespace", 1)[1]

@@ -46,9 +46,11 @@ headers are untrusted even after authentication.
 
 The implemented metrics surface uses only nine fixed names and no labels. It
 shares the console listener, direct-TLS/OIDC or loopback-session boundary,
-exact Host validation and private no-store response policy. A dedicated
-machine bearer, unauthenticated scrape path and forwarded-header exception are
-not implemented.
+exact Host validation and private no-store response policy. Optional machine
+access requires both one exact file-backed bearer and an immediate-peer CIDR
+match; comparison is constant-time, query credentials are rejected and the
+authority is scoped only to `GET`/`HEAD /metrics`. An unauthenticated scrape
+path and forwarded-header exception are not implemented.
 
 ## Explicitly excluded validation targets
 

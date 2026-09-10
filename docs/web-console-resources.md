@@ -104,10 +104,12 @@ reverse-proxy termination are unsupported and rejected.
 ## Aggregate metrics
 
 Authenticated `GET /metrics` returns a fixed Prometheus text payload on the
-same configured console listener. Exact Host and session checks apply in
-loopback and direct-TLS LAN modes; LAN authentication is still OIDC, TLS is
-still mandatory, and forwarded headers remain rejected. There is no separate
-metrics listener, bearer token or browser-configurable network target.
+same configured console listener. A valid browser session is sufficient. When
+`[web.metrics]` is configured, a machine request is accepted only when its
+single exact `Authorization: Bearer` credential and immediate TCP peer CIDR
+both match. Exact Host checks still apply; LAN mode still terminates TLS
+directly, and forwarded headers remain rejected. There is no separate metrics
+listener or browser-configurable network target.
 
 The complete metric allowlist is:
 
@@ -126,9 +128,11 @@ counters. Filenames, paths, plan/profile/source hashes, origins, job, user or
 session identifiers, and media metadata are absent by construction and by
 forbidden-value tests. Session/job lock failure or history-store failure returns
 503 instead of partial metrics. A logged-out or expired session receives 401.
-Automated bearer-token scraping is unsupported in this version; an operator
-must deliberately supply a current protected console session under the same
-network policy.
+An invalid, duplicate, missing or query-string credential receives 401 without
+metrics. The machine bearer cannot authenticate dashboard, job, plan, export,
+SSE or mutation routes. The optional token is exactly 64 lowercase hexadecimal
+characters loaded from a private file at startup; the CIDR allowlist contains
+one to 32 duplicate-free IPv4/IPv6 networks. Rotation requires restart.
 
 ## Numeric bounds
 
@@ -143,6 +147,8 @@ network policy.
 | Session idle lifetime | 30 min | 60 min |
 | Session absolute lifetime | 8 h | 12 h |
 | Bootstrap lifetime | 10 min | 15 min |
+| Metrics peer CIDRs | operator-defined | 32 |
+| Metrics bearer token | 64 lowercase hex characters | exact |
 | Pairing failures per source in 5 min | 5 | 5 |
 | Concurrent running jobs | 1 | 4 |
 | Queued jobs | 4 | 8 |

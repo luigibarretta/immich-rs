@@ -230,6 +230,25 @@ requires private directory permissions. Browser requests carry only opaque
 profile IDs. Absolute source/state paths, secret paths, server origins and
 adapter limits remain operator-owned TOML.
 
+Unattended Prometheus-compatible scraping is opt-in. Add the following nested
+policy under `[web]`; it does not create another listener or authorize any
+route other than `GET`/`HEAD /metrics`:
+
+```toml
+[web.metrics]
+bearer_token_file = "/run/secrets/metrics-bearer"
+allowed_cidrs = ["127.0.0.1/32", "192.0.2.44/32"]
+```
+
+The credential file must be absolute, regular, non-symlink and owner-only on
+Unix. Its content is exactly 32 random bytes encoded as 64 lowercase hexadecimal
+characters, optionally followed by one LF or CRLF. Supply it only as an
+`Authorization: Bearer` header. Query parameters, browser configuration and
+environment variables cannot supply the token. One to 32 duplicate-free IPv4
+or IPv6 CIDRs must include the immediate TCP peer observed by the console;
+forwarded headers never affect this decision. Credential rotation requires an
+atomic file replacement while stopped and a restart.
+
 A folder profile uses exactly one contained `relative_root`. A
 `google_takeout`, `apple_photos` or `picasa` profile instead uses one contained
 directory or a bounded `relative_inputs` array of contained ZIP files. Its

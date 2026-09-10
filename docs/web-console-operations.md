@@ -90,6 +90,9 @@ job publication.
   and unused grants must fail rather than cross generations.
 - Rotate TLS certificates, private keys or OIDC client material while stopped,
   validate ownership and restart. Restart logs out every session.
+- Rotate the optional metrics bearer by atomically replacing its private file
+  while stopped, then restart. Update the collector through its secret workflow;
+  never log, paste into TOML or pass the value on a command line.
 - OIDC signing-key rotation is discovered during a fresh bounded login. Unknown
   keys, mixed/out-of-policy DNS answers and provider outage fail authentication
   closed.
@@ -98,16 +101,24 @@ job publication.
 
 Authenticated `GET /metrics` publishes nine label-free gauges listed in the
 [resource matrix](web-console-resources.md). The endpoint shares the console
-Host, session, TLS/OIDC and no-forwarded-header policy. It has no machine bearer
-or separate listener; unattended scraping is not supported. Never export a
-browser cookie to a general metrics system.
+Host, TLS and no-forwarded-header policy. A browser session remains supported,
+but unattended scraping is supported only when `[web.metrics]` supplies a
+private file-backed bearer and the collector's immediate peer matches an
+explicit CIDR. Never export a browser cookie to a general metrics system.
+
+Configure the collector to send the bearer from its own protected credential
+file, over the existing direct-TLS listener. Do not put the credential in the
+URL. A 401 indicates missing/invalid authorization or a peer outside the CIDR
+policy; confirm the address observed after container or host networking rather
+than broadening the range. A 503 means the relevant lock or history store could
+not be read. The bearer grants no dashboard or mutation access.
 
 `jobs_queued` and `jobs_running` show current bounded admission; terminal job
 gauges count only records retained in memory. `history_rows` is the current
 durable row count, while `sessions_active` and `sse_subscribers` are
 process-local. These are state gauges, not cumulative success or service-level
-metrics. HTTP 503 means the relevant lock or history store could not be read;
-investigate state integrity and capacity without weakening authentication.
+metrics. Investigate state integrity and capacity without weakening
+authentication.
 
 ## Regression and shutdown gates
 

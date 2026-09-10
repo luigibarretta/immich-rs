@@ -120,6 +120,14 @@ and use container paths in the strict TOML:
   `/state/checkpoints` and removes it, so application-written bytes in the
   reserved mount remain zero.
 
+The same read-only secret directory may contain the optional metrics bearer
+referenced by `[web.metrics].bearer_token_file`. Keep it owner-only and readable
+by container UID 65532. The collector must reach the existing published TLS
+port, send the bearer as an authorization header and originate from a CIDR
+declared in the TOML. Docker bridge or proxying can change the immediate peer
+address; verify that address explicitly instead of trusting forwarded headers
+or widening the allowlist.
+
 Prepare the source/config/secret paths with permissions readable by UID 65532,
 then build and start only the optional profile:
 

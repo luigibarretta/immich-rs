@@ -412,10 +412,12 @@ Sequential gates are:
    container test are implemented. The signed-tag pipeline builds both products
    on all five native targets and admits separate attested amd64/arm64 OCI
    archives only into one complete signed checksum bundle;
-9. **Implemented:** authenticated label-free aggregate metrics, bounded
+9. **Implemented:** authenticated label-free aggregate metrics, optional
+   file-backed machine bearer constrained by immediate-peer CIDRs, bounded
    retention and fail-closed recovery guidance, semantic SSR improvements and
    a synthetic loopback headless-browser regression gate. The metrics and
-   browser tranches are green in exact-SHA Gitea runs 6461 and 6463.
+   browser tranches are green in exact-SHA Gitea runs 6461 and 6463; machine
+   scraping is green at `da86bf41923ad855d7611680a93f8ecbce47925f` in run 6571.
 
 Production Immich-to-Immich migration, gallery/media serving, arbitrary path or
 URL input, and delete/replace/trash/tag/people/stack/maintenance operations are

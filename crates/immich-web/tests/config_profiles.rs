@@ -50,14 +50,14 @@ fn configuration(
 [web]
 listen_address = "127.0.0.1:2285"
 public_origin = "http://127.0.0.1:2285"
-bootstrap_secret_file = "{}"
+bootstrap_secret_file = {}
 history_state_id = "console"
 {}
 
 [[sources]]
 id = "camera_roll"
 label = "Synthetic camera roll"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "{}"
 generation = 1
 
@@ -71,7 +71,7 @@ case_sensitive = true
 [[servers]]
 id = "disposable"
 origin = "http://127.0.0.1:9387"
-api_key_file = "{}"
+api_key_file = {}
 mode = "disposable"
 generation = 1
 credential_generation = 1
@@ -79,17 +79,21 @@ credential_generation = 1
 [[states]]
 id = "console"
 label = "Synthetic console state"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "state"
 generation = 1
 "#,
-        bootstrap.display(),
+        toml_path(&bootstrap),
         extra_web,
-        source_root.display(),
+        toml_path(source_root),
         relative_root,
-        api_key.display(),
-        workspace.path("").display(),
+        toml_path(&api_key),
+        toml_path(&workspace.path("")),
     )
+}
+
+fn toml_path(path: &Path) -> String {
+    serde_json::Value::String(path.to_string_lossy().into_owned()).to_string()
 }
 
 fn write_config(

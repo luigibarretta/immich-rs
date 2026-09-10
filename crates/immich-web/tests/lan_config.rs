@@ -56,14 +56,14 @@ history_state_id = "console"
 [[sources]]
 id = "camera_roll"
 label = "Synthetic source"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "."
 generation = 1
 
 [[servers]]
 id = "disposable"
 origin = "http://127.0.0.1:9387"
-api_key_file = "{}"
+api_key_file = {}
 mode = "disposable"
 generation = 1
 credential_generation = 1
@@ -71,36 +71,40 @@ credential_generation = 1
 [[states]]
 id = "console"
 label = "Synthetic console state"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "state"
 generation = 1
 "#,
-        workspace.path("source").display(),
-        workspace.path("never-read-api-key.secret").display(),
-        workspace.root.display(),
+        toml_path(&workspace.path("source")),
+        toml_path(&workspace.path("never-read-api-key.secret")),
+        toml_path(&workspace.root),
     )
 }
 
 fn lan_policy(workspace: &TestWorkspace) -> String {
     format!(
         r#"[web.lan]
-tls_certificate_file = "{}"
-tls_private_key_file = "{}"
+tls_certificate_file = {}
+tls_private_key_file = {}
 
 [web.lan.oidc]
 issuer = "https://idp.internal.example/"
 client_id = "immich-rs-web"
-client_secret_file = "{}"
-ca_certificate_file = "{}"
+client_secret_file = {}
+ca_certificate_file = {}
 allowed_cidrs = ["192.0.2.0/24", "fd42::/64"]
 allowed_subjects = ["operator-1"]
 allowed_algorithm = "EdDSA"
 "#,
-        workspace.path("tls.crt").display(),
-        workspace.path("tls.key").display(),
-        workspace.path("oidc.secret").display(),
-        workspace.path("idp-ca.crt").display(),
+        toml_path(&workspace.path("tls.crt")),
+        toml_path(&workspace.path("tls.key")),
+        toml_path(&workspace.path("oidc.secret")),
+        toml_path(&workspace.path("idp-ca.crt")),
     )
+}
+
+fn toml_path(path: &Path) -> String {
+    serde_json::Value::String(path.to_string_lossy().into_owned()).to_string()
 }
 
 #[test]
@@ -147,8 +151,8 @@ fn lan_policy_rejects_incomplete_or_ambiguous_auth() -> Result<(), Box<dyn std::
         assert!(WebConfig::load(&path).is_err());
     }
     let ambiguous = format!(
-        "bootstrap_secret_file = \"{}\"\n{}",
-        workspace.path("bootstrap.secret").display(),
+        "bootstrap_secret_file = {}\n{}",
+        toml_path(&workspace.path("bootstrap.secret")),
         valid
     );
     let path = workspace.write_config(&ambiguous)?;

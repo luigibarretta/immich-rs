@@ -130,14 +130,14 @@ public_origin = "https://console.example:{port}"
 history_state_id = "console"
 
 [web.lan]
-tls_certificate_file = "{}"
-tls_private_key_file = "{}"
+tls_certificate_file = {}
+tls_private_key_file = {}
 
 [web.lan.oidc]
 issuer = "{issuer}"
 client_id = "immich-rs-web"
-client_secret_file = "{}"
-ca_certificate_file = "{}"
+client_secret_file = {}
+ca_certificate_file = {}
 allowed_cidrs = ["127.0.0.1/32"]
 required_role = "operator"
 allowed_algorithm = "EdDSA"
@@ -145,14 +145,14 @@ allowed_algorithm = "EdDSA"
 [[sources]]
 id = "source"
 label = "Synthetic source"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "."
 generation = 1
 
 [[servers]]
 id = "disposable"
 origin = "http://127.0.0.1:9387"
-api_key_file = "{}"
+api_key_file = {}
 mode = "disposable"
 generation = 1
 credential_generation = 1
@@ -160,17 +160,17 @@ credential_generation = 1
 [[states]]
 id = "console"
 label = "Synthetic state"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "state"
 generation = 1
 "#,
-            certificate.display(),
-            key.display(),
-            secret.display(),
-            ca.display(),
-            self.path("source").display(),
-            self.path("never-read-api-key.secret").display(),
-            self.root.display(),
+            toml_path(&certificate),
+            toml_path(&key),
+            toml_path(&secret),
+            toml_path(&ca),
+            toml_path(&self.path("source")),
+            toml_path(&self.path("never-read-api-key.secret")),
+            toml_path(&self.root),
         );
         let path = self.path("web.toml");
         fs::write(&path, config)?;
@@ -180,6 +180,10 @@ generation = 1
     pub fn path(&self, name: &str) -> PathBuf {
         self.root.join(name)
     }
+}
+
+fn toml_path(path: &Path) -> String {
+    serde_json::Value::String(path.to_string_lossy().into_owned()).to_string()
 }
 
 impl Drop for TestWorkspace {

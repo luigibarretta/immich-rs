@@ -109,11 +109,11 @@ fn configuration(
 [web]
 listen_address = "127.0.0.1:{}"
 public_origin = "http://127.0.0.1:{}"
-bootstrap_secret_file = "{}"
+bootstrap_secret_file = {}
 history_state_id = "console"
 
 [web.metrics]
-bearer_token_file = "{}"
+bearer_token_file = {}
 allowed_cidrs = ["127.0.0.1/32"]
 
 [web.limits]
@@ -124,14 +124,14 @@ header_read_seconds = 1
 [[sources]]
 id = "camera_roll"
 label = "{}"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "."
 generation = 1
 
 [[servers]]
 id = "disposable"
 origin = "{}"
-api_key_file = "{}"
+api_key_file = {}
 mode = "disposable"
 generation = 1
 credential_generation = 1
@@ -139,20 +139,24 @@ credential_generation = 1
 [[states]]
 id = "console"
 label = "Synthetic console state"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "state"
 generation = 1
 "#,
         port,
         port,
-        bootstrap_path.display(),
-        metrics_path.display(),
+        toml_path(bootstrap_path),
+        toml_path(metrics_path),
         label,
-        source.display(),
+        toml_path(source),
         server_origin,
-        workspace.path("never-read-api-key.secret").display(),
-        workspace.path("").display(),
+        toml_path(&workspace.path("never-read-api-key.secret")),
+        toml_path(&workspace.path("")),
     )
+}
+
+fn toml_path(path: &Path) -> String {
+    serde_json::Value::String(path.to_string_lossy().into_owned()).to_string()
 }
 
 #[cfg(unix)]

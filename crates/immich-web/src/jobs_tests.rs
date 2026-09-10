@@ -31,7 +31,7 @@ impl Workspace {
 [web]
 listen_address = "127.0.0.1:2285"
 public_origin = "http://127.0.0.1:2285"
-bootstrap_secret_file = "{}"
+bootstrap_secret_file = {}
 history_state_id = "console"
 
 [web.limits]
@@ -45,20 +45,20 @@ sse_replay_events = 1
 [[sources]]
 id = "bounded"
 label = "Bounded synthetic source"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "."
 generation = 1
 
 [[states]]
 id = "console"
 label = "Synthetic console state"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "state"
 generation = 1
 "#,
-            root.join("unused.secret").display(),
-            source.display(),
-            root.display(),
+            toml_path(&root.join("unused.secret")),
+            toml_path(&source),
+            toml_path(&root),
         );
         fs::write(root.join("web.toml"), config)?;
         Ok(Self { root })
@@ -74,6 +74,10 @@ generation = 1
         let store = Arc::new(ConsoleStore::open(&state_profile, config.limits())?);
         Ok(JobManager::new(config, store))
     }
+}
+
+fn toml_path(path: &std::path::Path) -> String {
+    serde_json::Value::String(path.to_string_lossy().into_owned()).to_string()
 }
 
 #[cfg(unix)]

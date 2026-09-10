@@ -50,28 +50,28 @@ pub fn configured_console(
 [web]
 listen_address = "127.0.0.1:2285"
 public_origin = "http://127.0.0.1:2285"
-bootstrap_secret_file = "{}"
+bootstrap_secret_file = {}
 history_state_id = "console"
 {}
 [[servers]]
 id = "disposable"
 origin = "{}"
-api_key_file = "{}"
+api_key_file = {}
 mode = "disposable"
 generation = 1
 credential_generation = 1
 [[states]]
 id = "console"
 label = "Synthetic state"
-allowed_root = "{}"
+allowed_root = {}
 relative_root = "state"
 generation = 1
 "#,
-        bootstrap.display(),
+        toml_path(&bootstrap),
         source_profiles(workspace),
         origin,
-        api_key.display(),
-        workspace.path("").display(),
+        toml_path(&api_key),
+        toml_path(&workspace.path("")),
     );
     let path = workspace.path("imports.toml");
     fs::write(&path, config)?;
@@ -99,7 +99,7 @@ fn source_profiles(workspace: &TestWorkspace) -> String {
 id = "{id}"
 label = "Synthetic {label}"
 kind = "{kind}"
-allowed_root = "{}"
+allowed_root = {}
 relative_inputs = ["{input}"]
 generation = 1
 [sources.scan]
@@ -121,11 +121,15 @@ max_retries_per_run = 2
 retry_base_delay_ms = 1
 retry_delay_cap_ms = 2
 "#,
-            allowed.display()
+            toml_path(&allowed)
         )
     })
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+fn toml_path(path: &Path) -> String {
+    serde_json::Value::String(path.to_string_lossy().into_owned()).to_string()
 }
 
 pub async fn pair(router: &Router) -> Result<Session, Box<dyn std::error::Error>> {

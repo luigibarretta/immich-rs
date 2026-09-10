@@ -52,6 +52,8 @@ pub(super) fn load_json_file<T: DeserializeOwned>(
         &file
             .metadata()
             .map_err(|_| WebConfigError::new("cannot inspect plan state"))?,
+        ResourceIdentity::from_file(&file)
+            .map_err(|_| WebConfigError::new("plan state identity is unavailable"))?,
         maximum,
     )?;
     if before != opened {
@@ -79,10 +81,16 @@ pub(super) fn file_stamp(path: &Path, maximum: u64) -> Result<FileStamp, WebConf
     if metadata.file_type().is_symlink() {
         return Err(WebConfigError::new("plan state must not be a symlink"));
     }
-    stamp(&metadata, maximum)
+    let identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("plan state identity is unavailable"))?;
+    stamp(&metadata, identity, maximum)
 }
 
-fn stamp(metadata: &fs::Metadata, maximum: u64) -> Result<FileStamp, WebConfigError> {
+fn stamp(
+    metadata: &fs::Metadata,
+    identity: ResourceIdentity,
+    maximum: u64,
+) -> Result<FileStamp, WebConfigError> {
     if !metadata.is_file()
         || metadata.len() == 0
         || metadata.len() > maximum
@@ -91,7 +99,7 @@ fn stamp(metadata: &fs::Metadata, maximum: u64) -> Result<FileStamp, WebConfigEr
         return Err(WebConfigError::new("plan state file is invalid"));
     }
     Ok(FileStamp {
-        identity: ResourceIdentity::from_metadata(metadata)?,
+        identity,
         length: metadata.len(),
     })
 }

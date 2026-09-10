@@ -12,6 +12,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
+use crate::profiles::ResourceIdentity;
 use crate::{WebConfigError, WebLimits};
 
 const MIN_SECRET_BYTES: usize = 16;
@@ -310,12 +311,16 @@ fn read_secret(path: &Path) -> Result<Vec<u8>, WebConfigError> {
     let before = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot read bootstrap secret"))?;
     validate_secret_metadata(&before)?;
+    let before_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot inspect bootstrap secret"))?;
     let mut file =
         File::open(path).map_err(|_| WebConfigError::new("cannot read bootstrap secret"))?;
     let opened = file
         .metadata()
         .map_err(|_| WebConfigError::new("cannot inspect bootstrap secret"))?;
     validate_secret_metadata(&opened)?;
+    let opened_identity = ResourceIdentity::from_file(&file)
+        .map_err(|_| WebConfigError::new("cannot inspect bootstrap secret"))?;
     let mut bootstrap_material = Vec::with_capacity(MAX_SECRET_BYTES + 1);
     file.by_ref()
         .take((MAX_SECRET_BYTES + 1) as u64)
@@ -323,7 +328,10 @@ fn read_secret(path: &Path) -> Result<Vec<u8>, WebConfigError> {
         .map_err(|_| WebConfigError::new("cannot read bootstrap secret"))?;
     let after = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot revalidate bootstrap secret"))?;
-    if !same_file(&opened, &before) || !same_file(&opened, &after) {
+    validate_secret_metadata(&after)?;
+    let after_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot revalidate bootstrap secret"))?;
+    if opened_identity != before_identity || opened_identity != after_identity {
         bootstrap_material.fill(0);
         return Err(WebConfigError::new("bootstrap secret identity changed"));
     }
@@ -364,17 +372,4 @@ fn private_permissions(metadata: &Metadata) -> bool {
 #[cfg(windows)]
 const fn private_permissions(_metadata: &Metadata) -> bool {
     true
-}
-
-#[cfg(unix)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-    left.dev() == right.dev() && left.ino() == right.ino()
-}
-
-#[cfg(windows)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
 }

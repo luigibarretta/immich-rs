@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
 use crate::WebConfigError;
+use crate::profiles::ResourceIdentity;
 
 const TOKEN_HEX_BYTES: usize = 64;
 const MAX_ADDRESS_RANGES: usize = 32;
@@ -102,12 +103,16 @@ fn read_token(path: &Path) -> Result<Vec<u8>, WebConfigError> {
     let before = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot read metrics credential"))?;
     validate_metadata(&before)?;
+    let before_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot inspect metrics credential"))?;
     let mut file =
         File::open(path).map_err(|_| WebConfigError::new("cannot read metrics credential"))?;
     let opened = file
         .metadata()
         .map_err(|_| WebConfigError::new("cannot inspect metrics credential"))?;
     validate_metadata(&opened)?;
+    let opened_identity = ResourceIdentity::from_file(&file)
+        .map_err(|_| WebConfigError::new("cannot inspect metrics credential"))?;
     let mut token = Vec::with_capacity(TOKEN_HEX_BYTES + 2);
     file.by_ref()
         .take((TOKEN_HEX_BYTES + 3) as u64)
@@ -115,7 +120,10 @@ fn read_token(path: &Path) -> Result<Vec<u8>, WebConfigError> {
         .map_err(|_| WebConfigError::new("cannot read metrics credential"))?;
     let after = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot revalidate metrics credential"))?;
-    if !same_file(&before, &opened) || !same_file(&opened, &after) {
+    validate_metadata(&after)?;
+    let after_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot revalidate metrics credential"))?;
+    if opened_identity != before_identity || opened_identity != after_identity {
         token.fill(0);
         return Err(WebConfigError::new("metrics credential identity changed"));
     }
@@ -168,19 +176,6 @@ fn private_permissions(metadata: &Metadata) -> bool {
 #[cfg(windows)]
 const fn private_permissions(_metadata: &Metadata) -> bool {
     true
-}
-
-#[cfg(unix)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-    left.dev() == right.dev() && left.ino() == right.ino()
-}
-
-#[cfg(windows)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
 }
 
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]

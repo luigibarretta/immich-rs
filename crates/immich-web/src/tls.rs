@@ -10,6 +10,7 @@ use tokio_rustls::TlsAcceptor;
 
 use crate::WebConfigError;
 use crate::oidc::LanConfig;
+use crate::profiles::ResourceIdentity;
 
 const MAX_TLS_FILE_BYTES: usize = 1024 * 1024;
 const MAX_CERTIFICATES: usize = 16;
@@ -44,11 +45,15 @@ fn read_file(path: &Path, private: bool) -> Result<Vec<u8>, WebConfigError> {
     let before =
         fs::symlink_metadata(path).map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
     validate_metadata(&before, private)?;
+    let before_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
     let mut file = File::open(path).map_err(|_| WebConfigError::new("cannot open TLS file"))?;
     let opened = file
         .metadata()
         .map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
     validate_metadata(&opened, private)?;
+    let opened_identity = ResourceIdentity::from_file(&file)
+        .map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
     let capacity = usize::try_from(opened.len())
         .map_or(MAX_TLS_FILE_BYTES, |length| MAX_TLS_FILE_BYTES.min(length));
     let mut bytes = Vec::with_capacity(capacity);
@@ -58,10 +63,13 @@ fn read_file(path: &Path, private: bool) -> Result<Vec<u8>, WebConfigError> {
         .map_err(|_| WebConfigError::new("cannot read TLS file"))?;
     let after = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot revalidate TLS file"))?;
+    validate_metadata(&after, private)?;
+    let after_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot revalidate TLS file"))?;
     if bytes.is_empty()
         || bytes.len() > MAX_TLS_FILE_BYTES
-        || !same_file(&before, &opened)
-        || !same_file(&opened, &after)
+        || opened_identity != before_identity
+        || opened_identity != after_identity
     {
         bytes.fill(0);
         return Err(WebConfigError::new("TLS file identity changed"));
@@ -92,17 +100,4 @@ fn private_permissions(metadata: &Metadata) -> bool {
 #[cfg(windows)]
 const fn private_permissions(_metadata: &Metadata) -> bool {
     true
-}
-
-#[cfg(unix)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-    left.dev() == right.dev() && left.ino() == right.ino()
-}
-
-#[cfg(windows)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
 }

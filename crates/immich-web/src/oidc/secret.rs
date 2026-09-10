@@ -4,6 +4,7 @@ use std::path::Path;
 use std::str;
 
 use crate::WebConfigError;
+use crate::profiles::ResourceIdentity;
 
 const MAX_SECRET_BYTES: usize = 512;
 const MAX_CA_BYTES: usize = 1024 * 1024;
@@ -49,11 +50,15 @@ fn read_file(path: &Path, maximum: usize, private: bool) -> Result<Vec<u8>, WebC
     let before =
         fs::symlink_metadata(path).map_err(|_| WebConfigError::new("cannot inspect OIDC file"))?;
     validate_metadata(&before, maximum, private)?;
+    let before_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot inspect OIDC file"))?;
     let mut file = File::open(path).map_err(|_| WebConfigError::new("cannot open OIDC file"))?;
     let opened = file
         .metadata()
         .map_err(|_| WebConfigError::new("cannot inspect OIDC file"))?;
     validate_metadata(&opened, maximum, private)?;
+    let opened_identity = ResourceIdentity::from_file(&file)
+        .map_err(|_| WebConfigError::new("cannot inspect OIDC file"))?;
     let capacity = usize::try_from(opened.len()).map_or(maximum, |length| maximum.min(length));
     let mut bytes = Vec::with_capacity(capacity);
     file.by_ref()
@@ -62,10 +67,13 @@ fn read_file(path: &Path, maximum: usize, private: bool) -> Result<Vec<u8>, WebC
         .map_err(|_| WebConfigError::new("cannot read OIDC file"))?;
     let after = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot revalidate OIDC file"))?;
+    validate_metadata(&after, maximum, private)?;
+    let after_identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("cannot revalidate OIDC file"))?;
     if bytes.is_empty()
         || bytes.len() > maximum
-        || !same_file(&before, &opened)
-        || !same_file(&opened, &after)
+        || opened_identity != before_identity
+        || opened_identity != after_identity
     {
         bytes.fill(0);
         return Err(WebConfigError::new("OIDC file identity changed"));
@@ -100,17 +108,4 @@ fn private_permissions(metadata: &Metadata) -> bool {
 #[cfg(windows)]
 const fn private_permissions(_metadata: &Metadata) -> bool {
     true
-}
-
-#[cfg(unix)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-    left.dev() == right.dev() && left.ino() == right.ino()
-}
-
-#[cfg(windows)]
-fn same_file(left: &Metadata, right: &Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
 }

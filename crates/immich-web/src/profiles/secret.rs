@@ -77,18 +77,23 @@ struct FileStamp {
 fn file_stamp(path: &Path, maximum: u64, private: bool) -> Result<FileStamp, WebConfigError> {
     let metadata = fs::symlink_metadata(path)
         .map_err(|_| WebConfigError::new("cannot inspect server file"))?;
-    stamp(&metadata, maximum, private)
+    let identity = ResourceIdentity::from_path(path)
+        .map_err(|_| WebConfigError::new("server file identity is unavailable"))?;
+    stamp(&metadata, identity, maximum, private)
 }
 
 fn open_stamp(file: &File, maximum: u64, private: bool) -> Result<FileStamp, WebConfigError> {
     let metadata = file
         .metadata()
         .map_err(|_| WebConfigError::new("cannot inspect server file"))?;
-    stamp(&metadata, maximum, private)
+    let identity = ResourceIdentity::from_file(file)
+        .map_err(|_| WebConfigError::new("server file identity is unavailable"))?;
+    stamp(&metadata, identity, maximum, private)
 }
 
 fn stamp(
     metadata: &fs::Metadata,
+    identity: ResourceIdentity,
     maximum: u64,
     private: bool,
 ) -> Result<FileStamp, WebConfigError> {
@@ -101,7 +106,7 @@ fn stamp(
         return Err(WebConfigError::new("server secret file is not private"));
     }
     Ok(FileStamp {
-        identity: ResourceIdentity::from_metadata(metadata)?,
+        identity,
         length: metadata.len(),
     })
 }

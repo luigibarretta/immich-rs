@@ -1,6 +1,8 @@
-use std::fs;
+use std::fs::{self, File};
+use std::hash::{Hash, Hasher};
 use std::path::{Component, Path, PathBuf};
 
+use same_file::Handle;
 use sha2::{Digest, Sha256};
 
 use crate::error::WebConfigError;
@@ -41,7 +43,9 @@ pub fn canonical_resource(path: &Path) -> Result<(PathBuf, ResourceIdentity), We
     }
     let canonical = fs::canonicalize(path)
         .map_err(|_| WebConfigError::new("cannot resolve configured source input"))?;
-    Ok((canonical, ResourceIdentity::from_metadata(&metadata)?))
+    let identity = ResourceIdentity::from_path(&canonical)
+        .map_err(|_| WebConfigError::new("source identity is unavailable"))?;
+    Ok((canonical, identity))
 }
 
 pub fn valid_relative_root(path: &Path) -> bool {
@@ -90,39 +94,49 @@ pub fn update_path_digest(digest: &mut Sha256, path: &Path) {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub struct ResourceIdentity {
-    first: u64,
-    second: u64,
-}
+pub struct ResourceIdentity([u8; 32]);
 
 impl ResourceIdentity {
-    #[cfg(unix)]
-    pub fn from_metadata(metadata: &fs::Metadata) -> Result<Self, WebConfigError> {
-        use std::os::unix::fs::MetadataExt;
-        let identity = Self {
-            first: metadata.dev(),
-            second: metadata.ino(),
-        };
-        (identity.second != 0)
-            .then_some(identity)
-            .ok_or_else(|| WebConfigError::new("source identity is unavailable"))
+    pub fn from_path(path: &Path) -> std::io::Result<Self> {
+        let handle = Handle::from_path(path)?;
+        Self::from_handle(&handle)
     }
 
-    #[cfg(windows)]
-    pub fn from_metadata(metadata: &fs::Metadata) -> Result<Self, WebConfigError> {
-        use std::os::windows::fs::MetadataExt;
-        let first = metadata
-            .volume_serial_number()
-            .map(u64::from)
-            .ok_or_else(|| WebConfigError::new("source identity is unavailable"))?;
-        let second = metadata
-            .file_index()
-            .ok_or_else(|| WebConfigError::new("source identity is unavailable"))?;
-        Ok(Self { first, second })
+    pub fn from_file(file: &File) -> std::io::Result<Self> {
+        let handle = Handle::from_file(file.try_clone()?)?;
+        Self::from_handle(&handle)
+    }
+
+    fn from_handle(handle: &Handle) -> std::io::Result<Self> {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            if handle.as_file().metadata()?.ino() == 0 {
+                return Err(std::io::Error::other("file identity is unavailable"));
+            }
+        }
+        let mut hasher = IdentityHasher::default();
+        handle.hash(&mut hasher);
+        Ok(Self(hasher.0.finalize().into()))
     }
 
     pub fn update_digest(self, digest: &mut Sha256) {
-        digest.update(self.first.to_le_bytes());
-        digest.update(self.second.to_le_bytes());
+        digest.update(self.0);
+    }
+}
+
+#[derive(Default)]
+struct IdentityHasher(Sha256);
+
+impl Hasher for IdentityHasher {
+    fn finish(&self) -> u64 {
+        let value = self.0.clone().finalize();
+        u64::from_le_bytes([
+            value[0], value[1], value[2], value[3], value[4], value[5], value[6], value[7],
+        ])
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.update(bytes);
     }
 }

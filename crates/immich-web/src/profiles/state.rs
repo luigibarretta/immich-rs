@@ -36,9 +36,8 @@ impl StateProfile {
         if !canonical_root.starts_with(&allowed) || !private_directory(&canonical_root)? {
             return Err(WebConfigError::new("state profile root is not private"));
         }
-        let metadata = fs::metadata(&canonical_root)
-            .map_err(|_| WebConfigError::new("cannot inspect state profile"))?;
-        let identity = ResourceIdentity::from_metadata(&metadata)?;
+        let identity = ResourceIdentity::from_path(&canonical_root)
+            .map_err(|_| WebConfigError::new("source identity is unavailable"))?;
         let generation_sha256 = state_generation(
             raw.generation,
             &raw.id,
@@ -68,9 +67,8 @@ impl StateProfile {
 
     pub fn resolve(&self) -> Result<ResolvedStateProfile, WebConfigError> {
         let canonical = canonical_directory(&self.configured_root)?;
-        let metadata = fs::metadata(&canonical)
-            .map_err(|_| WebConfigError::new("cannot inspect state profile"))?;
-        let identity = ResourceIdentity::from_metadata(&metadata)?;
+        let identity = ResourceIdentity::from_path(&canonical)
+            .map_err(|_| WebConfigError::new("source identity is unavailable"))?;
         if canonical != self.canonical_root
             || identity != self.identity
             || !private_directory(&canonical)?

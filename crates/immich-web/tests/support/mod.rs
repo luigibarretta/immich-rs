@@ -16,6 +16,7 @@ use tower::ServiceExt;
 pub const HOST: &str = "127.0.0.1:2285";
 pub const ORIGIN: &str = "http://127.0.0.1:2285";
 pub const SECRET: &str = "synthetic-bootstrap-secret";
+const METRICS_TOKEN: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 static WORKSPACE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 pub struct TestWorkspace {
@@ -67,6 +68,9 @@ impl TestWorkspace {
         let bootstrap_path = self.path("bootstrap.secret");
         fs::write(&bootstrap_path, format!("{SECRET}\n"))?;
         make_private(&bootstrap_path)?;
+        let metrics_path = self.path("metrics.secret");
+        fs::write(&metrics_path, format!("{METRICS_TOKEN}\n"))?;
+        make_private(&metrics_path)?;
         let config_path = self.path("web.toml");
         fs::write(
             &config_path,
@@ -77,6 +81,7 @@ impl TestWorkspace {
                 port,
                 server_origin,
                 "Camera <script>alert(1)</script>",
+                &metrics_path,
             ),
         )?;
         Ok(WebConsole::from_config(WebConfig::load(&config_path)?)?)
@@ -96,6 +101,7 @@ fn configuration(
     port: u16,
     server_origin: &str,
     label: &str,
+    metrics_path: &Path,
 ) -> String {
     format!(
         r#"schema_version = 1
@@ -105,6 +111,10 @@ listen_address = "127.0.0.1:{}"
 public_origin = "http://127.0.0.1:{}"
 bootstrap_secret_file = "{}"
 history_state_id = "console"
+
+[web.metrics]
+bearer_token_file = "{}"
+allowed_cidrs = ["127.0.0.1/32"]
 
 [web.limits]
 request_header_bytes = 1024
@@ -136,6 +146,7 @@ generation = 1
         port,
         port,
         bootstrap_path.display(),
+        metrics_path.display(),
         label,
         source.display(),
         server_origin,

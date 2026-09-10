@@ -1,12 +1,19 @@
 #![forbid(unsafe_code)]
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use axum::Router;
+use axum::body::{Body, to_bytes};
+use axum::extract::ConnectInfo;
 use axum::http::header::{CONTENT_TYPE, LOCATION};
-use axum::http::{Method, StatusCode};
+use axum::http::{Method, Request, StatusCode};
+use tower::ServiceExt;
 
 mod support;
 
-use support::{HOST, ORIGIN, SECRET, TestWorkspace, csrf, response_cookie, send};
+use support::{HOST, ORIGIN, SECRET, TestResponse, TestWorkspace, csrf, response_cookie, send};
+
+const METRICS_TOKEN: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 struct Session {
     cookie: String,
@@ -86,6 +93,61 @@ async fn complete_scan(
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
     Err("scan did not finish within the bounded wait".into())
+}
+
+async fn send_authorized(
+    router: &Router,
+    uri: &str,
+    authorization: Option<&str>,
+) -> Result<TestResponse, Box<dyn std::error::Error>> {
+    let mut builder = Request::builder()
+        .method(Method::GET)
+        .uri(uri)
+        .header("host", HOST);
+    if let Some(value) = authorization {
+        builder = builder.header("authorization", value);
+    }
+    let mut request = builder.body(Body::empty())?;
+    request.extensions_mut().insert(ConnectInfo(SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::LOCALHOST),
+        40_000,
+    )));
+    let response = router.clone().oneshot(request).await?;
+    let (parts, response_body) = response.into_parts();
+    let bytes = to_bytes(response_body, 128 * 1_024).await?;
+    Ok(TestResponse {
+        status: parts.status,
+        headers: parts.headers,
+        body: String::from_utf8(bytes.to_vec())?,
+    })
+}
+
+#[tokio::test]
+async fn metrics_machine_auth_is_scoped_and_fail_closed() -> Result<(), Box<dyn std::error::Error>>
+{
+    let workspace = TestWorkspace::new()?;
+    let router = workspace.console()?.router();
+    for (uri, authorization) in [
+        ("/metrics".to_owned(), None),
+        (format!("/metrics?token={METRICS_TOKEN}"), None),
+        ("/metrics".to_owned(), Some("Bearer wrong")),
+        ("/metrics".to_owned(), Some(METRICS_TOKEN)),
+    ] {
+        let denied = send_authorized(&router, &uri, authorization).await?;
+        assert_eq!(denied.status, StatusCode::UNAUTHORIZED);
+        assert!(!denied.body.contains("immich_rs_web_sessions_active"));
+    }
+
+    let bearer = format!("Bearer {METRICS_TOKEN}");
+    let machine = send_authorized(&router, "/metrics", Some(&bearer)).await?;
+    assert_eq!(machine.status, StatusCode::OK);
+    assert!(machine.body.contains("immich_rs_web_sessions_active 0\n"));
+    assert!(!machine.body.contains(METRICS_TOKEN));
+
+    let unrelated = send_authorized(&router, "/", Some(&bearer)).await?;
+    assert!(unrelated.body.contains("Pair this browser"));
+    assert!(!unrelated.body.contains("Camera"));
+    Ok(())
 }
 
 #[tokio::test]

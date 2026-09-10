@@ -9,6 +9,7 @@ use url::{Position, Url};
 
 use crate::error::WebConfigError;
 use crate::limits::{RawWebLimits, WebLimits};
+use crate::metrics_auth::{MetricsAuthConfig, RawMetricsAuthConfig};
 use crate::oidc::{LanConfig, RawLanConfig};
 use crate::profiles::{
     RawServerProfile, RawSourceProfile, RawStateProfile, ServerProfile, SourceProfile, StateProfile,
@@ -27,6 +28,7 @@ pub struct WebConfig {
     allowed_host: String,
     bootstrap_secret_file: Option<PathBuf>,
     lan: Option<LanConfig>,
+    metrics: Option<MetricsAuthConfig>,
     limits: WebLimits,
     sources: Vec<SourceProfile>,
     servers: Vec<ServerProfile>,
@@ -74,6 +76,11 @@ impl WebConfig {
             validate_public_origin(&raw.web.public_origin, listen_address, lan.is_some())?;
         let bootstrap_secret_file =
             validate_auth_mode(listen_address, raw.web.bootstrap_secret_file, lan.as_ref())?;
+        let metrics = raw
+            .web
+            .metrics
+            .map(MetricsAuthConfig::from_raw)
+            .transpose()?;
         let sources = validate_sources(raw.sources)?;
         let servers = validate_servers(raw.servers)?;
         let states = validate_states(raw.states)?;
@@ -89,6 +96,7 @@ impl WebConfig {
             allowed_host,
             bootstrap_secret_file,
             lan,
+            metrics,
             limits,
             sources,
             servers,
@@ -125,6 +133,12 @@ impl WebConfig {
     #[must_use]
     pub(crate) const fn lan(&self) -> Option<&LanConfig> {
         self.lan.as_ref()
+    }
+
+    /// Optional machine authentication policy for the same metrics route.
+    #[must_use]
+    pub(crate) const fn metrics(&self) -> Option<&MetricsAuthConfig> {
+        self.metrics.as_ref()
     }
 
     /// Whether session cookies must be restricted to HTTPS transport.
@@ -297,6 +311,7 @@ struct RawWeb {
     bootstrap_secret_file: Option<PathBuf>,
     history_state_id: String,
     lan: Option<RawLanConfig>,
+    metrics: Option<RawMetricsAuthConfig>,
     #[serde(default)]
     limits: RawWebLimits,
 }

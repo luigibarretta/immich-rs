@@ -1,5 +1,7 @@
 use axum::Router;
-use axum::extract::State;
+use std::net::SocketAddr;
+
+use axum::extract::{ConnectInfo, State};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -14,8 +16,17 @@ pub fn routes() -> Router<ConsoleState> {
     Router::new().route("/metrics", get(metrics))
 }
 
-async fn metrics(State(state): State<ConsoleState>, headers: HeaderMap) -> Response {
-    if authenticated_session(&state, &headers).is_none() {
+async fn metrics(
+    State(state): State<ConsoleState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+) -> Response {
+    let browser_authorized = authenticated_session(&state, &headers).is_some();
+    let machine_authorized = state
+        .metrics_auth
+        .as_ref()
+        .is_some_and(|auth| auth.authorize(peer.ip(), &headers));
+    if !browser_authorized && !machine_authorized {
         return views::locked(StatusCode::UNAUTHORIZED);
     }
     let Some(sessions) = state.auth.active_session_count() else {

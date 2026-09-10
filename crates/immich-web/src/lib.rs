@@ -16,6 +16,7 @@ mod jobs;
 mod jobs_tests;
 mod limits;
 mod metrics;
+mod metrics_auth;
 mod oidc;
 mod oidc_http;
 mod policy;

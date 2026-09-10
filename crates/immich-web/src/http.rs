@@ -26,6 +26,7 @@ use crate::grants::GrantStore;
 use crate::job_http;
 use crate::jobs::JobManager;
 use crate::metrics;
+use crate::metrics_auth::MetricsAuthenticator;
 use crate::oidc::OidcManager;
 use crate::oidc_http;
 use crate::policy::{RequestPolicy, request_policy};
@@ -50,6 +51,7 @@ pub struct ConsoleState {
     pub jobs: JobManager,
     pub grants: Arc<GrantStore>,
     pub store: Arc<ConsoleStore>,
+    pub(crate) metrics_auth: Option<Arc<MetricsAuthenticator>>,
     pub(crate) oidc: Option<Arc<OidcManager>>,
 }
 
@@ -74,6 +76,11 @@ impl WebConsole {
             None => AuthStore::oidc(config.limits()),
         };
         let tls = config.lan().map(tls::load_acceptor).transpose()?;
+        let metrics_auth = config
+            .metrics()
+            .map(MetricsAuthenticator::load)
+            .transpose()?
+            .map(Arc::new);
         let state_profile = config.history_state()?.resolve()?;
         let store = Arc::new(ConsoleStore::open(&state_profile, config.limits())?);
         let config = Arc::new(config);
@@ -90,6 +97,7 @@ impl WebConsole {
                 jobs,
                 grants,
                 store,
+                metrics_auth,
                 oidc,
             },
             tls,

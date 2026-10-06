@@ -127,7 +127,7 @@ pub fn reconcile(state: &mut ScanState) {
             ));
             continue;
         }
-        let document = match parse_document(&sidecar) {
+        let document = match parse_document(&sidecar, false) {
             Ok(document) => document,
             Err(error) => {
                 record_parse_error(state, &sidecar, error);
@@ -188,7 +188,10 @@ pub fn reconcile(state: &mut ScanState) {
     complete(state);
 }
 
-pub fn parse_document(sidecar: &DiscoveredSidecar) -> Result<TakeoutDocument, ParseError> {
+pub fn parse_document(
+    sidecar: &DiscoveredSidecar,
+    allow_empty_title: bool,
+) -> Result<TakeoutDocument, ParseError> {
     if let Some(error) = sidecar.takeout_parse_error {
         return Err(error);
     }
@@ -214,7 +217,7 @@ pub fn parse_document(sidecar: &DiscoveredSidecar) -> Result<TakeoutDocument, Pa
     if bytes.len() as u64 != sidecar.byte_len || digest != sidecar.content_sha256 {
         return Err(ParseError::SourceChanged);
     }
-    parse_bytes(&bytes)
+    parse_bytes(&bytes, allow_empty_title)
 }
 
 pub fn record_parse_error(state: &mut ScanState, sidecar: &DiscoveredSidecar, error: ParseError) {

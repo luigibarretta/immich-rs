@@ -47,9 +47,11 @@ struct RawGeo {
     longitude: Option<f64>,
 }
 
-pub fn parse_bytes(bytes: &[u8]) -> Result<TakeoutDocument, ParseError> {
+pub fn parse_bytes(bytes: &[u8], allow_empty_title: bool) -> Result<TakeoutDocument, ParseError> {
     let raw: RawDocument = serde_json::from_slice(bytes).map_err(|_| ParseError::Invalid)?;
-    validate_text(&raw.title, MAX_TITLE_BYTES, false)?;
+    if !allow_empty_title || !raw.title.is_empty() {
+        validate_text(&raw.title, MAX_TITLE_BYTES, false)?;
+    }
     let description = raw
         .description
         .filter(|value| !value.is_empty())
@@ -142,6 +144,7 @@ mod tests {
     fn preferred_metadata_is_normalized_without_formatted_time() -> Result<(), ParseError> {
         let document = parse_bytes(
             br#"{"title":"pixel.png","description":"synthetic\ntext","photoTakenTime":{"timestamp":"1704067200","formatted":"ignored"},"creationTime":{"timestamp":"0"},"geoData":{"latitude":1.25,"longitude":2.5},"geoDataExif":{"latitude":3.5,"longitude":-4.25}}"#,
+            false,
         )?;
         assert_eq!(
             document.metadata.taken_at_utc.as_deref(),
@@ -159,15 +162,26 @@ mod tests {
 
     #[test]
     fn invalid_values_fail_and_zero_location_is_absent() -> Result<(), ParseError> {
-        let zero = parse_bytes(br#"{"title":"pixel.png","geoData":{"latitude":0,"longitude":0}}"#)?;
+        let zero = parse_bytes(
+            br#"{"title":"pixel.png","geoData":{"latitude":0,"longitude":0}}"#,
+            false,
+        )?;
         assert!(zero.metadata.location.is_none());
-        assert!(parse_bytes(br#"{"title":"../pixel.png"}"#).is_err());
+        assert!(parse_bytes(br#"{"title":""}"#, false).is_err());
+        assert!(parse_bytes(br#"{"title":"../pixel.png"}"#, false).is_err());
         assert!(
-            parse_bytes(br#"{"title":"pixel.png","photoTakenTime":{"timestamp":"now"}}"#).is_err()
+            parse_bytes(
+                br#"{"title":"pixel.png","photoTakenTime":{"timestamp":"now"}}"#,
+                false,
+            )
+            .is_err()
         );
         assert!(
-            parse_bytes(br#"{"title":"pixel.png","geoData":{"latitude":91,"longitude":0}}"#)
-                .is_err()
+            parse_bytes(
+                br#"{"title":"pixel.png","geoData":{"latitude":91,"longitude":0}}"#,
+                false,
+            )
+            .is_err()
         );
         Ok(())
     }

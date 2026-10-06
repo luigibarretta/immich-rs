@@ -87,6 +87,73 @@ fn supplemental_name_resolves_bounded_metadata() -> Result<(), Box<dyn std::erro
 }
 
 #[test]
+fn indexed_supplemental_names_select_the_matching_numbered_media()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("indexed-supplemental")?;
+    directory.write("Photos from 2024/pixel.jpg", b"base-image")?;
+    directory.write("Photos from 2024/pixel(1).jpg", b"numbered-image")?;
+    directory.write(
+        "Photos from 2024/pixel.jpg.supplemental-metadata.json",
+        br#"{"title":"pixel.jpg","description":"base"}"#,
+    )?;
+    directory.write(
+        "Photos from 2024/pixel.jpg.supplemental-metadata(1).json",
+        br#"{"title":"pixel.jpg","description":"numbered"}"#,
+    )?;
+
+    let plan = scan(&directory.0)?;
+    assert!(plan.errors.is_empty());
+    assert_eq!(plan.assets.len(), 2);
+    let base = plan
+        .assets
+        .iter()
+        .find(|asset| asset.relative_path.ends_with("/pixel.jpg"))
+        .ok_or("missing base asset")?;
+    let numbered = plan
+        .assets
+        .iter()
+        .find(|asset| asset.relative_path.ends_with("/pixel(1).jpg"))
+        .ok_or("missing numbered asset")?;
+    assert_eq!(
+        base.normalized_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.description.as_deref()),
+        Some("base")
+    );
+    assert_eq!(
+        numbered
+            .normalized_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.description.as_deref()),
+        Some("numbered")
+    );
+    Ok(())
+}
+
+#[test]
+fn empty_album_title_uses_the_album_directory_name() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("empty-album-title")?;
+    let media = b"synthetic-identical-image";
+    directory.write("Photos from 2024/pixel.png", media)?;
+    directory.write(
+        "Photos from 2024/pixel.png.json",
+        br#"{"title":"pixel.png"}"#,
+    )?;
+    directory.write("Family Album/pixel.png", media)?;
+    directory.write("Family Album/pixel.png.json", br#"{"title":"pixel.png"}"#)?;
+    directory.write("Family Album/metadata.json", br#"{"title":""}"#)?;
+
+    let plan = scan(&directory.0)?;
+    assert!(plan.errors.is_empty());
+    let metadata = plan.assets[0]
+        .normalized_metadata
+        .as_ref()
+        .ok_or("missing normalized metadata")?;
+    assert_eq!(metadata.albums, ["Family Album"]);
+    Ok(())
+}
+
+#[test]
 fn album_alias_collapses_to_the_year_copy() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new("album-alias")?;
     let media = b"synthetic-identical-image";

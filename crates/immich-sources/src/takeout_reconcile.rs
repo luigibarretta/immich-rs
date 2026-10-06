@@ -26,16 +26,23 @@ pub fn reconcile(state: &mut ScanState) {
             ));
             continue;
         }
-        let document = match parse_document(&sidecar) {
+        let album_document = is_album_document(&sidecar.relative_path);
+        let mut document = match parse_document(&sidecar, album_document) {
             Ok(document) => document,
             Err(error) => {
                 record_parse_error(state, &sidecar, error);
                 continue;
             }
         };
+        if document.title.is_empty() {
+            filename(parent(&sidecar.relative_path)).clone_into(&mut document.title);
+        }
         state.sidecars[sidecar_index].takeout_document = Some(document.clone());
+        let indexed = candidates_for_indexed_sidecar_name(state, &sidecar.relative_path);
         let exact = candidates_for_title(state, &sidecar.relative_path, &document.title);
-        let (candidates, rule) = if exact.is_empty() {
+        let (candidates, rule) = if !indexed.is_empty() {
+            (indexed, rule_id::GOOGLE_TAKEOUT_SUPPLEMENTAL)
+        } else if exact.is_empty() {
             (
                 candidates_for_sidecar_name(state, &sidecar.relative_path),
                 rule_id::GOOGLE_TAKEOUT_SUPPLEMENTAL,
@@ -80,6 +87,36 @@ pub fn reconcile(state: &mut ScanState) {
         }
     }
     complete(state);
+}
+
+fn candidates_for_indexed_sidecar_name(state: &ScanState, sidecar: &str) -> Vec<usize> {
+    let name = filename(sidecar);
+    let Some(without_json) = name.strip_suffix(".json") else {
+        return Vec::new();
+    };
+    let Some((media_name, index)) = without_json.rsplit_once(".supplemental-metadata(") else {
+        return Vec::new();
+    };
+    let Some(index) = index.strip_suffix(')') else {
+        return Vec::new();
+    };
+    if index.is_empty() || !index.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Vec::new();
+    }
+    let Some((stem, extension)) = media_name.rsplit_once('.') else {
+        return Vec::new();
+    };
+    let target = format!("{stem}({index}).{extension}");
+    state
+        .media
+        .iter()
+        .enumerate()
+        .filter(|(_, media)| {
+            parent(&media.relative_path) == parent(sidecar)
+                && filename(&media.relative_path) == target
+        })
+        .map(|(index, _)| index)
+        .collect()
 }
 
 fn candidates_for_title(state: &ScanState, sidecar: &str, title: &str) -> Vec<usize> {
@@ -315,7 +352,7 @@ fn canonical_rank(path: &str) -> u8 {
     )
 }
 
-fn is_album_document(path: &str) -> bool {
+pub fn is_album_document(path: &str) -> bool {
     if filename(path) != "metadata.json" {
         return false;
     }

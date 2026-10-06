@@ -331,7 +331,10 @@ fn merge_entry(
             } else if identity.byte_len > MAX_JSON_BYTES {
                 (None, Some(ParseError::Oversized))
             } else {
-                match parse_bytes(bytes) {
+                match parse_bytes(
+                    bytes,
+                    crate::takeout_reconcile::is_album_document(&relative_path),
+                ) {
                     Ok(document) => (Some(document), None),
                     Err(error) => (None, Some(error)),
                 }

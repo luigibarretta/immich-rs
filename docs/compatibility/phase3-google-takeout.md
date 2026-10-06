@@ -11,6 +11,8 @@ the archives and never constructs a network capability.
 | Split ZIP layout | Parity | Both tools discover the same four physical paths across both archive parts. |
 | JSON `title` metadata | Parity | Both associate the alpha and NFC Unicode sidecars with their media. |
 | Supplemental filename | Declared oracle divergence | immich-rs resolves `beta.png.supplemental-metadata.json`; the oracle classifies it as album metadata and leaves beta pending. |
+| Numbered filename collisions | Stronger deterministic immich-rs contract | A sidecar such as `photo.jpg.supplemental-metadata(2).json` selects `photo(2).jpg` before its repeated original `title`; the unnumbered sidecar remains paired with `photo.jpg`. |
+| Empty album title | Stronger deterministic immich-rs contract | An album-level `metadata.json` with an empty title derives the album name from its containing directory; empty asset titles remain invalid. |
 | Content alias | Parity after logical deduplication | Both identify the album copy as a duplicate of alpha; immich-rs emits one logical asset. |
 | Album membership | Parity after logical deduplication | Alpha retains `Synthetic Album`; the oracle reports three album additions over physical paths. |
 | Description and location | Stronger normalized immich-rs contract | Every logical asset has a bounded description; alpha selects canonical `geoDataExif` coordinates. |

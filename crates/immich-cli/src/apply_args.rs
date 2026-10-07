@@ -341,7 +341,9 @@ impl ProductionOptions {
             })?,
             backup_reference: self
                 .backup_reference
-                .ok_or_else(|| CliFailure::usage("production apply requires --backup-reference"))?,
+                .ok_or_else(|| CliFailure::usage(
+                    "production apply requires --backup-reference <TEXT>: the restore point the Immich administrator verified; see --help",
+                ))?,
         }))
     }
 }

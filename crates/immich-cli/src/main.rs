@@ -13,6 +13,7 @@ mod environment;
 mod failure;
 mod folder;
 mod google_takeout;
+mod help;
 mod immich_migration_apply;
 mod immich_migration_plan;
 mod import_plan_args;
@@ -191,7 +192,5 @@ async fn run_apply(
 }
 
 fn print_help() {
-    println!(
-        "immich-rs {VERSION}\n\nBounded source imports, verified archive and disposable migration\n\nUsage:\n  immich-rs [--config <FILE>] config show\n  immich-rs [--config <FILE>] plan folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan picasa [PICASA_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload folder [OPTIONS] [PATH]\n  immich-rs [--config <FILE>] plan upload google-takeout [OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload apple-photos [APPLE_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan upload picasa [PICASA_OPTIONS] [DIRECTORY|ZIP...]\n  immich-rs [--config <FILE>] plan archive immich [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] plan migration immich [MIGRATION_OPTIONS]\n  immich-rs [--config <FILE>] inspect upload-plan --plan <FILE>\n  immich-rs [--config <FILE>] apply upload [UPLOAD_OPTIONS]\n  immich-rs [--config <FILE>] apply archive [ARCHIVE_OPTIONS]\n  immich-rs [--config <FILE>] apply migration immich [MIGRATION_OPTIONS]\n\nScan options:\n  --label <LABEL>\n  --buffer-bytes <BYTES>\n  --max-entries <COUNT>\n  --max-directory-entries <COUNT>\n  --max-path-bytes <BYTES>\n  --case-sensitive | --case-insensitive\n\nRemote read-only server commands require HTTPS and --authorize-production-read.\nRemote upload additionally requires --authorize-production-write, --confirm-plan-sha256,\n--expected-operations and --backup-reference. The backup reference is free text naming a\nrestore point of the destination that its Immich administrator verified, such as a database\ndump path or snapshot name; immich-rs records only its SHA-256 and never contacts or checks\nthe backup, so operators without server administration rights obtain it from the administrator.\nProduction authorization flags are CLI-only.\nFormat and executor resource limits are documented in docs/configuration.md.\nBoolean options have explicit positive and negative CLI forms where inheritance matters.\nOther options can use CLI, IMMICH_RS_* environment or strict schema-v1 TOML configuration.\nAPI keys use IMMICH_RS_API_KEY or IMMICH_RS_API_KEY_FILE and are never accepted in TOML.\nNo delete, replace, trash or independent metadata-mutation command exists."
-    );
+    println!("immich-rs {VERSION}\n\n{}", help::HELP);
 }

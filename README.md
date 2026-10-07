@@ -491,6 +491,15 @@ IMMICH_RS_API_KEY_FILE=/run/secrets/immich-api-key \
   --backup-reference <verified-restore-point-reference>
 ```
 
+`--backup-reference` is free text naming a restore point of the destination
+Immich server, for example
+`db:/backups/immich-20261007.sql.gz;zfs:pool/immich@nightly-20261007`. The
+Immich administrator creates and verifies that backup; immich-rs never contacts
+or inspects it and needs no administrator permission for this option. The
+reference must be non-empty, without leading or trailing whitespace or control
+characters, and only its SHA-256 enters reports and checkpoints. Operators
+without server administration rights ask the administrator for the reference.
+
 Add `--ca-certificate /path/to/private-ca.pem` only when the HTTPS deployment
 uses a private CA; hostname verification remains mandatory. All production
 acknowledgements are invocation-only and cannot be enabled through TOML,

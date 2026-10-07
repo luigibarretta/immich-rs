@@ -131,6 +131,61 @@ fn indexed_supplemental_names_select_the_matching_numbered_media()
 }
 
 #[test]
+fn truncated_and_legacy_indexed_sidecars_select_the_numbered_media()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("truncated-indexed-supplemental")?;
+    for (stem, truncated) in [("long", "supplemen"), ("short", "s")] {
+        directory.write(
+            &format!("Photos from 2024/{stem}.jpg"),
+            format!("{stem}-base").as_bytes(),
+        )?;
+        directory.write(
+            &format!("Photos from 2024/{stem}(1).jpg"),
+            format!("{stem}-numbered").as_bytes(),
+        )?;
+        directory.write(
+            &format!("Photos from 2024/{stem}.jpg.supplemental-metadata.json"),
+            format!(r#"{{"title":"{stem}.jpg","description":"base"}}"#).as_bytes(),
+        )?;
+        directory.write(
+            &format!("Photos from 2024/{stem}.jpg.{truncated}(1).json"),
+            format!(r#"{{"title":"{stem}.jpg","description":"numbered"}}"#).as_bytes(),
+        )?;
+    }
+    directory.write("Photos from 2024/legacy.jpg", b"legacy-base")?;
+    directory.write("Photos from 2024/legacy(2).jpg", b"legacy-numbered")?;
+    directory.write(
+        "Photos from 2024/legacy.jpg.json",
+        br#"{"title":"legacy.jpg","description":"base"}"#,
+    )?;
+    directory.write(
+        "Photos from 2024/legacy.jpg(2).json",
+        br#"{"title":"legacy.jpg","description":"numbered"}"#,
+    )?;
+
+    let plan = scan(&directory.0)?;
+    assert!(plan.errors.is_empty(), "{:?}", plan.errors);
+    assert_eq!(plan.assets.len(), 6);
+    for asset in &plan.assets {
+        let expected = if asset.relative_path.contains('(') {
+            "numbered"
+        } else {
+            "base"
+        };
+        assert_eq!(
+            asset
+                .normalized_metadata
+                .as_ref()
+                .and_then(|metadata| metadata.description.as_deref()),
+            Some(expected),
+            "{}",
+            asset.relative_path
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn empty_album_title_uses_the_album_directory_name() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::new("empty-album-title")?;
     let media = b"synthetic-identical-image";

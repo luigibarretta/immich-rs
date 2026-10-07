@@ -328,3 +328,53 @@ fn encrypted_unsupported_and_corrupt_archives_fail_closed() -> Result<(), Box<dy
     ));
     Ok(())
 }
+
+#[test]
+fn archive_indexed_sidecars_and_empty_album_titles_reconcile()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::new("indexed-album")?;
+    let archive = directory.archive(
+        "takeout-001.zip",
+        &[
+            ("Takeout/Google Photos/Photos from 2024/pixel.jpg", b"base"),
+            (
+                "Takeout/Google Photos/Photos from 2024/pixel(1).jpg",
+                b"numbered",
+            ),
+            (
+                "Takeout/Google Photos/Photos from 2024/pixel.jpg.supplemental-metadata.json",
+                br#"{"title":"pixel.jpg","description":"base"}"#,
+            ),
+            (
+                "Takeout/Google Photos/Photos from 2024/pixel.jpg.supplemental-met(1).json",
+                br#"{"title":"pixel.jpg","description":"numbered"}"#,
+            ),
+            ("Takeout/Google Photos/Family Album/pixel.jpg", b"base"),
+            (
+                "Takeout/Google Photos/Family Album/pixel.jpg.json",
+                br#"{"title":"pixel.jpg","description":"base"}"#,
+            ),
+            (
+                "Takeout/Google Photos/Family Album/metadata.json",
+                br#"{"title":""}"#,
+            ),
+        ],
+    )?;
+
+    let plan = scan(&[archive])?;
+    assert!(plan.errors.is_empty(), "{:?}", plan.errors);
+    assert_eq!(plan.assets.len(), 2);
+    for asset in &plan.assets {
+        let metadata = asset
+            .normalized_metadata
+            .as_ref()
+            .ok_or("missing normalized metadata")?;
+        if asset.relative_path.ends_with("pixel(1).jpg") {
+            assert_eq!(metadata.description.as_deref(), Some("numbered"));
+        } else {
+            assert_eq!(metadata.description.as_deref(), Some("base"));
+            assert_eq!(metadata.albums, ["Family Album"]);
+        }
+    }
+    Ok(())
+}

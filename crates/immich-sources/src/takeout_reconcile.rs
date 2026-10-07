@@ -89,24 +89,14 @@ pub fn reconcile(state: &mut ScanState) {
     complete(state);
 }
 
+const SUPPLEMENTAL_MARKER: &str = "supplemental-metadata";
+
+/// Resolve `<media>.<marker>(N).json` and legacy `<media>(N).json` to `<stem>(N).<ext>`.
+/// Takeout truncates long sidecar names, so any non-empty prefix of the marker is accepted.
 fn candidates_for_indexed_sidecar_name(state: &ScanState, sidecar: &str) -> Vec<usize> {
-    let name = filename(sidecar);
-    let Some(without_json) = name.strip_suffix(".json") else {
+    let Some(target) = indexed_media_name(filename(sidecar)) else {
         return Vec::new();
     };
-    let Some((media_name, index)) = without_json.rsplit_once(".supplemental-metadata(") else {
-        return Vec::new();
-    };
-    let Some(index) = index.strip_suffix(')') else {
-        return Vec::new();
-    };
-    if index.is_empty() || !index.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Vec::new();
-    }
-    let Some((stem, extension)) = media_name.rsplit_once('.') else {
-        return Vec::new();
-    };
-    let target = format!("{stem}({index}).{extension}");
     state
         .media
         .iter()
@@ -117,6 +107,26 @@ fn candidates_for_indexed_sidecar_name(state: &ScanState, sidecar: &str) -> Vec<
         })
         .map(|(index, _)| index)
         .collect()
+}
+
+fn indexed_media_name(sidecar_name: &str) -> Option<String> {
+    let (head, index) = sidecar_name.strip_suffix(").json")?.rsplit_once('(')?;
+    if index.is_empty() || !index.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let media_name = match head.rsplit_once('.') {
+        Some((media_name, marker))
+            if !marker.is_empty() && SUPPLEMENTAL_MARKER.starts_with(marker) =>
+        {
+            media_name
+        }
+        _ => head,
+    };
+    let (stem, extension) = media_name.rsplit_once('.')?;
+    if stem.is_empty() || extension.is_empty() {
+        return None;
+    }
+    Some(format!("{stem}({index}).{extension}"))
 }
 
 fn candidates_for_title(state: &ScanState, sidecar: &str, title: &str) -> Vec<usize> {

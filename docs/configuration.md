@@ -186,6 +186,10 @@ Production authorization is intentionally not configurable. The read and write
 acknowledgements, exact plan digest, operation budget and verified-backup
 reference exist only as explicit CLI options on the invocation that uses them.
 They have no TOML or environment equivalents and are not persisted verbatim.
+The backup reference is operator-supplied free text identifying a restore point
+that the destination's Immich administrator verified, such as a database dump
+path or a filesystem snapshot name. immich-rs does not contact or validate the
+backup itself; it stores only the reference's SHA-256 digest.
 
 ## Web Console configuration namespace
 

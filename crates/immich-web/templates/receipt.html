@@ -33,7 +33,7 @@
     <input type="hidden" name="csrf" value="{{ csrf_token }}">
     <label>Exact plan digest <input name="plan_sha256" required maxlength="64" autocomplete="off"></label>
     <label>Exact maximum logical effects <input name="max_logical_effects" required type="number" min="1"></label>
-    <label>Backup reference (production only) <input name="backup_reference" maxlength="256" autocomplete="off"></label>
+    <label>Backup reference (production only; restore-point name provided by the Immich administrator, not verified by immich-rs) <input name="backup_reference" maxlength="256" autocomplete="off"></label>
     <label><input name="acknowledge" value="apply" type="checkbox" required> I authorize only this exact plan and count.</label>
     <button type="submit">Create single-use grant</button>
   </form>

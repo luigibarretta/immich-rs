@@ -24,6 +24,7 @@ mod scan;
 mod takeout_archive;
 mod takeout_metadata;
 mod takeout_reconcile;
+mod zip_name;
 
 pub use apple_photos::{
     AlbumMode, ApplePhotosScanConfig, scan_apple_photos_inputs, scan_apple_photos_inputs_resolved,
@@ -33,6 +34,7 @@ pub use google_takeout::{
 };
 pub use picasa::{PicasaScanConfig, scan_picasa_inputs, scan_picasa_inputs_resolved};
 pub use scan::{FolderScanConfig, NoProgress, ProgressObserver, ScanError, TakeoutScanConfig};
+pub use zip_name::{zip_enclosed_name, zip_entry_name};
 
 const MAX_DIAGNOSTIC_PATHS: usize = 8;
 
@@ -376,3 +378,5 @@ mod takeout_reconcile_tests;
 mod takeout_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod zip_contract_tests;

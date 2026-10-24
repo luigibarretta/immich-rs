@@ -48,7 +48,7 @@ tower = { version = "=0.5.3", features = ["limit", "timeout", "util"] }
 tower-http = { version = "=0.6.11", features = ["limit", "timeout"] }
 unicode-normalization = "0.1.24"
 url = "2.5.4"
-zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "=9.1.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

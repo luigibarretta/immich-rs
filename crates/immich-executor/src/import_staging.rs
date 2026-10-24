@@ -5,7 +5,9 @@ use std::path::{Component, Path, PathBuf};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD;
 use immich_rs_core::{Cancellation, UploadOperation, UploadPlan};
-use immich_rs_sources::{ResolvedFolderPlan, ResolvedSourceFile};
+use immich_rs_sources::{
+    ResolvedFolderPlan, ResolvedSourceFile, zip_enclosed_name, zip_entry_name,
+};
 use sha1::Sha1;
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization as _;
@@ -294,16 +296,15 @@ fn validate_entry<R: Read>(
 fn portable_entry_path<R: Read>(
     entry: &zip::read::ZipFile<'_, R>,
 ) -> Result<String, ExecutorError> {
-    if entry.name().contains(['\\', '\0'])
-        || entry
-            .name()
+    let name = zip_entry_name(entry);
+    if name.contains(['\\', '\0'])
+        || name
             .split('/')
             .any(|component| matches!(component, "." | ".."))
     {
         return Err(ExecutorError::new(ExecutorErrorClass::SourceChanged));
     }
-    let enclosed = entry
-        .enclosed_name()
+    let enclosed = zip_enclosed_name(entry, &name)
         .ok_or_else(|| ExecutorError::new(ExecutorErrorClass::SourceChanged))?;
     let mut components = Vec::new();
     for component in enclosed.components() {

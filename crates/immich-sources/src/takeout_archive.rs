@@ -18,6 +18,7 @@ use zip::{CompressionMethod, ZipArchive};
 use crate::discovery::{media_kind, metadata_kind, validate_source_label};
 use crate::reconcile::{diagnostic, finalize_plan};
 use crate::takeout_metadata::{MAX_JSON_BYTES, ParseError, parse_bytes};
+use crate::zip_name::{zip_enclosed_name, zip_entry_name};
 use crate::{
     DiscoveredMedia, DiscoveredSidecar, ProgressObserver, ResolvedFolderPlan, ScanError, ScanState,
     TakeoutScanConfig,
@@ -177,16 +178,15 @@ fn portable_entry_path<R: Read>(
     entry: &ZipFile<'_, R>,
     max_path_bytes: usize,
 ) -> Result<String, ScanError> {
-    if entry.name().contains(['\\', '\0'])
-        || entry
-            .name()
+    let name = zip_entry_name(entry);
+    if name.contains(['\\', '\0'])
+        || name
             .split('/')
             .any(|component| matches!(component, "." | ".."))
     {
         return Err(ScanError::InvalidArchive("unsafe ZIP entry path"));
     }
-    let enclosed = entry
-        .enclosed_name()
+    let enclosed = zip_enclosed_name(entry, &name)
         .ok_or(ScanError::InvalidArchive("unsafe ZIP entry path"))?;
     let mut components = Vec::new();
     for component in enclosed.components() {

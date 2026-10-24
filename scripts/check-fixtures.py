@@ -19,7 +19,8 @@ FIXTURE_ROOTS = [
     REPOSITORY_ROOT / "tests" / "fixtures" / "v4",
 ]
 SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
-SKIPPED_PARTS = {".git", "target", ".cargo"}
+# `.ci` holds CI scratch checkouts of other repositories, not this tree.
+SKIPPED_PARTS = {".ci", ".git", "target", ".cargo"}
 SELF_TEST_PATHS = {
     "scripts/check-fixtures.py",
     "tests/tooling/test_fixture_tools.py",

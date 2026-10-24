@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 import tomllib
@@ -39,6 +40,38 @@ def internal_dependencies(manifest: Path) -> set[str]:
     if not isinstance(dependencies, dict):
         raise ValueError(f"{manifest}: dependencies must be a table")
     return {name for name in dependencies if name.startswith("immich-rs-")}
+
+
+def push_gate_runs(command: str) -> bool:
+    """Whether a ci-local step running exactly `command` is owned by a ci.yml job.
+
+    ci.yml runs its checks through `ci-local.mjs --ci --only <steps>`, so the
+    command text lives in ci-local.json; scripts/check-ci-local-jobs.py proves
+    every manifest step runs in exactly one job.
+    """
+    workflow = (REPOSITORY_ROOT / ".gitea" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    owned: set[str] = set()
+    for line in workflow.splitlines():
+        if line.lstrip().startswith("#") or "ci-local.mjs" not in line:
+            continue
+        tokens = line.split("ci-local.mjs", 1)[1].split()
+        if "--ci" in tokens and "--only" in tokens[:-1]:
+            owned.update(tokens[tokens.index("--only") + 1].split(","))
+    manifest = json.loads((REPOSITORY_ROOT / "ci-local.json").read_text(encoding="utf-8"))
+    steps = manifest.get("steps") if isinstance(manifest, dict) else None
+    if not isinstance(steps, list):
+        raise ValueError("ci-local.json: steps must be a list")
+    for step in steps:
+        run = step.get("run") if isinstance(step, dict) else None
+        if isinstance(run, list):
+            commands = [" ".join(str(part) for part in run)]
+        elif isinstance(run, str):
+            commands = [part.strip() for part in run.split("&&")]
+        else:
+            continue
+        if step.get("name") in owned and command in commands:
+            return True
+    return False
 
 
 def check() -> list[str]:
@@ -303,16 +336,13 @@ def check() -> list[str]:
     production_workflow = (
         REPOSITORY_ROOT / ".gitea" / "workflows" / "production-disposable.yml"
     ).read_text(encoding="utf-8")
-    push_workflow = (REPOSITORY_ROOT / ".gitea" / "workflows" / "ci.yml").read_text(
-        encoding="utf-8"
-    )
     if (
         "com.docker.network.bridge.enable_ip_masquerade=false" not in production_harness
         or 'scripts/tls-forward.py" --listen-host "$TLS_HOST"' not in production_harness
         or "workflow_dispatch" not in production_workflow
         or "phase7-disposable-*" not in production_workflow
         or "branches:" in production_workflow
-        or "python3 scripts/check-production-evidence.py" not in push_workflow
+        or not push_gate_runs("python3 scripts/check-production-evidence.py")
     ):
         failures.append("production HTTPS gate is not isolated and evidence-enforced")
     materializer = (REPOSITORY_ROOT / "scripts" / "materialize-phase2-corpus.sh").read_text(

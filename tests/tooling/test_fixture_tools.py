@@ -130,6 +130,21 @@ class FixtureToolTests(unittest.TestCase):
         self.assertTrue(checker.PRODUCTION_PATTERNS["production hostname"].search("it1-prd-photo-01"))
         self.assertTrue(checker.PRODUCTION_PATTERNS["RFC1918 IPv4"].search("192.168.50.10"))
 
+    def test_repository_scan_skips_ci_scratch_checkouts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="immich-rs-scan-") as temporary:
+            root = Path(temporary)
+            (root / ".ci" / "repo-tooling").mkdir(parents=True)
+            canary = root / ".ci" / "repo-tooling" / "notes.md"
+            canary.write_text("host it1-prd-photo-01\n", encoding="utf-8")
+            kept = root / "notes.md"
+            kept.write_text("synthetic\n", encoding="utf-8")
+            original = checker.REPOSITORY_ROOT
+            checker.REPOSITORY_ROOT = root
+            try:
+                scanned = checker._iter_repository_text()
+            finally:
+                checker.REPOSITORY_ROOT = original
+            self.assertEqual(scanned, [kept])
 
 if __name__ == "__main__":
     unittest.main()

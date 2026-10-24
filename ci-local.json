@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "strict": true,
+  "logMaxKbPerStep": 256,
+  "defaults": {
+    "timeout_s": 600,
+    "env": { "CARGO_INCREMENTAL": "0" }
+  },
+  "pressure": { "maxSomeAvg60": 20 },
+  "steps": [
+    {
+      "name": "ci-local-jobs",
+      "description": "Every manifest step runs in exactly one CI job (scripts/check-ci-local-jobs.py; unit tests run in tooling-tests)",
+      "run": ["python3", "scripts/check-ci-local-jobs.py"],
+      "quick": true,
+      "timeout_s": 60
+    },
+    {
+      "name": "adrs",
+      "description": "Architecture decision records are complete and consistent",
+      "run": ["scripts/check-adrs.sh"],
+      "quick": true,
+      "timeout_s": 120
+    },
+    {
+      "name": "architecture",
+      "description": "Workspace layering (ADR-0004) and capability boundaries",
+      "run": ["python3", "scripts/check-architecture.py"],
+      "quick": true,
+      "timeout_s": 120
+    },
+    {
+      "name": "evidence",
+      "description": "Committed benchmark, disposable, production, migration and web evidence",
+      "run": "python3 scripts/check-benchmark-evidence.py && python3 scripts/check-disposable-evidence.py && python3 scripts/check-phase5-evidence.py && python3 scripts/check-phase6-evidence.py && python3 scripts/check-production-evidence.py && python3 scripts/check-phase8-evidence.py && python3 scripts/check-phase8-benchmark.py && python3 scripts/check-source-import-evidence.py && python3 scripts/check-source-import-benchmark.py && python3 scripts/check-migration-evidence.py && python3 scripts/check-real-migration-benchmark.py && python3 scripts/check-web-evidence.py",
+      "quick": true,
+      "timeout_s": 300
+    },
+    {
+      "name": "release-checks",
+      "description": "Release pipeline and signing contract (scripts/check-release.py)",
+      "run": ["python3", "scripts/check-release.py"],
+      "quick": true,
+      "timeout_s": 120
+    },
+    {
+      "name": "loc",
+      "description": "Source-file LOC policy (scripts/check-loc.py, scripts/loc-baseline.json)",
+      "run": ["python3", "scripts/check-loc.py"],
+      "quick": true,
+      "timeout_s": 120
+    },
+    {
+      "name": "fixtures",
+      "description": "Synthetic fixture provenance and repository secret/production canaries",
+      "run": ["python3", "scripts/check-fixtures.py"],
+      "quick": true,
+      "timeout_s": 300
+    },
+    {
+      "name": "tooling-tests",
+      "description": "Python unit tests of every repository script (tests/tooling)",
+      "run": ["python3", "-m", "unittest", "discover", "-s", "tests/tooling", "-p", "test_*.py"],
+      "quick": true,
+      "timeout_s": 900
+    },
+    {
+      "name": "rust-fmt",
+      "description": "rustfmt check",
+      "run": ["cargo", "fmt", "--all", "--", "--check"],
+      "quick": true,
+      "timeout_s": 300
+    },
+    {
+      "name": "container-contract",
+      "description": "Static container contract and both Compose configurations",
+      "run": "python3 scripts/check-container.py && docker compose config --quiet && IMMICH_RS_API_KEY_PATH=/dev/null docker compose -f compose.yaml -f deploy/compose.production.yaml config --quiet",
+      "quick": true,
+      "timeout_s": 120
+    },
+    {
+      "name": "cargo-deny",
+      "description": "cargo-deny advisories, licenses, bans and sources (deny.toml)",
+      "run": ["cargo", "deny", "check"],
+      "quick": true,
+      "timeout_s": 600
+    },
+    {
+      "name": "audit-lockfiles",
+      "description": "RustSec audit of every Cargo.lock, warnings denied",
+      "uses": "audit-all-lockfiles",
+      "quick": true,
+      "timeout_s": 600,
+      "with": {
+        "ecosystems": ["cargo"],
+        "cargo": { "ignore": [], "args": ["--deny", "warnings"] }
+      }
+    },
+    {
+      "name": "clippy",
+      "description": "clippy (pedantic and nursery denied by workspace lints), all targets and features, warnings denied",
+      "run": ["cargo", "clippy", "--locked", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"],
+      "heavy": true,
+      "timeout_s": 3600
+    },
+    {
+      "name": "rust-test",
+      "description": "Workspace tests, all targets",
+      "run": ["cargo", "test", "--locked", "--workspace", "--all-targets"],
+      "heavy": true,
+      "timeout_s": 3600
+    },
+    {
+      "name": "rust-doc",
+      "description": "rustdoc builds for the workspace",
+      "run": ["cargo", "doc", "--locked", "--workspace", "--no-deps"],
+      "heavy": true,
+      "timeout_s": 1800
+    },
+    {
+      "name": "cli-fail-closed",
+      "description": "The CLI prints its version and fails closed without a command",
+      "run": "cargo run --locked -p immich-rs-cli -- --version && if cargo run --locked -p immich-rs-cli; then echo 'CLI unexpectedly accepted a missing command' >&2; exit 1; fi",
+      "heavy": true,
+      "timeout_s": 1800
+    },
+    {
+      "name": "oracle-fetch",
+      "description": "Fetch and verify the pinned immich-go oracle on cache miss",
+      "run": ["python3", "scripts/fetch-oracle.py"],
+      "timeout_s": 600
+    },
+    {
+      "name": "differential-build",
+      "description": "Build the migration differential subject",
+      "run": ["cargo", "build", "--locked", "-p", "immich-rs-cli"],
+      "heavy": true,
+      "timeout_s": 2400
+    },
+    {
+      "name": "differential",
+      "description": "Normalized read-only black-box differential (scripts/run-differential-suite.sh)",
+      "run": ["bash", "scripts/run-differential-suite.sh"],
+      "needs": ["oracle-fetch", "differential-build"],
+      "timeout_s": 1800
+    }
+  ]
+}

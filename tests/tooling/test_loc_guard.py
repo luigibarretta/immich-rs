@@ -11,11 +11,16 @@ CHECKER = REPOSITORY / "scripts" / "check-loc.py"
 
 
 class LocGuardTests(unittest.TestCase):
-    def run_guard(self, source: str, max_lines: int = 4) -> subprocess.CompletedProcess[str]:
+    def run_guard(
+        self, source: str, max_lines: int = 4, scratch: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         with tempfile.TemporaryDirectory(prefix="immich-rs-loc-") as temporary:
             root = Path(temporary)
             (root / "src").mkdir()
             (root / "src" / "lib.rs").write_text(source, encoding="utf-8")
+            if scratch is not None:
+                (root / "src" / ".ci" / "checkout").mkdir(parents=True)
+                (root / "src" / ".ci" / "checkout" / "big.rs").write_text(scratch, encoding="utf-8")
             policy = {
                 "maxLines": max_lines,
                 "allowedGrowthLines": 0,
@@ -40,6 +45,10 @@ class LocGuardTests(unittest.TestCase):
         result = self.run_guard("one\ntwo\nthree\nfour\nfive\n")
         self.assertEqual(result.returncode, 1)
         self.assertIn("src/lib.rs has 5 LOC (max 4)", result.stderr)
+
+    def test_ignores_ci_scratch_checkouts(self) -> None:
+        result = self.run_guard("one\n", scratch="one\ntwo\nthree\nfour\nfive\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

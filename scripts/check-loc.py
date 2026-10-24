@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 
 
+# `.ci` holds CI scratch checkouts (for example the pinned repo-tooling).
 DEFAULT_IGNORED_DIRS = {
+    ".ci",
     ".git",
     ".next",
     ".turbo",

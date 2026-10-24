@@ -596,35 +596,27 @@ The crate boundaries are dependency rules, not microservices. See
 
 ## Verification
 
-Run the complete fast gate:
+The gate is declared once in `ci-local.json` and run by the vendored
+`ci-local` runner (repo-tooling, pinned in `dependencies/repo-tooling.sha`).
+CI calls the same runner with `--ci --only <steps>` in every
+`.gitea/workflows/ci.yml` job, and `scripts/check-ci-local-jobs.py` proves that
+each manifest step runs in exactly one job, so the local gate and CI cannot
+drift. Before every push:
 
 ```bash
-scripts/check-adrs.sh
-python3 scripts/check-architecture.py
-python3 scripts/check-benchmark-evidence.py
-python3 scripts/check-disposable-evidence.py
-python3 scripts/check-phase5-evidence.py
-python3 scripts/check-phase6-evidence.py
-python3 scripts/check-production-evidence.py
-python3 scripts/check-phase8-evidence.py
-python3 scripts/check-phase8-benchmark.py
-python3 scripts/check-source-import-evidence.py
-python3 scripts/check-source-import-benchmark.py
-python3 scripts/check-migration-evidence.py
-python3 scripts/check-real-migration-benchmark.py
-python3 scripts/check-web-evidence.py
-python3 scripts/check-release.py
-python3 scripts/check-container.py
-python3 scripts/check-fixtures.py
-python3 scripts/check-loc.py
-python3 -m unittest discover -s tests/tooling -p 'test_*.py'
-cargo fmt --all -- --check
-cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
-cargo test --locked --workspace --all-targets
-cargo doc --locked --workspace --no-deps
-cargo deny check
-cargo audit --deny warnings
+export PATH=$HOME/.local/dev-build-lock-bin:$PATH   # dev-01 build lock first
+node third_party/repo-tooling/ci-local.mjs --list    # steps and their flags
+node third_party/repo-tooling/ci-local.mjs --quick   # seconds: checks, fmt, deny, audit
+node third_party/repo-tooling/ci-local.mjs           # full gate, as CI runs it
 ```
+
+The manifest covers the ADR, architecture, evidence, release, LOC, fixture
+and tooling-test checks, `cargo fmt`, `cargo clippy` (workspace lints deny
+`pedantic` and `nursery`), `cargo test`, `cargo doc`, the fail-closed CLI,
+the static container and Compose contract, `cargo deny check`,
+`cargo audit --deny warnings` for every `Cargo.lock`, and the pinned
+black-box differential (`--only differential`). The hardened image builds and
+runs of the `container-amd64` job stay CI-only.
 
 On Windows x64, run the Python entries with `py -3.12` and then validate the
 native release executable explicitly:
@@ -636,7 +628,8 @@ py -3.12 scripts/check-pe.py target/release/immich-rs.exe
 py -3.12 scripts/check-pe.py target/release/immich-rs-web.exe
 ```
 
-The pinned differential additionally runs:
+The `differential` step runs `scripts/run-differential-suite.sh` against the
+verified oracle under `.cache/oracle`; by hand, the same comparison is:
 
 ```bash
 python3 scripts/run-oracle.py tests/oracle/cases/folder-matrix-v1.json \

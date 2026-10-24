@@ -24,3 +24,6 @@ __pycache__/
 /deploy/immich-rs-web.toml
 /deploy/web-secrets/
 /normalized-plan.json
+
+# CI scratch checkouts (for example the pinned repo-tooling).
+/.ci/

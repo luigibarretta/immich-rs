@@ -9,6 +9,13 @@
   "pressure": { "maxSomeAvg60": 20 },
   "steps": [
     {
+      "name": "repo-tooling-sync",
+      "description": "third_party/repo-tooling matches dist/ of the pinned commit (CI checks out the pin at .ci/repo-tooling; locally set REPO_TOOLING_UPSTREAM)",
+      "uses": "repo-tooling-sync",
+      "quick": true,
+      "timeout_s": 60
+    },
+    {
       "name": "ci-local-jobs",
       "description": "Every manifest step runs in exactly one CI job (scripts/check-ci-local-jobs.py; unit tests run in tooling-tests)",
       "run": ["python3", "scripts/check-ci-local-jobs.py"],
@@ -45,10 +52,18 @@
     },
     {
       "name": "loc",
-      "description": "Source-file LOC policy (scripts/check-loc.py, scripts/loc-baseline.json)",
-      "run": ["python3", "scripts/check-loc.py"],
+      "description": "Source-file LOC policy (built-in, scripts/loc-baseline.json, fleet-default preset)",
+      "uses": "loc",
       "quick": true,
       "timeout_s": 120
+    },
+    {
+      "name": "nasa",
+      "description": "NASA/JPL-inspired warning counters never rise (scripts/nasa-baseline.json)",
+      "uses": "nasa",
+      "quick": true,
+      "timeout_s": 300,
+      "with": { "args": ["--ratchet"] }
     },
     {
       "name": "fixtures",

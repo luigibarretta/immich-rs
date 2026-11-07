@@ -1,16 +1,16 @@
 {
-  "maxLines": 400,
-  "allowedGrowthLines": 0,
+  "extends": "fleet-default",
   "roots": [
     "crates",
     "scripts",
     "tests"
   ],
-  "extensions": [
-    ".rs",
-    ".py",
-    ".sh"
-  ],
+  "overrides": {
+    "extensions": {
+      "value": [".rs", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".svelte", ".py", ".go", ".swift", ".sql", ".sh"],
+      "reason": "Shell scripts drive the disposable, differential and container runs; ADR-0018 counts them, so they stay counted (tightens the preset)."
+    }
+  },
   "ignore": {},
   "allow": {}
 }

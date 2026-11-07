@@ -14,8 +14,8 @@ concurrency:
 # entry point used before a push (`node third_party/repo-tooling/ci-local.mjs
 # --quick`, then the full gate). Every manifest step runs in exactly one call
 # below (scripts/check-ci-local-jobs.py). Plain workflow steps are CI-only:
-# checkouts, the repo-tooling pin check, toolchains, caches, tool installation,
-# the hardened image builds and runs, their cleanup and artifact upload.
+# checkouts, toolchains, caches, tool installation, the hardened
+# image builds and runs, their cleanup and artifact upload.
 jobs:
   quality:
     runs-on: docker
@@ -24,16 +24,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      # CI-only: verifies third_party/repo-tooling against a checkout of the
-      # commit pinned in dependencies/repo-tooling.sha.
+      # CI-only: the checkout of the commit pinned in
+      # dependencies/repo-tooling.sha that the repo-tooling-sync step compares
+      # third_party/repo-tooling with.
       - name: Checkout pinned repository tooling
         uses: actions/checkout@v4
         with:
           repository: luigibarretta/repo-tooling
-          ref: 7c1288562bb7ae8c5e111cf7da965cc69830cdd7
+          ref: b8ee6b7218d4d01c90403d1d24826006242a6a23
           path: .ci/repo-tooling
-      - name: Verify pinned repository tooling
-        run: scripts/check-repo-tooling-sync.sh
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -48,8 +47,8 @@ jobs:
         with:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Architecture, evidence, release, LOC, fixture and tooling checks
-        run: node third_party/repo-tooling/ci-local.mjs --ci --only ci-local-jobs,adrs,architecture,evidence,release-checks,loc,fixtures,tooling-tests
+      - name: Repository tooling, architecture, evidence, release, LOC, NASA, fixture and tooling checks
+        run: node third_party/repo-tooling/ci-local.mjs --ci --only repo-tooling-sync,ci-local-jobs,adrs,architecture,evidence,release-checks,loc,nasa,fixtures,tooling-tests
       - name: Rust format, lint, tests, docs and the fail-closed CLI
         run: node third_party/repo-tooling/ci-local.mjs --ci --only rust-fmt,clippy,rust-test,rust-doc,cli-fail-closed
 

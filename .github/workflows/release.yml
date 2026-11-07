@@ -49,7 +49,7 @@ jobs:
           python scripts/check-release.py
           python scripts/check-container.py
           python scripts/check-fixtures.py
-          python scripts/check-loc.py
+          node third_party/repo-tooling/check-loc.mjs
           python -m unittest discover -s tests/tooling -p 'test_*.py'
 
   native:

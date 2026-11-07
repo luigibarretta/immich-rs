@@ -33,6 +33,11 @@ designed and remain subject to review.
 
 ## Verification
 
-`scripts/check-loc.py` validates its versioned baseline, rejects stale
-allowances or ignores, and fails when any maintained file exceeds 400 lines.
-Tooling tests exercise the boundary and CI runs the guard on every push.
+The `loc` step of `ci-local.json` runs the vendored repo-tooling guard
+(`third_party/repo-tooling/check-loc.mjs`) on `scripts/loc-baseline.json`,
+which extends the fleet-default preset (400 lines, zero growth, ratchet, no
+`part_NN` fragments) and keeps shell scripts counted through a tightening
+`extensions` override. It validates the baseline, rejects stale allowances or
+ignores, and fails when any maintained file exceeds 400 lines. The guard's own
+tests live upstream in repo-tooling; CI runs it on every push. It replaced the
+repository-local `scripts/check-loc.py` with the move to repo-tooling 0.6.0.

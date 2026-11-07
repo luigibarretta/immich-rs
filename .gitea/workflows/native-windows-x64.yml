@@ -43,7 +43,6 @@ jobs:
           py -3.12 scripts/check-release.py
           py -3.12 scripts/check-container.py
           py -3.12 scripts/check-fixtures.py
-          py -3.12 scripts/check-loc.py
           py -3.12 -m unittest discover -s tests/tooling -p 'test_*.py'
       - name: Test and build the native binary
         shell: powershell

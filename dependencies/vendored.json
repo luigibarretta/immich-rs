@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "dependencies": [
+    {
+      "name": "auth-modules",
+      "description": "lib-auth-modules, vendored as an exact git archive of the pinned commit (tag v0.2.0) so every build (CLI, Web Console, containers, GitHub mirror) works from one checkout; refresh pin, tree and digest together (vendor/auth-modules.provenance.md, ADR-0035)",
+      "path": "vendor/auth-modules",
+      "pinFile": "dependencies/auth-modules.sha",
+      "treeSha256File": "dependencies/auth-modules-vendor.sha256",
+      "upstream": {
+        "checkout": [".ci/auth-modules", "../lib-auth-modules"],
+        "url": "https://git.luigibarretta.com/luigibarretta/lib-auth-modules.git",
+        "subdir": ""
+      }
+    }
+  ]
+}

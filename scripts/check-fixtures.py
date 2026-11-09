@@ -21,6 +21,9 @@ FIXTURE_ROOTS = [
 SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
 # `.ci` holds CI scratch checkouts of other repositories, not this tree.
 SKIPPED_PARTS = {".ci", ".git", "target", ".cargo"}
+# Exact upstream archives proven by `check-vendored-dep` (pin and tree digest);
+# their own test vectors and documentation are not this repository's fixtures.
+VENDORED_ROOTS = ("vendor/auth-modules/",)
 SELF_TEST_PATHS = {
     "scripts/check-fixtures.py",
     "tests/tooling/test_fixture_tools.py",
@@ -77,6 +80,7 @@ def _iter_repository_text() -> list[Path]:
         and path.suffix.lower() in TEXT_SUFFIXES
         and not any(part in SKIPPED_PARTS for part in path.relative_to(REPOSITORY_ROOT).parts)
         and path.relative_to(REPOSITORY_ROOT).as_posix() not in SELF_TEST_PATHS
+        and not path.relative_to(REPOSITORY_ROOT).as_posix().startswith(VENDORED_ROOTS)
     )
 
 

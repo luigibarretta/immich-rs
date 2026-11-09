@@ -76,6 +76,11 @@ secrets:
     file: ${IMMICH_RS_API_KEY_PATH:?set an absolute secret-file path}
 ```
 
+Compose bind-mounts the host file unchanged, so prepare it as owned by UID
+65532 with mode `0400` (`chown 65532:65532 api-key && chmod 0400 api-key`): the
+CLI rejects a key file that is group/other accessible, a symlink, or owned by
+another user.
+
 Use both files and pass every production authorization as an explicit command
 argument:
 

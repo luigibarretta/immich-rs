@@ -1,6 +1,3 @@
-use std::fs::{self, File, Metadata};
-use std::io::Read;
-use std::path::Path;
 use std::sync::Arc;
 
 use rustls::ServerConfig;
@@ -8,21 +5,34 @@ use rustls::pki_types::pem::PemObject;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use tokio_rustls::TlsAcceptor;
 
-use crate::WebConfigError;
 use crate::oidc::LanConfig;
-use crate::profiles::ResourceIdentity;
+use crate::{WebConfigError, bounded_file};
 
-const MAX_TLS_FILE_BYTES: usize = 1024 * 1024;
+const MAX_TLS_FILE_BYTES: u64 = 1024 * 1024;
 const MAX_CERTIFICATES: usize = 16;
 
 pub fn load_acceptor(config: &LanConfig) -> Result<TlsAcceptor, WebConfigError> {
-    let certificate_bytes = read_file(config.tls_certificate_file(), false)?;
-    let key_bytes = read_file(config.tls_private_key_file(), true)?;
-    let certificates = CertificateDer::pem_slice_iter(&certificate_bytes)
+    let certificate_bytes = bounded_file::read_regular(
+        config.tls_certificate_file(),
+        MAX_TLS_FILE_BYTES,
+        WebConfigError::new("TLS file must be a bounded regular file"),
+    )?;
+    let mut key_bytes = bounded_file::read_private(
+        config.tls_private_key_file(),
+        MAX_TLS_FILE_BYTES,
+        WebConfigError::new("TLS private key file must be a private bounded regular file"),
+    )?;
+    let result = acceptor(&certificate_bytes, &key_bytes);
+    key_bytes.fill(0);
+    result
+}
+
+fn acceptor(certificate_bytes: &[u8], key_bytes: &[u8]) -> Result<TlsAcceptor, WebConfigError> {
+    let certificates = CertificateDer::pem_slice_iter(certificate_bytes)
         .take(MAX_CERTIFICATES + 1)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|_| WebConfigError::new("TLS certificate file is invalid"))?;
-    let mut keys = PrivateKeyDer::pem_slice_iter(&key_bytes).take(2);
+    let mut keys = PrivateKeyDer::pem_slice_iter(key_bytes).take(2);
     let key = keys
         .next()
         .transpose()
@@ -39,65 +49,4 @@ pub fn load_acceptor(config: &LanConfig) -> Result<TlsAcceptor, WebConfigError> 
         .with_single_cert(certificates, key)
         .map_err(|_| WebConfigError::new("TLS identity does not match"))?;
     Ok(TlsAcceptor::from(Arc::new(server)))
-}
-
-fn read_file(path: &Path, private: bool) -> Result<Vec<u8>, WebConfigError> {
-    let before =
-        fs::symlink_metadata(path).map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
-    validate_metadata(&before, private)?;
-    let before_identity = ResourceIdentity::from_path(path)
-        .map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
-    let mut file = File::open(path).map_err(|_| WebConfigError::new("cannot open TLS file"))?;
-    let opened = file
-        .metadata()
-        .map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
-    validate_metadata(&opened, private)?;
-    let opened_identity = ResourceIdentity::from_file(&file)
-        .map_err(|_| WebConfigError::new("cannot inspect TLS file"))?;
-    let capacity = usize::try_from(opened.len())
-        .map_or(MAX_TLS_FILE_BYTES, |length| MAX_TLS_FILE_BYTES.min(length));
-    let mut bytes = Vec::with_capacity(capacity);
-    file.by_ref()
-        .take((MAX_TLS_FILE_BYTES + 1) as u64)
-        .read_to_end(&mut bytes)
-        .map_err(|_| WebConfigError::new("cannot read TLS file"))?;
-    let after = fs::symlink_metadata(path)
-        .map_err(|_| WebConfigError::new("cannot revalidate TLS file"))?;
-    validate_metadata(&after, private)?;
-    let after_identity = ResourceIdentity::from_path(path)
-        .map_err(|_| WebConfigError::new("cannot revalidate TLS file"))?;
-    if bytes.is_empty()
-        || bytes.len() > MAX_TLS_FILE_BYTES
-        || opened_identity != before_identity
-        || opened_identity != after_identity
-    {
-        bytes.fill(0);
-        return Err(WebConfigError::new("TLS file identity changed"));
-    }
-    Ok(bytes)
-}
-
-fn validate_metadata(metadata: &Metadata, private: bool) -> Result<(), WebConfigError> {
-    if !metadata.is_file()
-        || metadata.file_type().is_symlink()
-        || metadata.len() == 0
-        || metadata.len() > MAX_TLS_FILE_BYTES as u64
-        || (private && !private_permissions(metadata))
-    {
-        return Err(WebConfigError::new(
-            "TLS file must be a bounded regular file",
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-fn private_permissions(metadata: &Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    metadata.permissions().mode().trailing_zeros() >= 6
-}
-
-#[cfg(windows)]
-const fn private_permissions(_metadata: &Metadata) -> bool {
-    true
 }

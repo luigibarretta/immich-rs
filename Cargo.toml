@@ -8,6 +8,7 @@ members = [
   "crates/immich-sources",
   "crates/immich-web",
 ]
+exclude = ["vendor/auth-modules"]
 resolver = "3"
 
 [workspace.package]
@@ -20,6 +21,9 @@ repository = "https://git.luigibarretta.com/luigibarretta/immich-rs"
 homepage = "https://git.luigibarretta.com/luigibarretta/immich-rs"
 
 [workspace.dependencies]
+# Vendored lib-auth-modules (ADR-0035): private secret-file reads only, no
+# transitive dependencies. The exact version keeps cargo-deny's wildcard ban.
+auth-modules = { path = "vendor/auth-modules", version = "=0.2.0", default-features = false, features = ["secret-files"] }
 askama = { version = "=0.16.1", default-features = false, features = ["derive", "std"] }
 axum = { version = "=0.8.9", default-features = false, features = ["form", "http1", "query", "tokio"] }
 ctrlc = "3.5.2"

@@ -3,10 +3,10 @@ use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use auth_modules::secrets::constant_time_eq;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use sha2::{Digest, Sha256};
-use subtle::ConstantTimeEq;
 
 use super::client::Provider;
 use super::token;
@@ -67,8 +67,8 @@ impl OidcManager {
         csrf: &str,
         previous_cookie: Option<String>,
     ) -> Result<String, WebConfigError> {
-        if !constant_time_equal(cookie, &self.login_cookie)
-            || !constant_time_equal(csrf, &self.login_csrf)
+        if !constant_time_eq(cookie.as_bytes(), self.login_cookie.as_bytes())
+            || !constant_time_eq(csrf.as_bytes(), self.login_csrf.as_bytes())
         {
             return Err(WebConfigError::new("OIDC login CSRF validation failed"));
         }
@@ -159,10 +159,6 @@ impl OidcManager {
 fn purge(states: &mut BTreeMap<String, Pending>, now: Instant, lifetime_seconds: u64) {
     let lifetime = Duration::from_secs(lifetime_seconds);
     states.retain(|_, value| now.saturating_duration_since(value.created_at) < lifetime);
-}
-
-fn constant_time_equal(left: &str, right: &str) -> bool {
-    left.len() == right.len() && bool::from(left.as_bytes().ct_eq(right.as_bytes()))
 }
 
 fn valid_token(value: &str) -> bool {

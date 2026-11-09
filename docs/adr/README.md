@@ -51,6 +51,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0032](ADR-0032-immich-migration.md) | Immich-to-Immich migration | Accepted |
 | [0033](ADR-0033-optional-operator-web-console.md) | Optional authenticated operator Web Console | Accepted |
 | [0034](ADR-0034-machine-authenticated-metrics.md) | Machine-authenticated Web Console metrics | Accepted |
+| [0035](ADR-0035-shared-auth-modules-secret-files.md) | Shared auth-modules secret-file primitives | Accepted |
 
 ## Template
 

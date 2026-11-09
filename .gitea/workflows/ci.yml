@@ -48,7 +48,7 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - name: Repository tooling, architecture, evidence, release, LOC, NASA, fixture and tooling checks
-        run: node third_party/repo-tooling/ci-local.mjs --ci --only repo-tooling-sync,ci-local-jobs,adrs,architecture,evidence,release-checks,loc,nasa,fixtures,tooling-tests
+        run: node third_party/repo-tooling/ci-local.mjs --ci --only repo-tooling-sync,vendored-deps,ci-local-jobs,adrs,architecture,evidence,release-checks,loc,nasa,fixtures,tooling-tests
       - name: Rust format, lint, tests, docs and the fail-closed CLI
         run: node third_party/repo-tooling/ci-local.mjs --ci --only rust-fmt,clippy,rust-test,rust-doc,cli-fail-closed
 

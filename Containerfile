@@ -7,6 +7,7 @@ WORKDIR /build
 
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY vendor/auth-modules ./vendor/auth-modules
 
 RUN --mount=type=cache,id=immich-rs-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=immich-rs-target-${TARGETARCH},target=/build/target,sharing=locked \

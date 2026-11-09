@@ -159,7 +159,10 @@ of:
 
 - `IMMICH_RS_API_KEY` for an ephemeral process environment;
 - `IMMICH_RS_API_KEY_FILE` for a regular, non-symlink secret file of at most
-  4,097 bytes, with one optional trailing newline.
+  4,097 bytes. On Unix the file must have owner-only permissions (`0600` or
+  `0400`) and, on Linux, be owned by the invoking user (UID 65532 inside the
+  container image); surrounding whitespace such as a trailing newline is
+  removed. The same rules apply to the source and destination key files below.
 
 Configuring both fails with the authentication exit class. The file contents,
 path and key are never rendered. Compose deployments should prefer a mounted
@@ -228,8 +231,10 @@ generation = 1
 ```
 
 The bootstrap value is a private regular UTF-8 file containing 16–256 bytes,
-with at most one trailing line ending. On Unix, bootstrap, API-key, OIDC-client
-and TLS-private-key files require owner-only permissions; the state root
+with at most one trailing line ending. On Unix, bootstrap, API-key, OIDC-client,
+metrics-credential and TLS-private-key files require owner-only permissions
+(`0600` or `0400`); on Linux they must also be owned by the console's effective
+UID (65532 in the container image). The state root
 requires private directory permissions. Browser requests carry only opaque
 profile IDs. Absolute source/state paths, secret paths, server origins and
 adapter limits remain operator-owned TOML.

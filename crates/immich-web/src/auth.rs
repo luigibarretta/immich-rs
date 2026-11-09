@@ -1,19 +1,17 @@
 use std::collections::{BTreeMap, VecDeque};
-use std::fs::{self, File, Metadata};
-use std::io::Read;
 use std::net::IpAddr;
 use std::path::Path;
 use std::str;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use auth_modules::secrets::constant_time_eq;
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
-use crate::profiles::ResourceIdentity;
-use crate::{WebConfigError, WebLimits};
+use crate::{WebConfigError, WebLimits, bounded_file};
 
 const MIN_SECRET_BYTES: usize = 16;
 const MAX_SECRET_BYTES: usize = 256;
@@ -146,8 +144,8 @@ impl AuthStore {
         if failures.len() >= MAX_PAIRING_FAILURES {
             return Err(PairingFailure::RateLimited);
         }
-        if !constant_time_equal(cookie_token, &bootstrap.cookie_token)
-            || !constant_time_equal(csrf_token, &bootstrap.csrf_token)
+        if !constant_time_eq(cookie_token.as_bytes(), bootstrap.cookie_token.as_bytes())
+            || !constant_time_eq(csrf_token.as_bytes(), bootstrap.csrf_token.as_bytes())
         {
             record_failure(failures, now);
             return Err(PairingFailure::InvalidCsrf);
@@ -230,7 +228,7 @@ impl AuthStore {
 
     pub fn authenticate_csrf(&self, cookie_token: &str, csrf_token: &str) -> Option<SessionView> {
         let session = self.authenticate(cookie_token)?;
-        constant_time_equal(csrf_token, &session.csrf_token).then_some(session)
+        constant_time_eq(csrf_token.as_bytes(), session.csrf_token.as_bytes()).then_some(session)
     }
 
     pub fn valid_binding(&self, cookie_token: &str, binding: &[u8; 32]) -> bool {
@@ -258,10 +256,9 @@ impl AuthStore {
             return false;
         };
         expire_sessions(&mut state.sessions, now, self.limits);
-        let valid = state
-            .sessions
-            .get(cookie_token)
-            .is_some_and(|session| constant_time_equal(csrf_token, &session.csrf_token));
+        let valid = state.sessions.get(cookie_token).is_some_and(|session| {
+            constant_time_eq(csrf_token.as_bytes(), session.csrf_token.as_bytes())
+        });
         if valid {
             state.sessions.remove(cookie_token);
         }
@@ -294,10 +291,6 @@ fn record_failure(failures: &mut VecDeque<Instant>, now: Instant) {
     failures.push_back(now);
 }
 
-fn constant_time_equal(left: &str, right: &str) -> bool {
-    left.len() == right.len() && bool::from(left.as_bytes().ct_eq(right.as_bytes()))
-}
-
 fn random_token() -> Result<String, WebConfigError> {
     let mut bytes = [0_u8; TOKEN_BYTES];
     getrandom::fill(&mut bytes)
@@ -308,33 +301,12 @@ fn random_token() -> Result<String, WebConfigError> {
 }
 
 fn read_secret(path: &Path) -> Result<Vec<u8>, WebConfigError> {
-    let before = fs::symlink_metadata(path)
-        .map_err(|_| WebConfigError::new("cannot read bootstrap secret"))?;
-    validate_secret_metadata(&before)?;
-    let before_identity = ResourceIdentity::from_path(path)
-        .map_err(|_| WebConfigError::new("cannot inspect bootstrap secret"))?;
-    let mut file =
-        File::open(path).map_err(|_| WebConfigError::new("cannot read bootstrap secret"))?;
-    let opened = file
-        .metadata()
-        .map_err(|_| WebConfigError::new("cannot inspect bootstrap secret"))?;
-    validate_secret_metadata(&opened)?;
-    let opened_identity = ResourceIdentity::from_file(&file)
-        .map_err(|_| WebConfigError::new("cannot inspect bootstrap secret"))?;
-    let mut bootstrap_material = Vec::with_capacity(MAX_SECRET_BYTES + 1);
-    file.by_ref()
-        .take((MAX_SECRET_BYTES + 1) as u64)
-        .read_to_end(&mut bootstrap_material)
-        .map_err(|_| WebConfigError::new("cannot read bootstrap secret"))?;
-    let after = fs::symlink_metadata(path)
-        .map_err(|_| WebConfigError::new("cannot revalidate bootstrap secret"))?;
-    validate_secret_metadata(&after)?;
-    let after_identity = ResourceIdentity::from_path(path)
-        .map_err(|_| WebConfigError::new("cannot revalidate bootstrap secret"))?;
-    if opened_identity != before_identity || opened_identity != after_identity {
-        bootstrap_material.fill(0);
-        return Err(WebConfigError::new("bootstrap secret identity changed"));
-    }
+    // One optional trailing CRLF/LF on top of the accepted secret length.
+    let mut bootstrap_material = bounded_file::read_private(
+        path,
+        MAX_SECRET_BYTES as u64 + 2,
+        WebConfigError::new("bootstrap secret must be a private bounded regular file"),
+    )?;
     if bootstrap_material.last() == Some(&b'\n') {
         bootstrap_material.pop();
         if bootstrap_material.last() == Some(&b'\r') {
@@ -348,28 +320,4 @@ fn read_secret(path: &Path) -> Result<Vec<u8>, WebConfigError> {
         return Err(WebConfigError::new("bootstrap secret is invalid"));
     }
     Ok(bootstrap_material)
-}
-
-fn validate_secret_metadata(metadata: &Metadata) -> Result<(), WebConfigError> {
-    if !metadata.is_file()
-        || metadata.file_type().is_symlink()
-        || !(MIN_SECRET_BYTES as u64..=MAX_SECRET_BYTES as u64 + 2).contains(&metadata.len())
-        || !private_permissions(metadata)
-    {
-        return Err(WebConfigError::new(
-            "bootstrap secret must be a private bounded regular file",
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-fn private_permissions(metadata: &Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    metadata.permissions().mode().trailing_zeros() >= 6
-}
-
-#[cfg(windows)]
-const fn private_permissions(_metadata: &Metadata) -> bool {
-    true
 }

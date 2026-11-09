@@ -4,6 +4,18 @@ All notable changes will be documented in this file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 Semantic Versioning.
 
+## [Unreleased]
+
+### Security
+
+- Adopted the vendored `auth-modules` 0.2.0 `secret-files` primitives
+  (ADR-0035) for every Web Console private file and the CLI API key files,
+  replacing five local readers and six permission checks. CLI API key files
+  now require owner-only permissions and, on Linux, the invoking user as
+  owner; Web Console private files on Linux must be owned by the console UID.
+- Session, pairing and OIDC login tokens use the shared constant-time
+  comparison.
+
 ## [0.1.0-rc.3] - 2026-09-10
 
 ### Changed

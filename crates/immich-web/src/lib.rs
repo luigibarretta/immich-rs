@@ -4,6 +4,7 @@
 mod auth;
 #[cfg(test)]
 mod auth_tests;
+mod bounded_file;
 mod config;
 mod cookies;
 mod error;

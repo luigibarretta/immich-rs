@@ -7,3 +7,5 @@
 !NOTICE.md
 !crates/
 !crates/**
+!vendor/
+!vendor/auth-modules/**

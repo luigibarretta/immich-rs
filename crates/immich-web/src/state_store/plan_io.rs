@@ -5,8 +5,8 @@ use std::path::Path;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use crate::WebConfigError;
 use crate::profiles::ResourceIdentity;
+use crate::{WebConfigError, bounded_file};
 
 pub(super) fn publish_new(pending: &Path, final_path: &Path) -> Result<(), std::io::Error> {
     fs::hard_link(pending, final_path)?;
@@ -94,7 +94,7 @@ fn stamp(
     if !metadata.is_file()
         || metadata.len() == 0
         || metadata.len() > maximum
-        || !private_permissions(metadata)
+        || !bounded_file::private_permissions(metadata)
     {
         return Err(WebConfigError::new("plan state file is invalid"));
     }
@@ -152,17 +152,6 @@ fn create_private_file(path: &Path) -> Result<File, WebConfigError> {
         .create_new(true)
         .open(path)
         .map_err(|_| WebConfigError::new("cannot create plan state"))
-}
-
-#[cfg(unix)]
-fn private_permissions(metadata: &fs::Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    metadata.permissions().mode().trailing_zeros() >= 6
-}
-
-#[cfg(windows)]
-fn private_permissions(_metadata: &fs::Metadata) -> bool {
-    true
 }
 
 #[cfg(unix)]

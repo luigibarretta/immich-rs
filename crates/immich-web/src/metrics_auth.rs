@@ -1,6 +1,4 @@
 use std::collections::BTreeSet;
-use std::fs::{self, File, Metadata};
-use std::io::Read;
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 
@@ -10,8 +8,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
-use crate::WebConfigError;
-use crate::profiles::ResourceIdentity;
+use crate::{WebConfigError, bounded_file};
 
 const TOKEN_HEX_BYTES: usize = 64;
 const MAX_ADDRESS_RANGES: usize = 32;
@@ -100,33 +97,12 @@ impl MetricsAuthenticator {
 }
 
 fn read_token(path: &Path) -> Result<Vec<u8>, WebConfigError> {
-    let before = fs::symlink_metadata(path)
-        .map_err(|_| WebConfigError::new("cannot read metrics credential"))?;
-    validate_metadata(&before)?;
-    let before_identity = ResourceIdentity::from_path(path)
-        .map_err(|_| WebConfigError::new("cannot inspect metrics credential"))?;
-    let mut file =
-        File::open(path).map_err(|_| WebConfigError::new("cannot read metrics credential"))?;
-    let opened = file
-        .metadata()
-        .map_err(|_| WebConfigError::new("cannot inspect metrics credential"))?;
-    validate_metadata(&opened)?;
-    let opened_identity = ResourceIdentity::from_file(&file)
-        .map_err(|_| WebConfigError::new("cannot inspect metrics credential"))?;
-    let mut token = Vec::with_capacity(TOKEN_HEX_BYTES + 2);
-    file.by_ref()
-        .take((TOKEN_HEX_BYTES + 3) as u64)
-        .read_to_end(&mut token)
-        .map_err(|_| WebConfigError::new("cannot read metrics credential"))?;
-    let after = fs::symlink_metadata(path)
-        .map_err(|_| WebConfigError::new("cannot revalidate metrics credential"))?;
-    validate_metadata(&after)?;
-    let after_identity = ResourceIdentity::from_path(path)
-        .map_err(|_| WebConfigError::new("cannot revalidate metrics credential"))?;
-    if opened_identity != before_identity || opened_identity != after_identity {
-        token.fill(0);
-        return Err(WebConfigError::new("metrics credential identity changed"));
-    }
+    // One optional trailing CRLF/LF on top of the fixed token length.
+    let mut token = bounded_file::read_private(
+        path,
+        TOKEN_HEX_BYTES as u64 + 2,
+        WebConfigError::new("metrics credential must be a private bounded regular file"),
+    )?;
     if token.last() == Some(&b'\n') {
         token.pop();
         if token.last() == Some(&b'\r') {
@@ -151,30 +127,6 @@ const fn valid_token(token: &[u8]) -> bool {
         }
         index += 1;
     }
-    true
-}
-
-fn validate_metadata(metadata: &Metadata) -> Result<(), WebConfigError> {
-    if !metadata.is_file()
-        || metadata.file_type().is_symlink()
-        || !(TOKEN_HEX_BYTES as u64..=TOKEN_HEX_BYTES as u64 + 2).contains(&metadata.len())
-        || !private_permissions(metadata)
-    {
-        return Err(WebConfigError::new(
-            "metrics credential must be a private bounded regular file",
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-fn private_permissions(metadata: &Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    metadata.permissions().mode().trailing_zeros() >= 6
-}
-
-#[cfg(windows)]
-const fn private_permissions(_metadata: &Metadata) -> bool {
     true
 }
 

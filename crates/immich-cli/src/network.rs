@@ -143,6 +143,32 @@ fn api_key_value(direct_name: &str, file_name: &str) -> Result<String, CliFailur
     }
 }
 
+/// Reads an API key file: owner-only permissions, no symlink, bounded, with
+/// the same device/inode before the open, after the open and after the read
+/// (`auth_modules::secrets::files`, ADR-0035). Surrounding ASCII whitespace,
+/// such as the trailing newline of an editor, is removed.
+#[cfg(unix)]
+fn read_api_key_file(path: &std::path::Path) -> Result<String, CliFailure> {
+    use auth_modules::secrets::files::{FileOwner, PrivateFileOptions, read_private_string_with};
+
+    // Linux resolves the effective UID through /proc/self; other Unix targets
+    // cannot without `unsafe`, so they keep the permission and type checks only.
+    let owner = if cfg!(target_os = "linux") {
+        FileOwner::CurrentProcess
+    } else {
+        FileOwner::Any
+    };
+    let options = PrivateFileOptions::new(MAX_API_KEY_FILE_BYTES)
+        .owner(owner)
+        .trim_ascii_whitespace();
+    read_private_string_with(path, &options)
+        .map(auth_modules::secrets::Redacted::into_inner)
+        .map_err(|_| CliFailure::authentication())
+}
+
+/// Without Unix permission bits the file is only required to be a bounded,
+/// regular, non-symlink file.
+#[cfg(not(unix))]
 fn read_api_key_file(path: &std::path::Path) -> Result<String, CliFailure> {
     let metadata = std::fs::symlink_metadata(path).map_err(|_| CliFailure::authentication())?;
     if !metadata.file_type().is_file()
@@ -157,3 +183,7 @@ fn read_api_key_file(path: &std::path::Path) -> Result<String, CliFailure> {
     let value = value.strip_suffix('\r').unwrap_or(value);
     Ok(value.to_owned())
 }
+
+#[cfg(all(test, unix))]
+#[path = "network_tests.rs"]
+mod tests;

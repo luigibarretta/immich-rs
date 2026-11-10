@@ -15,6 +15,14 @@ Semantic Versioning.
   owner; Web Console private files on Linux must be owned by the console UID.
 - Session, pairing and OIDC login tokens use the shared constant-time
   comparison.
+- Web Console response headers are applied by the vendored `http-hardening`
+  0.2.0 `SecurityHeadersLayer` (ADR-0036) instead of local code, with the same
+  header set and values, applied outermost and validated at startup.
+- Fix: with the OIDC LAN profile, the CSP `form-action` also allows the issuer
+  origin; Chromium applied `form-action` to the redirect answering
+  `POST /oidc/login` and blocked the console login.
+- The OIDC client, and the Immich client for pinned endpoints, ignore proxies
+  from the environment, which would otherwise bypass the pinned addresses.
 
 ## [0.1.0-rc.3] - 2026-09-10
 

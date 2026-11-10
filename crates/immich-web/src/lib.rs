@@ -22,6 +22,7 @@ mod oidc;
 mod oidc_http;
 mod policy;
 mod profiles;
+mod security_headers;
 mod server;
 mod state_store;
 mod tls;

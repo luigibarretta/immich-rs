@@ -2,11 +2,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::extract::{ConnectInfo, Request, State};
-use axum::http::header::{
-    CACHE_CONTROL, CONTENT_LENGTH, CONTENT_SECURITY_POLICY, HOST, ORIGIN, PRAGMA, REFERRER_POLICY,
-    X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
-};
-use axum::http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode};
+use axum::http::header::{CONTENT_LENGTH, HOST, ORIGIN};
+use axum::http::{HeaderMap, Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
@@ -39,12 +36,12 @@ pub async fn request_policy(
     next: Next,
 ) -> Response {
     let rejection = validate_request(&policy, &request);
-    let mut response = match rejection {
+    // Security response headers are applied by the outer `SecurityHeadersLayer`
+    // (`security_headers.rs`), rejections included.
+    match rejection {
         Some(status) => status.into_response(),
         None => next.run(request).await,
-    };
-    harden_response(response.headers_mut());
-    response
+    }
 }
 
 fn validate_request(policy: &RequestPolicy, request: &Request) -> Option<StatusCode> {
@@ -104,34 +101,4 @@ fn header_bytes(headers: &HeaderMap) -> usize {
             .saturating_add(value.as_bytes().len())
             .saturating_add(4)
     })
-}
-
-fn harden_response(headers: &mut HeaderMap) {
-    const VALUES: [(HeaderName, &str); 10] = [
-        (CACHE_CONTROL, "private, no-store, max-age=0"),
-        (PRAGMA, "no-cache"),
-        (
-            CONTENT_SECURITY_POLICY,
-            "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
-        ),
-        (X_FRAME_OPTIONS, "DENY"),
-        (REFERRER_POLICY, "no-referrer"),
-        (X_CONTENT_TYPE_OPTIONS, "nosniff"),
-        (
-            HeaderName::from_static("permissions-policy"),
-            "camera=(), microphone=(), geolocation=()",
-        ),
-        (
-            HeaderName::from_static("cross-origin-opener-policy"),
-            "same-origin",
-        ),
-        (
-            HeaderName::from_static("cross-origin-resource-policy"),
-            "same-origin",
-        ),
-        (HeaderName::from_static("x-robots-tag"), "noindex, nofollow"),
-    ];
-    for (name, value) in VALUES {
-        headers.insert(name, HeaderValue::from_static(value));
-    }
 }

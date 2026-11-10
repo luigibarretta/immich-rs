@@ -15,6 +15,8 @@ use axum::routing::get;
 use serde_json::json;
 use tokio::sync::oneshot;
 
+#[path = "security_headers/contract.rs"]
+mod contract;
 #[path = "plan_security/inspection.rs"]
 mod inspection;
 mod support;

@@ -3,6 +3,7 @@ use axum::http::header::CONTENT_DISPOSITION;
 use axum::http::{Method, StatusCode};
 
 use super::PairedSession;
+use super::contract::assert_security_headers;
 use super::support::{HOST, TestWorkspace, send};
 
 pub async fn inspect_and_export(
@@ -52,6 +53,7 @@ pub async fn inspect_and_export(
     )
     .await?;
     assert_eq!(export.status, StatusCode::OK);
+    assert_security_headers(&export.headers, "JSON plan export");
     assert_eq!(
         export
             .headers

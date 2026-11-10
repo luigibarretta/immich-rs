@@ -1,0 +1,4 @@
+[advisories]
+# No ignored advisories. Any future exception must be mirrored by an OpenVEX
+# statement in docs/vex/http-hardening.openvex.json with a review date.
+ignore = []

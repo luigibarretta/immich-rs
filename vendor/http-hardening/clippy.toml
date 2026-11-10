@@ -1,0 +1,6 @@
+# Tests may unwrap, expect and panic; production code may not (NASA-style rules).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true
+too-many-arguments-threshold = 6

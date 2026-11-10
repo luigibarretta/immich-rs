@@ -9,3 +9,4 @@
 !crates/**
 !vendor/
 !vendor/auth-modules/**
+!vendor/http-hardening/**

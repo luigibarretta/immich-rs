@@ -8,7 +8,7 @@ members = [
   "crates/immich-sources",
   "crates/immich-web",
 ]
-exclude = ["vendor/auth-modules"]
+exclude = ["vendor/auth-modules", "vendor/http-hardening"]
 resolver = "3"
 
 [workspace.package]
@@ -24,6 +24,9 @@ homepage = "https://git.luigibarretta.com/luigibarretta/immich-rs"
 # Vendored lib-auth-modules (ADR-0035): private secret-file reads only, no
 # transitive dependencies. The exact version keeps cargo-deny's wildcard ban.
 auth-modules = { path = "vendor/auth-modules", version = "=0.2.0", default-features = false, features = ["secret-files"] }
+# Vendored lib-http-hardening (ADR-0036): only the tower SecurityHeadersLayer
+# for the Web Console response headers; no outbound guard or reqwest adapter.
+http-hardening = { path = "vendor/http-hardening", version = "=0.2.0", default-features = false, features = ["tower"] }
 askama = { version = "=0.16.1", default-features = false, features = ["derive", "std"] }
 axum = { version = "=0.8.9", default-features = false, features = ["form", "http1", "query", "tokio"] }
 ctrlc = "3.5.2"

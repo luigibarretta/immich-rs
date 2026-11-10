@@ -52,6 +52,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0033](ADR-0033-optional-operator-web-console.md) | Optional authenticated operator Web Console | Accepted |
 | [0034](ADR-0034-machine-authenticated-metrics.md) | Machine-authenticated Web Console metrics | Accepted |
 | [0035](ADR-0035-shared-auth-modules-secret-files.md) | Shared auth-modules secret-file primitives | Accepted |
+| [0036](ADR-0036-shared-http-hardening-security-headers.md) | Shared http-hardening security headers | Accepted |
 
 ## Template
 

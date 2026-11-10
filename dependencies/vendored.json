@@ -8,8 +8,30 @@
       "pinFile": "dependencies/auth-modules.sha",
       "treeSha256File": "dependencies/auth-modules-vendor.sha256",
       "upstream": {
-        "checkout": [".ci/auth-modules", "../lib-auth-modules"],
+        "checkout": [
+          ".ci/auth-modules",
+          "../lib-auth-modules"
+        ],
         "url": "https://git.luigibarretta.com/luigibarretta/lib-auth-modules.git",
+        "subdir": ""
+      }
+    },
+    {
+      "name": "http-hardening",
+      "description": "lib-http-hardening, vendored as an exact git archive of the pinned commit (tag v0.2.0) without the upstream consumer survey, so every build works from one checkout; the Web Console uses only SecurityHeadersLayer (feature tower); refresh pin, tree and digest together (vendor/http-hardening.provenance.md, ADR-0036)",
+      "path": "vendor/http-hardening",
+      "pinFile": "dependencies/http-hardening.sha",
+      "treeSha256File": "dependencies/http-hardening-vendor.sha256",
+      "exclude": [
+        "Cargo.lock",
+        "docs/consumer-survey-2026-11-09.md"
+      ],
+      "upstream": {
+        "checkout": [
+          ".ci/lib-http-hardening",
+          "../lib-http-hardening"
+        ],
+        "url": "https://git.luigibarretta.com/luigibarretta/lib-http-hardening.git",
         "subdir": ""
       }
     }

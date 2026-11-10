@@ -83,7 +83,11 @@ pub fn build_http_client(
         if !addresses.matches(endpoint) {
             return Err(ClientError::new(ClientErrorClass::Protocol));
         }
-        builder = builder.resolve_to_addrs(addresses.host(), addresses.addresses());
+        // A proxy from the environment would resolve the host itself and
+        // bypass the pinned addresses, so pinned endpoints never use one.
+        builder = builder
+            .resolve_to_addrs(addresses.host(), addresses.addresses())
+            .no_proxy();
     }
     builder
         .build()

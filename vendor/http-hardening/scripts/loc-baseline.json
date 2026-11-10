@@ -1,0 +1,8 @@
+{
+  "extends": "fleet-default",
+  "roots": [
+    "src"
+  ],
+  "ignore": {},
+  "allow": {}
+}

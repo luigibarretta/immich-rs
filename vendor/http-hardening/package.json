@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "scripts": {
+    "loc:check": "node third_party/repo-tooling/check-loc.mjs",
+    "nasa:warn": "node third_party/repo-tooling/check-nasa-warnings.mjs"
+  }
+}

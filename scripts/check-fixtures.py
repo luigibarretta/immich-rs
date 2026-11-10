@@ -23,7 +23,7 @@ SERVER_FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "oracle" / "server-fixtures"
 SKIPPED_PARTS = {".ci", ".git", "target", ".cargo"}
 # Exact upstream archives proven by `check-vendored-dep` (pin and tree digest);
 # their own test vectors and documentation are not this repository's fixtures.
-VENDORED_ROOTS = ("vendor/auth-modules/",)
+VENDORED_ROOTS = ("vendor/auth-modules/", "vendor/http-hardening/")
 SELF_TEST_PATHS = {
     "scripts/check-fixtures.py",
     "tests/tooling/test_fixture_tools.py",

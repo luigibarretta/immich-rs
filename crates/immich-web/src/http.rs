@@ -11,6 +11,7 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::middleware;
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
+use http_hardening::security_headers::SecurityHeadersLayer;
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
@@ -30,6 +31,7 @@ use crate::metrics_auth::MetricsAuthenticator;
 use crate::oidc::OidcManager;
 use crate::oidc_http;
 use crate::policy::{RequestPolicy, request_policy};
+use crate::security_headers;
 use crate::server;
 use crate::state_store::ConsoleStore;
 use crate::tls;
@@ -42,6 +44,7 @@ const JOB_SCRIPT: &str = include_str!("../assets/job.js");
 pub struct WebConsole {
     state: ConsoleState,
     tls: Option<TlsAcceptor>,
+    security_headers: SecurityHeadersLayer,
 }
 
 #[derive(Clone)]
@@ -88,6 +91,8 @@ impl WebConsole {
             .lan()
             .map(|_| OidcManager::new(Arc::clone(&config)).map(Arc::new))
             .transpose()?;
+        let security_headers =
+            security_headers::layer(config.lan().map(|lan| lan.oidc().issuer()))?;
         let jobs = JobManager::new(Arc::clone(&config), Arc::clone(&store));
         let grants = Arc::new(GrantStore::new(Arc::clone(&config), Arc::clone(&store)));
         Ok(Self {
@@ -101,6 +106,7 @@ impl WebConsole {
                 oidc,
             },
             tls,
+            security_headers,
         })
     }
 
@@ -124,6 +130,8 @@ impl WebConsole {
                 Duration::from_secs(limits.response_seconds),
             ))
             .layer(middleware::from_fn_with_state(policy, request_policy))
+            // Outermost: every response, request-policy rejections included.
+            .layer(self.security_headers.clone())
             .with_state(self.state.clone())
     }
 

@@ -17,7 +17,7 @@
     },
     {
       "name": "vendored-deps",
-      "description": "vendor/auth-modules matches its pin and tree digest (dependencies/vendored.json); byte-compared with lib-auth-modules when a clone is available",
+      "description": "vendor/auth-modules and vendor/http-hardening match their pins and tree digests (dependencies/vendored.json); byte-compared with the upstream libraries when clones are available",
       "uses": "check-vendored-dep",
       "quick": true,
       "timeout_s": 120

@@ -145,7 +145,10 @@ async fn pinned_client(config: &OidcConfig, limits: WebLimits) -> Result<Client,
         return Err(WebConfigError::new("OIDC DNS answer limit exceeded"));
     }
     let addresses: Vec<_> = addresses.into_iter().collect();
+    // `no_proxy`: a proxy from the environment would resolve the host itself
+    // and bypass the pinned, allow-listed addresses.
     let mut builder = Client::builder()
+        .no_proxy()
         .https_only(true)
         .redirect(Policy::none())
         .timeout(Duration::from_secs(limits.response_seconds))

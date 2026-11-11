@@ -17,7 +17,7 @@ const MIN_SECRET_BYTES: usize = 16;
 const MAX_SECRET_BYTES: usize = 256;
 const TOKEN_BYTES: usize = 32;
 const MAX_PAIRING_FAILURES: usize = 5;
-const PAIRING_FAILURE_WINDOW: Duration = Duration::from_secs(5 * 60);
+const PAIRING_FAILURE_WINDOW: Duration = Duration::from_mins(5);
 
 pub struct AuthStore {
     limits: WebLimits,

@@ -276,10 +276,7 @@ fn apply_metadata(
     config: &PicasaScanConfig,
     document: Option<&PicasaDocument>,
 ) {
-    let mut metadata = asset
-        .normalized_metadata
-        .take()
-        .map_or_else(NormalizedMetadata::default, |value| value);
+    let mut metadata = asset.normalized_metadata.take().unwrap_or_default();
     if let Some(caption) = document.and_then(|doc| doc.captions.get(filename(&asset.relative_path)))
     {
         metadata.description = Some(caption.clone());

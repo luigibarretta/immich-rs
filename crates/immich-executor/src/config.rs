@@ -47,7 +47,7 @@ impl UploadExecutionConfig {
             && self.max_retries_per_run <= 10_000
             && !self.retry_base_delay.is_zero()
             && self.retry_base_delay <= self.retry_delay_cap
-            && self.retry_delay_cap <= Duration::from_secs(300);
+            && self.retry_delay_cap <= Duration::from_mins(5);
         valid
             .then_some(())
             .ok_or_else(|| ExecutorError::new(ExecutorErrorClass::InvalidConfiguration))

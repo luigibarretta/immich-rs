@@ -116,13 +116,6 @@
       "with": {
         "ecosystems": ["cargo"],
         "cargo": {
-          "ignore": [
-            {
-              "id": "RUSTSEC-2026-0459",
-              "reason": "bundled SQLite CVE-2026-119375; immich-rs opens only its own state databases; the fix (rusqlite 0.41) needs the Rust 1.89 toolchain bump (docs/security/advisory-exceptions.md)",
-              "until": "2026-12-15"
-            }
-          ],
           "args": ["--deny", "warnings"]
         }
       }

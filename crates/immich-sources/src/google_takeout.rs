@@ -61,26 +61,26 @@ pub fn scan_google_takeout_inputs_resolved(
     observer: &mut impl ProgressObserver,
 ) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
-    if let [input] = inputs {
-        if std::fs::symlink_metadata(input).is_ok_and(|metadata| {
+    if let [input] = inputs
+        && std::fs::symlink_metadata(input).is_ok_and(|metadata| {
             metadata.file_type().is_dir() && !metadata.file_type().is_symlink()
-        }) {
-            validate_layout(input)?;
-            return scan_resolved_internal(
-                input,
-                source_label,
-                &config.scan,
-                cancellation,
-                observer,
-                &mut |_| {},
-                ScanStrategy {
-                    source_kind: SourceKind::GoogleTakeout,
-                    schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION_V2,
-                    reconcile_state: crate::takeout_reconcile::reconcile,
-                    skip_path: |_| None,
-                },
-            );
-        }
+        })
+    {
+        validate_layout(input)?;
+        return scan_resolved_internal(
+            input,
+            source_label,
+            &config.scan,
+            cancellation,
+            observer,
+            &mut |_| {},
+            ScanStrategy {
+                source_kind: SourceKind::GoogleTakeout,
+                schema_version: immich_rs_core::NORMALIZED_PLAN_SCHEMA_VERSION_V2,
+                reconcile_state: crate::takeout_reconcile::reconcile,
+                skip_path: |_| None,
+            },
+        );
     }
     if inputs.iter().any(|input| {
         std::fs::symlink_metadata(input).is_ok_and(|metadata| metadata.file_type().is_dir())

@@ -8,6 +8,12 @@ Semantic Versioning.
 
 ### Security
 
+- Upgraded `rusqlite` to 0.41.1 (`libsqlite3-sys` 0.39.1, bundled SQLite
+  3.54.1), fixing RUSTSEC-2026-0459 (CVE-2026-119375); the temporary advisory
+  exception is removed from `deny.toml` and the lockfile audit.
+- The toolchain moves from Rust 1.88.0 to 1.96.1 (ADR-0037): workspace
+  `rust-version` 1.96, every CI workflow, and the `rust:1.96.1-bookworm`
+  builder images pinned by digest.
 - Adopted the vendored `auth-modules` 0.2.0 `secret-files` primitives
   (ADR-0035) for every Web Console private file and the CLI API key files,
   replacing five local readers and six permission checks. CLI API key files

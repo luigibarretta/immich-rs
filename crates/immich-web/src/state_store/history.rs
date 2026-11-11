@@ -217,19 +217,23 @@ fn configure(connection: &mut Connection, maximum_bytes: u64) -> Result<(), WebC
         .map_err(db_error)?;
     let database_budget = maximum_bytes.saturating_mul(3) / 4;
     let maximum_pages = database_budget / SQLITE_PAGE_BYTES;
-    let configured_pages: u64 = connection
-        .pragma_update_and_check(None, "max_page_count", maximum_pages, |row| row.get(0))
+    let configured_pages: i64 = connection
+        .pragma_update_and_check(None, "max_page_count", pragma_i64(maximum_pages)?, |row| {
+            row.get(0)
+        })
         .map_err(db_error)?;
+    let configured_pages = u64::try_from(configured_pages)
+        .map_err(|_| WebConfigError::new("history database operation failed"))?;
     if configured_pages > maximum_pages {
         return Err(WebConfigError::new(
             "history database exceeds its page bound",
         ));
     }
     connection
-        .pragma_update(None, "journal_size_limit", maximum_bytes / 4)
+        .pragma_update(None, "journal_size_limit", pragma_i64(maximum_bytes / 4)?)
         .map_err(db_error)?;
     connection
-        .pragma_update(None, "wal_autocheckpoint", 64_u64)
+        .pragma_update(None, "wal_autocheckpoint", 64_i64)
         .map_err(db_error)?;
     let integrity: String = connection
         .pragma_query_value(None, "quick_check", |row| row.get(0))
@@ -362,6 +366,11 @@ fn protect_file(_path: &Path) -> Result<(), WebConfigError> {
 
 fn to_i64(value: usize) -> Result<i64, WebConfigError> {
     i64::try_from(value).map_err(|_| WebConfigError::new("history limit is invalid"))
+}
+
+/// rusqlite binds only signed integers; out-of-range values fail like a database error.
+fn pragma_i64(value: u64) -> Result<i64, WebConfigError> {
+    i64::try_from(value).map_err(|_| WebConfigError::new("history database operation failed"))
 }
 
 fn db_error(_error: rusqlite::Error) -> WebConfigError {

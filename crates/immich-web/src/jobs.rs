@@ -272,10 +272,10 @@ impl JobManager {
         let job = state.jobs.get(id).filter(|job| &job.owner == owner)?;
         let snapshot = snapshot_job(job);
         drop(state);
-        if record_cancelled.is_some_and(|kind| record_cancelled_job(&self.inner, kind).is_err()) {
-            if let Ok(mut state) = self.inner.state.lock() {
-                state.worker_failed = true;
-            }
+        if record_cancelled.is_some_and(|kind| record_cancelled_job(&self.inner, kind).is_err())
+            && let Ok(mut state) = self.inner.state.lock()
+        {
+            state.worker_failed = true;
         }
         Some(snapshot)
     }

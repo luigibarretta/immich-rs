@@ -564,7 +564,7 @@ Picasa execution and Immich-to-Immich migration are recorded in the
 |---|---|
 | Behavioral oracle | immich-go v0.32.0, commit `f7d19fce34acd4884ea2c02fc3025706a060afdf` |
 | First Immich target | Immich v3.1 synthetic mock fixtures |
-| Rust toolchain | 1.88.0, edition 2024 |
+| Rust toolchain | 1.96.1, edition 2024 |
 | License | AGPL-3.0-only |
 | Normalized plan | `normalized-plan-v1` for folder/upload; `normalized-plan-v2` for Takeout; `normalized-plan-v3` for Apple Photos; `normalized-plan-v4` for Picasa |
 | Upload plan | `upload-plan-v1` for folder apply; `upload-plan-v2` for Google Takeout, Apple Photos and Picasa apply |

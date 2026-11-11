@@ -38,7 +38,7 @@ impl Default for ClientConfig {
         Self {
             request_timeout: Duration::from_secs(30),
             max_response_bytes: 64 * 1_024,
-            retry_after_cap: Duration::from_secs(60),
+            retry_after_cap: Duration::from_mins(1),
             upload_buffer_bytes: 64 * 1_024,
         }
     }
@@ -49,7 +49,7 @@ impl ClientConfig {
         let valid = !self.request_timeout.is_zero()
             && (1_024..=1024 * 1_024).contains(&self.max_response_bytes)
             && (4 * 1_024..=4 * 1_024 * 1_024).contains(&self.upload_buffer_bytes)
-            && self.retry_after_cap <= Duration::from_secs(300);
+            && self.retry_after_cap <= Duration::from_mins(5);
         valid
             .then_some(self)
             .ok_or_else(|| ClientError::new(ClientErrorClass::Protocol))

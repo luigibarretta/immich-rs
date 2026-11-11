@@ -53,6 +53,7 @@ Run `scripts/check-adrs.sh` before committing.
 | [0034](ADR-0034-machine-authenticated-metrics.md) | Machine-authenticated Web Console metrics | Accepted |
 | [0035](ADR-0035-shared-auth-modules-secret-files.md) | Shared auth-modules secret-file primitives | Accepted |
 | [0036](ADR-0036-shared-http-hardening-security-headers.md) | Shared http-hardening security headers | Accepted |
+| [0037](ADR-0037-rust-1-96-toolchain.md) | Rust 1.96 toolchain | Accepted |
 
 ## Template
 

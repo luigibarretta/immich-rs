@@ -23,7 +23,7 @@ the exact version commit after both main pipelines pass on that commit.
 The project does not download or redistribute Apple SDKs. The `immich-rs` and
 `immich-rs-web` artifacts are both built and tested on every target, including
 GitHub's native Apple hosted images. Every hosted job installs the same Python
-3.12 and Rust 1.88 toolchain contract.
+3.12 and Rust 1.96.1 toolchain contract (ADR-0037).
 
 For each product and target, the exact archive basename is
 `<product>-<version>-<target>`. Unix and macOS archives use `.tar.gz`; Windows

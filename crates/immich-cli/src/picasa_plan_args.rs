@@ -15,7 +15,7 @@ pub fn parse(
     let mut label = effective
         .label
         .clone()
-        .map_or_else(|| "picasa".to_owned(), |value| value);
+        .unwrap_or_else(|| "picasa".to_owned());
     let mut config = args::picasa_config(effective)?;
     let mut inputs = Vec::new();
     let mut index = 0;

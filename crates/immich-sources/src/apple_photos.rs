@@ -106,26 +106,26 @@ pub fn scan_apple_photos_inputs_resolved(
     observer: &mut impl ProgressObserver,
 ) -> Result<ResolvedFolderPlan, ScanError> {
     config.validate()?;
-    if let [input] = inputs {
-        if std::fs::symlink_metadata(input).is_ok_and(|metadata| {
+    if let [input] = inputs
+        && std::fs::symlink_metadata(input).is_ok_and(|metadata| {
             metadata.file_type().is_dir() && !metadata.file_type().is_symlink()
-        }) {
-            let resolved = scan_resolved_internal(
-                input,
-                source_label,
-                &config.scan,
-                cancellation,
-                observer,
-                &mut |_| {},
-                ScanStrategy {
-                    source_kind: SourceKind::ApplePhotos,
-                    schema_version: NORMALIZED_PLAN_SCHEMA_VERSION_V3,
-                    reconcile_state: crate::reconcile::reconcile,
-                    skip_path: export_noise_path,
-                },
-            )?;
-            return finish_resolved_plan(resolved, config);
-        }
+        })
+    {
+        let resolved = scan_resolved_internal(
+            input,
+            source_label,
+            &config.scan,
+            cancellation,
+            observer,
+            &mut |_| {},
+            ScanStrategy {
+                source_kind: SourceKind::ApplePhotos,
+                schema_version: NORMALIZED_PLAN_SCHEMA_VERSION_V3,
+                reconcile_state: crate::reconcile::reconcile,
+                skip_path: export_noise_path,
+            },
+        )?;
+        return finish_resolved_plan(resolved, config);
     }
     if inputs.iter().any(|input| {
         std::fs::symlink_metadata(input).is_ok_and(|metadata| metadata.file_type().is_dir())

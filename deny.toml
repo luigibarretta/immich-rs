@@ -4,14 +4,6 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
-# RUSTSEC-2026-0459 (bundled SQLite CVE-2026-119375): the fix needs rusqlite 0.41,
-# which needs Rust 1.89 while the toolchain is pinned to 1.88. immich-rs opens only
-# its own journal/history databases inside its private state directory, so a
-# crafted db + -wal pair requires write access there already. Remove together with
-# the toolchain bump (docs/security/advisory-exceptions.md).
-ignore = [
-  { id = "RUSTSEC-2026-0459", reason = "own state databases only; fix needs the Rust 1.89 toolchain bump" },
-]
 
 [licenses]
 version = 2

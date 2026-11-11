@@ -333,7 +333,7 @@ impl RawUploadConfig {
             && config.max_retries_per_run <= 10_000
             && !config.retry_base_delay.is_zero()
             && config.retry_base_delay <= config.retry_delay_cap
-            && config.retry_delay_cap <= Duration::from_secs(300);
+            && config.retry_delay_cap <= Duration::from_mins(5);
         valid
             .then_some(config)
             .ok_or_else(|| WebConfigError::new("source upload limits are invalid"))
